@@ -18,23 +18,24 @@
 #endif
 
 #if defined(ESP32_DASHBOARD)
-#if DASH_DEFAULT_HW == 0
-using SelectedHandler = LegacyHandler;
-#elif DASH_DEFAULT_HW == 2
-using SelectedHandler = HW4Handler;
-#else
-using SelectedHandler = HW3Handler;
-#endif
+    #if DASH_DEFAULT_HW == 0
+        using SelectedHandler = LegacyHandler;
+    #elif DASH_DEFAULT_HW == 2
+        using SelectedHandler = HW4Handler;
+    #else
+        using SelectedHandler = HW3Handler;
+    #endif
+
 #elif defined(NAG_KILLER)
-using SelectedHandler = NagHandler;
-#elif defined(HW4)
-using SelectedHandler = HW4Handler;
-#elif defined(HW3)
-using SelectedHandler = HW3Handler;
-#elif defined(LEGACY)
-using SelectedHandler = LegacyHandler;
-#else
-#error "Define HW4, HW3, LEGACY, or NAG_KILLER in build_flags"
+    using SelectedHandler = NagHandler;
+    #elif defined(HW4)
+    using SelectedHandler = HW4Handler;
+    #elif defined(HW3)
+    using SelectedHandler = HW3Handler;
+    #elif defined(LEGACY)
+    using SelectedHandler = LegacyHandler;
+    #else
+    #error "Define HW4, HW3, LEGACY, or NAG_KILLER in build_flags"
 #endif
 
 static std::unique_ptr<CanDriver> appDriver;

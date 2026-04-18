@@ -659,8 +659,7 @@ static void handleConfig()
         {
             hwMode = v;
             hwChanged = true;
-            dashLog("[CFG] HW=" + String(v == 0 ? "LEGACY" : v == 1 ? "HW3"
-                                                                    : "HW4"));
+            dashLog("[CFG] HW=" + String(v == 0 ? "LEGACY" : v == 1 ? "HW3" : "HW4"));
         }
     }
     if (server.hasArg("sp") && dashHandler)

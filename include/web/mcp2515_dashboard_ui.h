@@ -793,7 +793,7 @@ function updSeg(el,v,cls){
   el.querySelectorAll('.'+cls).forEach(b=>b.classList.toggle('active',parseInt(b.dataset.v)===v));
 }
 
-function setHW(v){state.hw=v;updSeg($('hw-seg'),v,'hw-btn');buildPills();updateHW4(v);updateSniffIdToggle();renderSniffer();pushCfg();}
+function setHW(v){state.hw=v;updSeg($('hw-seg'),v,'hw-btn');buildPills();updateHW4(v);updateSniffIdToggle();renderSniffer();pushCfg();var b=$('hw-badge');if(b)b.textContent=HW[v];}
 function setSP(v){state.sp=v;state.spl=true;buildPills();pushCfg();}
 function setSPL(v){state.spl=v;buildPills();pushCfg();}
 
