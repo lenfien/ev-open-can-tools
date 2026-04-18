@@ -53,6 +53,12 @@ inline Shared<bool> nagKillerRuntime{kNagKillerDefaultEnabled};
 inline Shared<bool> speedProfileLocked{false};
 inline Shared<uint8_t> hw4OffsetRuntime{0};
 inline Shared<bool> enableCamera{true};
+inline Shared<bool> enableBanShield{true};
+
+#define H4O_CUSTOM_COUNT 7
+static uint8_t h4oTab = 0; // 0=preset, 1=custom
+static uint8_t h4oCustomSl[H4O_CUSTOM_COUNT] = {30, 40, 60, 80,  90, 100, 120};
+static uint8_t h4oCustomV [H4O_CUSTOM_COUNT] = {60, 50, 33, 12,  11,  10,   8};
 
 inline uint8_t readMuxID(const CanFrame &frame)
 {

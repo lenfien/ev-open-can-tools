@@ -453,6 +453,31 @@
                 color: var(--tx3)
             }
 
+            .h4o-row {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                font-size: 12px;
+                color: var(--tx2);
+            }
+
+            .h4o-inp {
+                width: 52px;
+                background: var(--bg);
+                border: 1px solid var(--bd);
+                border-radius: 6px;
+                padding: 4px 6px;
+                color: var(--tx);
+                font-size: 12px;
+                font-family: inherit;
+                text-align: center;
+            }
+
+            .h4o-inp:focus {
+                outline: none;
+                border-color: var(--acc);
+            }
+
             .sniff-btn {
                 padding: 7px 12px;
                 background: transparent;
@@ -1022,6 +1047,18 @@
             </label>
         </div>
 
+        <div class="feat-row" id="row-banShield">
+            <div class="feat-info">
+                <div class="feat-name">Ban Shield</div>
+                <div class="feat-desc">Ban Shield Enable/Disable</div>
+            </div>
+            <label class="tgl"><input type="checkbox" id="tgl-banShield" checked="true" onchange="pushFeat()">
+                <div class="tgl-track">
+                    <div class="tgl-thumb"></div>
+                </div>
+            </label>
+        </div>
+
         <div class="feat-row hw4-only" id="row-evd">
             <div class="feat-info">
                 <div class="feat-name">Emergency Vehicle Detection</div>
@@ -1040,6 +1077,7 @@
                 <div class="feat-desc">Static offset injected on mux 2</div>
             </div>
             <div id="h4o-pills" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+            <div id="h4o-custom" style="margin-top:10px;display:flex;flex-direction:column;gap:6px"></div>
         </div>
 
         <div class="feat-row">
@@ -1492,6 +1530,17 @@
             {l: '+50%', v: 50},
             {l: '+60%', v: 60}
         ];
+
+        let H4O_Custom = [
+            {sl: 30, v: 60},
+            {sl: 40, v: 50},
+            {sl: 60, v: 33},
+            {sl: 80, v: 12},
+            {sl: 90, v: 11},
+            {sl: 100, v: 10},
+            {sl: 120, v: 8},
+        ];
+
         let state = {hw: 1, sp: 1, can: true, h4o: 0, spl: false};
         let sniffPaused = false, sniffFrames = [];
         let sniffShowDbcIds = localStorage.getItem('sniffIdMode') === 'dbc';
@@ -1666,6 +1715,42 @@
                 };
                 hc.appendChild(b);
             });
+
+            const hcCustom = $('h4o-custom');
+            if (hcCustom && !hcCustom.children.length) {
+                H4O_Custom.forEach((o, i) => {
+                    const row = document.createElement('div');
+                    row.className = 'h4o-row';
+
+                    const slInp = document.createElement('input');
+                    slInp.type = 'number';
+                    slInp.className = 'h4o-inp';
+                    slInp.value = o.sl;
+                    slInp.min = 0;
+                    slInp.max = 999;
+                    slInp.onchange = () => { H4O_Custom[i].sl = parseInt(slInp.value) || 0; };
+
+                    const arrow = document.createElement('span');
+                    arrow.textContent = 'km/h →';
+
+                    const vInp = document.createElement('input');
+                    vInp.type = 'number';
+                    vInp.className = 'h4o-inp';
+                    vInp.value = o.v;
+                    vInp.min = 0;
+                    vInp.max = 100;
+                    vInp.onchange = () => { H4O_Custom[i].v = parseInt(vInp.value) || 0; };
+
+                    const pct = document.createElement('span');
+                    pct.textContent = '%';
+
+                    row.appendChild(slInp);
+                    row.appendChild(arrow);
+                    row.appendChild(vInp);
+                    row.appendChild(pct);
+                    hcCustom.appendChild(row);
+                });
+            }
         }
 
         function updateHW4(hw) {
@@ -1763,6 +1848,7 @@
                 + '&summon=' + ($('tgl-summon').checked ? '1' : '0')
                 + '&isa=' + ($('tgl-isa').checked ? '1' : '0')
                 + '&camera=' + ($('tgl-camera').checked ? '1' : '0')
+                + '&banShield=' + ($('tgl-banShield').checked ? '1' : '0')
                 + '&evd=' + ($('tgl-evd').checked ? '1' : '0')
                 + '&fAD=' + ($('tgl-fAD').checked ? '1' : '0')
                 + '&eprn=' + ($('tgl-eprn').checked ? '1' : '0')
@@ -1998,6 +2084,7 @@
                         $('tgl-summon').checked = d.feat.summon;
                         $('tgl-isa').checked = d.feat.isa;
                         $('tgl-camera').checked = d.feat.camera;
+                        $('tgl-banShield').checked = d.feat.banShield;
                         $('tgl-evd').checked = d.feat.evd;
                         if (typeof d.feat.h4o !== 'undefined') {
                             state.h4o = d.feat.h4o;

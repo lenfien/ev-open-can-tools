@@ -69,6 +69,7 @@ struct Features
     bool evDetection = kEmergencyVehicleDetectionDefaultEnabled;
     uint8_t hw4Offset = 0;
     bool cameraEnabled = true;
+    bool enableBanShield = true;
 };
 
 static Features feat;
@@ -319,6 +320,7 @@ static void dashApplyRuntimeState()
     nagKillerRuntime = canActive && kNagKillerDefaultEnabled;
     hw4OffsetRuntime = canActive ? feat.hw4Offset : 0;
     enableCamera = canActive ? feat.cameraEnabled : true;
+    enableBanShield = canActive ? feat.enableBanShield : true;
 
     if (dashHandler)
     {
@@ -347,9 +349,13 @@ static void dashSavePrefs()
     prefs.putBool("f_sum", feat.summonUnlock);
     prefs.putBool("f_isa", feat.isaSuppress);
     prefs.putBool("f_camera", feat.cameraEnabled);
+    prefs.putBool("f_banShield", feat.enableBanShield);
     prefs.putBool("f_evd", feat.evDetection);
     prefs.putUChar("f_h4o", feat.hw4Offset);
     prefs.putBool("sp_lock", (bool)speedProfileLocked);
+    prefs.putUChar("h4o_tab", h4oTab);
+    prefs.putBytes("h4o_csl", h4oCustomSl, H4O_CUSTOM_COUNT);
+    prefs.putBytes("h4o_cv",  h4oCustomV,  H4O_CUSTOM_COUNT);
     prefs.end();
 }
 
@@ -386,7 +392,11 @@ static void dashLoadPrefs()
     feat.evDetection = prefs.getBool("f_evd", kEmergencyVehicleDetectionDefaultEnabled);
     feat.hw4Offset = prefs.getUChar("f_h4o", 0);
     feat.cameraEnabled = prefs.getUChar("f_camera", true);
+    feat.enableBanShield = prefs.getUChar("f_banShield", true);
     speedProfileLocked = prefs.getBool("sp_lock", false);
+    h4oTab = prefs.getUChar("h4o_tab", 0);
+    prefs.getBytes("h4o_csl", h4oCustomSl, H4O_CUSTOM_COUNT);
+    prefs.getBytes("h4o_cv",  h4oCustomV,  H4O_CUSTOM_COUNT);
     uint8_t sp = prefs.getUChar("sp", 1);
     bool ep = prefs.getBool("eprn", true);
 
@@ -435,7 +445,8 @@ static void dashLoadPrefs()
             " summon=" + String(feat.summonUnlock ? "ON" : "OFF") +
             " isa=" + String(feat.isaSuppress ? "ON" : "OFF") +
             " evd=" + String(feat.evDetection ? "ON" : "OFF") +
-            " camera=" + String(feat.cameraEnabled) ? "ON" : "OFF");
+            " camera=" + String(feat.cameraEnabled ? "ON" : "OFF") +
+            " banShield=" + String(feat.enableBanShield ? "ON" : "OFF"));
 }
 
 static uint32_t dashPluginStateHash(const char *value)
@@ -627,6 +638,10 @@ static void handleStatus()
     j += mcpEflg;
     j += ",\"up\":";
     j += (millis() - startMs) / 1000;
+    j += ",\"bsCnt\":";
+    j += dashHandler ? (uint32_t)dashHandler->banShieldCnt : 0;
+    j += ",\"spLim\":";
+    j += dashHandler ? (int)dashHandler->speedLimit : 0;
     j += ",\"feat\":{\"AD\":";
     j += feat.ADEnabled ? "true" : "false";
     j += ",\"nag\":";
@@ -637,6 +652,8 @@ static void handleStatus()
     j += feat.isaSuppress ? "true" : "false";
     j += ",\"camera\":";
     j += feat.cameraEnabled ? "true" : "false";
+    j += ",\"banShield\":";
+    j += feat.enableBanShield ? "true" : "false";
     j += ",\"evd\":";
     j += feat.evDetection ? "true" : "false";
     j += ",\"h4o\":";
@@ -651,6 +668,14 @@ static void handleStatus()
         j += "{\"rx\":" + String(muxRx[i]) +
              ",\"tx\":" + String(muxTx[i]) +
              ",\"err\":" + String(muxErr[i]) + "}";
+    }
+    j += "],\"h4oTab\":";
+    j += h4oTab;
+    j += ",\"h4oCust\":[";
+    for (int i = 0; i < H4O_CUSTOM_COUNT; i++)
+    {
+        if (i) j += ",";
+        j += "{\"sl\":" + String(h4oCustomSl[i]) + ",\"v\":" + String(h4oCustomV[i]) + "}";
     }
     j += "]}";
     server.send(200, "application/json", j);
@@ -722,6 +747,11 @@ static void handleFeatures()
         feat.cameraEnabled = server.arg("camera") == "1";
         dashLog("[FEAT] Camera " + String(feat.cameraEnabled ? "ON" : "OFF"));
     }
+    if (server.hasArg("banShield"))
+    {
+        feat.enableBanShield = server.arg("banShield") == "1";
+        dashLog("[FEAT] BanShield " + String(feat.enableBanShield ? "ON" : "OFF"));
+    }
     if (server.hasArg("evd"))
     {
         feat.evDetection = server.arg("evd") == "1";
@@ -745,6 +775,24 @@ static void handleFeatures()
         dashLog("[FEAT] Logging " + String(ep ? "ON" : "OFF"));
     }
     dashApplyRuntimeState();
+    dashSavePrefs();
+    server.send(200, "application/json", "{\"ok\":true}");
+}
+
+static void handleH4OCustom()
+{
+    if (server.hasArg("tab"))
+    {
+        uint8_t t = (uint8_t)server.arg("tab").toInt();
+        if (t <= 1) h4oTab = t;
+    }
+    for (int i = 0; i < H4O_CUSTOM_COUNT; i++)
+    {
+        String ksl = "sl" + String(i);
+        String kv  = "v"  + String(i);
+        if (server.hasArg(ksl)) h4oCustomSl[i] = (uint8_t)constrain(server.arg(ksl).toInt(), 0, 255);
+        if (server.hasArg(kv))  h4oCustomV[i]  = (uint8_t)constrain(server.arg(kv).toInt(),  0, 100);
+    }
     dashSavePrefs();
     server.send(200, "application/json", "{\"ok\":true}");
 }
@@ -2369,6 +2417,7 @@ static void mcpDashboardSetup(CarManagerBase *handler, CanDriver *driver)
     server.on("/status", HTTP_GET, handleStatus);
     server.on("/config", HTTP_POST, handleConfig);
     server.on("/features", HTTP_POST, handleFeatures);
+    server.on("/h4o_custom", HTTP_POST, handleH4OCustom);
     server.on("/frames", HTTP_GET, handleFrames);
     server.on("/log", HTTP_GET, handleLog);
     server.on("/reset_stats", HTTP_POST, handleResetStats);
