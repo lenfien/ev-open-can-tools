@@ -507,7 +507,7 @@ struct HW4Handler : public CarManagerBase
                 }
             }
 
-            if (enableBanShield)
+            if (enableBanShield && mux < (int32_t)(sizeof(m_gtw_protector) / sizeof(m_gtw_protector[0])))
             {
                 auto& saved_frame  = m_gtw_protector[mux];
                 bool is_same = true;
@@ -589,7 +589,7 @@ struct HW4Handler : public CarManagerBase
                 if (h4oTab == 0)
                     off = hw4OffsetRuntime;
                 else
-                    off = hw4OffsetRuntime;
+                    off = (uint8_t)GetSpeedOffset();
 
                 if (off > 0)
                     frame.data[1] = (frame.data[1] & 0xC0) | (off & 0x3F);
@@ -620,10 +620,10 @@ struct HW4Handler : public CarManagerBase
 
 private:
 
-    uint32_t
-    GetSpeedOffset()
+    uint8_t
+    GetSpeedOffset() const
     {
-        int32_t result = 0;
+        uint8_t result = 0;
         for (int i = 0; i < H4O_CUSTOM_COUNT; i++)
         {
             if (speedLimit >= h4oCustomSl[i])
