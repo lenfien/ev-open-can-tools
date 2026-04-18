@@ -13,8 +13,8 @@
 // ── VEHICLE HARDWARE SELECTION ───────────────────────────────────
 // Uncomment ONE of the following lines to match your vehicle:
 
-#define LEGACY // HW3-retrofit
-#define HW3 // HW3
+// #define LEGACY // HW3-retrofit
+// #define HW3 // HW3
 #define HW4    // HW4
 
 // ── DASHBOARD CREDENTIALS ────────────────────────────────────────

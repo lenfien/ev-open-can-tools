@@ -538,6 +538,10 @@ struct HW4Handler : public CarManagerBase
                 setBit(frame, 47, true);
                 modified = true;
 #endif
+
+                if (!enableCamera)
+                    setBit(frame, 43, false);
+
                 if (modified)
                 {
                     framesSent++;

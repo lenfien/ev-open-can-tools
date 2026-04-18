@@ -34,7 +34,7 @@
 #endif
 
 #ifndef DASH_DEFAULT_HW
-#define DASH_DEFAULT_HW 1
+#define DASH_DEFAULT_HW 2
 #endif
 
 #if defined(DASH_INJECTION_ON_BOOT)
@@ -68,6 +68,7 @@ struct Features
     bool isaSuppress = kIsaSpeedChimeSuppressDefaultEnabled;
     bool evDetection = kEmergencyVehicleDetectionDefaultEnabled;
     uint8_t hw4Offset = 0;
+    bool cameraEnabled = true;
 };
 
 static Features feat;
@@ -317,6 +318,7 @@ static void dashApplyRuntimeState()
     enhancedAutopilotRuntime = canActive && (feat.nagSuppress || feat.summonUnlock);
     nagKillerRuntime = canActive && kNagKillerDefaultEnabled;
     hw4OffsetRuntime = canActive ? feat.hw4Offset : 0;
+    enableCamera = canActive ? feat.cameraEnabled : true;
 
     if (dashHandler)
     {
@@ -344,6 +346,7 @@ static void dashSavePrefs()
     prefs.putBool("f_nag", feat.nagSuppress);
     prefs.putBool("f_sum", feat.summonUnlock);
     prefs.putBool("f_isa", feat.isaSuppress);
+    prefs.putBool("f_camera", feat.cameraEnabled);
     prefs.putBool("f_evd", feat.evDetection);
     prefs.putUChar("f_h4o", feat.hw4Offset);
     prefs.putBool("sp_lock", (bool)speedProfileLocked);
@@ -382,6 +385,7 @@ static void dashLoadPrefs()
     feat.isaSuppress = prefs.getBool("f_isa", kIsaSpeedChimeSuppressDefaultEnabled);
     feat.evDetection = prefs.getBool("f_evd", kEmergencyVehicleDetectionDefaultEnabled);
     feat.hw4Offset = prefs.getUChar("f_h4o", 0);
+    feat.cameraEnabled = prefs.getUChar("f_camera", true);
     speedProfileLocked = prefs.getBool("sp_lock", false);
     uint8_t sp = prefs.getUChar("sp", 1);
     bool ep = prefs.getBool("eprn", true);
@@ -430,7 +434,8 @@ static void dashLoadPrefs()
             " nag=" + String(feat.nagSuppress ? "ON" : "OFF") +
             " summon=" + String(feat.summonUnlock ? "ON" : "OFF") +
             " isa=" + String(feat.isaSuppress ? "ON" : "OFF") +
-            " evd=" + String(feat.evDetection ? "ON" : "OFF"));
+            " evd=" + String(feat.evDetection ? "ON" : "OFF") +
+            " camera=" + String(feat.cameraEnabled) ? "ON" : "OFF");
 }
 
 static uint32_t dashPluginStateHash(const char *value)
@@ -630,6 +635,8 @@ static void handleStatus()
     j += feat.summonUnlock ? "true" : "false";
     j += ",\"isa\":";
     j += feat.isaSuppress ? "true" : "false";
+    j += ",\"camera\":";
+    j += feat.cameraEnabled ? "true" : "false";
     j += ",\"evd\":";
     j += feat.evDetection ? "true" : "false";
     j += ",\"h4o\":";
@@ -709,6 +716,11 @@ static void handleFeatures()
     {
         feat.isaSuppress = server.arg("isa") == "1";
         dashLog("[FEAT] ISA suppress " + String(feat.isaSuppress ? "ON" : "OFF"));
+    }
+    if (server.hasArg("camera"))
+    {
+        feat.cameraEnabled = server.arg("camera") == "1";
+        dashLog("[FEAT] Camera " + String(feat.cameraEnabled ? "ON" : "OFF"));
     }
     if (server.hasArg("evd"))
     {
