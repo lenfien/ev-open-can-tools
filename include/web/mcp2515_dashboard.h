@@ -640,6 +640,8 @@ static void handleStatus()
     j += (millis() - startMs) / 1000;
     j += ",\"bsCnt\":";
     j += dashHandler ? (uint32_t)dashHandler->banShieldCnt : 0;
+    j += ",\"bsCheckCnt\":";
+    j += dashHandler ? (uint32_t)dashHandler->banShieldCheckCnt : 0;
     j += ",\"spLim\":";
     j += dashHandler ? (int)dashHandler->speedLimit : 0;
     j += ",\"feat\":{\"AD\":";
@@ -786,15 +788,31 @@ static void handleH4OCustom()
         uint8_t t = (uint8_t)server.arg("tab").toInt();
         if (t <= 1) h4oTab = t;
     }
+
+    String sl_str, v_str;
     for (int i = 0; i < H4O_CUSTOM_COUNT; i++)
     {
         String ksl = "sl" + String(i);
         String kv  = "v"  + String(i);
-        if (server.hasArg(ksl)) h4oCustomSl[i] = (uint8_t)constrain(server.arg(ksl).toInt(), 0, 255);
-        if (server.hasArg(kv))  h4oCustomV[i]  = (uint8_t)constrain(server.arg(kv).toInt(),  0, 100);
+
+        if (server.hasArg(ksl))
+        {
+            h4oCustomSl[i] = (uint8_t)constrain(server.arg(ksl).toInt(), 0, 255);
+            sl_str += String(h4oCustomSl[i]) + " ";
+        }
+
+        if (server.hasArg(kv))
+        {
+            h4oCustomV[i]  = (uint8_t)constrain(server.arg(kv).toInt(),  0, 100);
+            v_str += String(h4oCustomV[i]) + " ";
+        }
     }
+
     dashSavePrefs();
     server.send(200, "application/json", "{\"ok\":true}");
+
+    Serial.printf("H4OCustomHanlderReceived: tab : %d, h4oCustomSl: %s, h4oCustomV:%s",
+        h4oTab, sl_str.c_str(), v_str.c_str());
 }
 
 static void handleFrames()

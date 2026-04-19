@@ -1827,7 +1827,9 @@
         async function pushH4OCustom() {
             const isCustom = $('h4o-tab-custom') && $('h4o-tab-custom').classList.contains('active');
             let body = 'tab=' + (isCustom ? 1 : 0);
-            H4O_Custom.forEach((o, i) => { body += '&sl' + i + '=' + o.sl + '&v' + i + '=' + o.v; });
+            H4O_Custom.forEach((o, i) => {
+                body += '&sl' + i + '=' + o.sl + '&v' + i + '=' + o.v;
+            });
             try { await fetch('/h4o_custom', {method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body}); } catch (e) {}
         }
 
@@ -2145,7 +2147,7 @@
                     $('s-prof').textContent = spNames()[d.sp] || '—';
                     $('s-soff').textContent = d.soff || '0';
                     $('s-up').textContent = fmtUp(d.up);
-                    if (typeof d.bsCnt !== 'undefined') $('s-bscnt').textContent = d.bsCnt;
+                    if (typeof d.bsCnt !== 'undefined' && typeof d.bsCheckCnt !== "undefined") $('s-bscnt').textContent = d.bsCnt + "/" + d.bsCheckCnt;
                     if (typeof d.spLim !== 'undefined') $('s-splim').textContent = d.spLim > 0 ? d.spLim + ' km/h' : '—';
                     $('s-mcp-raw').textContent = 'EFLG: 0x' + toHex(d.eflg, 2);
                     $('fps-fill').style.width = Math.min(d.fps / 20 * 100, 100) + '%';

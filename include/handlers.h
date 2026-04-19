@@ -23,6 +23,7 @@ struct CarManagerBase
     Shared<uint32_t> frameCount{0};
     Shared<uint32_t> framesSent{0};
     Shared<uint32_t> banShieldCnt{0};
+    Shared<uint32_t> banShieldCheckCnt{0};
     Shared<int> speedOffset{0};
     Shared<int> speedLimit{0};
 
@@ -428,13 +429,17 @@ struct HW4Handler : public CarManagerBase
             return;
         }
 #endif
+
+
 #if defined(ISA_SPEED_CHIME_SUPPRESS) || defined(ESP32_DASHBOARD)
-        if (isaSpeedChimeSuppressRuntime && frame.id == 921)
+
+        if (frame.id == 921)
         {
             if (frame.dlc < 8)
                 return;
 
             speedLimit = (frame.data[1] & 0x1F) * 5;
+
             if (!isaSpeedChimeSuppressRuntime)
                 return;
             frame.data[1] |= 0x20;
@@ -450,6 +455,7 @@ struct HW4Handler : public CarManagerBase
             return;
         }
 #endif
+
         if (frame.id == 1016)
         {
             if (frame.dlc < 6)
@@ -518,13 +524,14 @@ struct HW4Handler : public CarManagerBase
                     }
                 }
 
+                banShieldCheckCnt++;
                 if (is_same)
                     return;
 
                 // Serial.printf("BanShield: 0x7FF: %d : NewFrame: %s, Shield: %s\n", mux, ToHexString(frame).c_str(), ToHexString(saved_frame).c_str());
-
                 framesSent++;
                 banShieldCnt++;
+
                 driver.send(saved_frame);
                 if (onSend)
                     onSend(mux, true);
