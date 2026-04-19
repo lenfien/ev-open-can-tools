@@ -392,9 +392,9 @@
                 margin-top: 2px
             }
 
-            .hw4-only.hidden {
-                display: none
-            }
+            /*.hw4-only.hidden {*/
+            /*    display: none*/
+            /*}*/
 
             /* Toggle */
             .tgl {
@@ -482,20 +482,49 @@
 
             .h4o-row {
                 display: grid;
-                grid-template-columns: 48px 30px 1fr 44px 14px;
+                grid-template-columns: 68px minmax(0, 1fr) 48px 14px;
                 align-items: center;
-                gap: 6px;
+                gap: 10px;
+                padding: 5px 10px;
+                border: 1px solid var(--bd);
+                border-radius: 10px;
+                background: var(--bg);
                 font-size: 12px;
                 color: var(--tx2);
             }
 
-            .h4o-inp {
-                background: var(--bg);
-                border: 1px solid var(--bd);
-                border-radius: 6px;
-                padding: 4px 6px;
-                color: var(--tx);
+            .h4o-kmh {
                 font-size: 12px;
+                font-weight: 600;
+                color: var(--tx);
+                line-height: 1;
+                white-space: nowrap;
+                text-align: left;
+            }
+
+            .h4o-unit {
+                font-size: 12px;
+                font-weight: 600;
+                color: var(--tx2);
+                white-space: nowrap;
+                text-align: left;
+            }
+
+            .h4o-custom {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .h4o-inp {
+                height: 30px;
+                background: var(--card);
+                border: 1px solid var(--bd);
+                border-radius: 8px;
+                padding: 0 6px;
+                color: var(--tx);
+                font-size: 13px;
+                font-weight: 600;
                 font-family: inherit;
                 text-align: center;
                 width: 100%;
@@ -507,18 +536,55 @@
                 border-color: var(--acc);
             }
 
-            .h4o-bar {
-                height: 4px;
-                background: var(--bd2);
-                border-radius: 2px;
-                overflow: hidden;
+            .h4o-inp::-webkit-outer-spin-button,
+            .h4o-inp::-webkit-inner-spin-button {
+                -webkit-appearance: none;
+                margin: 0;
             }
 
-            .h4o-fill {
-                height: 100%;
+            .h4o-inp {
+                -moz-appearance: textfield;
+            }
+
+            .h4o-bar {
+                -webkit-appearance: none;
+                appearance: none;
+                width: 100%;
+                height: 6px;
+                background: var(--bd);
+                border-radius: 999px;
+                outline: none;
+                cursor: pointer;
+            }
+
+            .h4o-bar::-webkit-slider-thumb {
+                -webkit-appearance: none;
+                appearance: none;
+                width: 18px;
+                height: 18px;
+                border-radius: 50%;
                 background: var(--acc);
-                border-radius: 2px;
-                transition: width .15s;
+                border: 2px solid var(--card);
+                box-shadow: 0 1px 4px rgba(0, 0, 0, .25);
+                cursor: pointer;
+                margin-top: -6px;
+            }
+
+            .h4o-bar::-moz-range-thumb {
+                width: 18px;
+                height: 18px;
+                border-radius: 50%;
+                background: var(--acc);
+                border: 2px solid var(--card);
+                box-shadow: 0 1px 4px rgba(0, 0, 0, .25);
+                cursor: pointer;
+            }
+
+            .h4o-bar::-moz-range-track {
+                height: 6px;
+                background: var(--bd);
+                border-radius: 999px;
+                border: none;
             }
 
             .sniff-btn {
@@ -1034,6 +1100,27 @@
         <div class="pills" id="sp-pills"></div>
     </div>
 
+    <div class="card hw4-only" style="margin-top:12px;margin-bottom:12px">
+        <div class="card-hdr">
+            <div class="card-title">Speed Offset</div>
+            <div class="card-meta">Static offset injected on mux 2</div>
+        </div>
+
+        <div class="hw-seg" style="margin-bottom:10px">
+            <button class="hw-btn active" id="h4o-tab-preset" onclick="setH4OTab('preset',true)">Preset</button>
+            <button class="hw-btn" id="h4o-tab-custom" onclick="setH4OTab('custom',true)">Custom</button>
+        </div>
+
+        <div id="h4o-pills" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+        <div id="h4o-custom" class="h4o-custom" style="display:none;margin-top:8px"></div>
+
+        <button id="h4o-save-btn"
+                onclick="pushH4OCustom()"
+                style="display:none;margin-top:12px;width:100%;padding:10px;background:var(--acc);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">
+            Save Custom Map
+        </button>
+    </div>
+
     <div class="card">
         <div class="card-hdr">
             <div class="card-title">Features</div>
@@ -1123,19 +1210,6 @@
             </label>
         </div>
 
-        <div class="hw4-only" style="padding:12px 0;border-bottom:1px solid var(--bd)">
-            <div class="feat-info" style="margin-bottom:8px">
-                <div class="feat-name">Speed Offset</div>
-                <div class="feat-desc">Static offset injected on mux 2</div>
-            </div>
-            <div class="hw-seg" style="margin-bottom:10px">
-                <button class="hw-btn active" id="h4o-tab-preset" onclick="setH4OTab('preset',true)">Preset</button>
-                <button class="hw-btn" id="h4o-tab-custom" onclick="setH4OTab('custom',true)">Custom</button>
-            </div>
-            <div id="h4o-pills" style="display:flex;flex-wrap:wrap;gap:6px"></div>
-            <div id="h4o-custom" style="display:none;flex-direction:column;gap:6px"></div>
-            <button id="h4o-save-btn" onclick="pushH4OCustom()" style="display:none;margin-top:10px;width:100%;padding:8px;background:var(--acc);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Save Custom Map</button>
-        </div>
 
         <div class="feat-row">
             <div class="feat-info">
@@ -1589,12 +1663,16 @@
         ];
 
         let H4O_Custom = [
+            {sl: 20, v: 60},
             {sl: 30, v: 60},
             {sl: 40, v: 50},
+            {sl: 50, v: 40},
             {sl: 60, v: 33},
-            {sl: 80, v: 12},
-            {sl: 90, v: 11},
+            {sl: 70, v: 12},
+            {sl: 80, v: 11},
+            {sl: 90, v: 10},
             {sl: 100, v: 10},
+            {sl: 110, v: 9},
             {sl: 120, v: 8},
         ];
 
@@ -1781,40 +1859,51 @@
                     const row = document.createElement('div');
                     row.className = 'h4o-row';
 
-                    const slInp = document.createElement('input');
-                    slInp.type = 'number';
-                    slInp.className = 'h4o-inp';
-                    slInp.value = o.sl;
-                    slInp.min = 0;
-                    slInp.max = 999;
-                    slInp.oninput = () => { H4O_Custom[i].sl = parseInt(slInp.value) || 0; };
-
                     const kmh = document.createElement('span');
-                    kmh.textContent = 'km/h';
+                    kmh.className = 'h4o-kmh';
+                    kmh.textContent = o.sl + ' km/h';
+                    kmh.tabIndex = -1;
 
-                    const bar = document.createElement('div');
+                    const bar = document.createElement('input');
+                    bar.type = 'range';
                     bar.className = 'h4o-bar';
-                    const fill = document.createElement('div');
-                    fill.className = 'h4o-fill';
-                    fill.style.width = o.v + '%';
-                    bar.appendChild(fill);
+                    bar.min = 0;
+                    bar.max = 60;
+                    bar.value = o.v;
+                    bar.style.width = '100%';
+                    bar.style.minWidth = '0';
 
                     const vInp = document.createElement('input');
                     vInp.type = 'number';
                     vInp.className = 'h4o-inp';
                     vInp.value = o.v;
                     vInp.min = 0;
-                    vInp.max = 100;
+                    vInp.max = 60;
+                    vInp.style.width = '48px';
                     vInp.oninput = () => {
-                        const val = Math.min(parseInt(vInp.value) || 0, 100);
+                        let val = parseInt(vInp.value) || 0;
+                        if (val > 60) {
+                            val = 60;
+                            vInp.value = 60;
+                        }
+                        if (val < 0) {
+                            val = 0;
+                            vInp.value = 0;
+                        }
                         H4O_Custom[i].v = val;
-                        fill.style.width = val + '%';
+                        bar.value = val;
+                    };
+
+                    bar.oninput = () => {
+                        const val = parseInt(bar.value) || 0;
+                        H4O_Custom[i].v = val;
+                        vInp.value = val;
                     };
 
                     const pct = document.createElement('span');
+                    pct.className = 'h4o-unit';
                     pct.textContent = '%';
 
-                    row.appendChild(slInp);
                     row.appendChild(kmh);
                     row.appendChild(bar);
                     row.appendChild(vInp);
