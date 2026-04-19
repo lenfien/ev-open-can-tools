@@ -3040,7 +3040,7 @@
         }
 
         function peRuleLabel(r, i) {
-            return '规则 ' + (i + 1) + ' · CAN 0x' + toHex((r.id || 0) & 0x7FF, 3) + (r.mux >= 0 ? ' · mux ' + r.mux : '');
+            return 'Rule ' + (i + 1) + ' · CAN 0x' + toHex((r.id || 0) & 0x7FF, 3) + (r.mux >= 0 ? ' · mux ' + r.mux : '');
         }
 
         function peUpdateRuleOptions() {
@@ -3170,7 +3170,7 @@
             const ops = r.ops.length ? r.ops.map((op, j) => peOpRow(i, j, op)).join('') : '<div style="font-size:11px;color:var(--tx3);padding:4px 0">无操作 &mdash; 在下方添加</div>';
             const hex = r.id ? '0x' + r.id.toString(16).toUpperCase() : '?';
             return '<details open style="margin-bottom:10px;border:1px solid var(--bd);border-radius:6px;padding:8px;background:var(--bg2)">' +
-                '<summary style="cursor:pointer;font-size:12px;color:var(--tx);user-select:none">规则 ' + (i + 1) + ' &mdash; CAN ' + hex + (r.id ? ' (' + r.id + ')' : '') + (r.mux >= 0 ? ' mux=' + r.mux : '') + ' &middot; ' + r.ops.length + ' op' + (r.ops.length === 1 ? '' : 's') + '</summary>' +
+                '<summary style="cursor:pointer;font-size:12px;color:var(--tx);user-select:none">Rule ' + (i + 1) + ' &mdash; CAN ' + hex + (r.id ? ' (' + r.id + ')' : '') + (r.mux >= 0 ? ' mux=' + r.mux : '') + ' &middot; ' + r.ops.length + ' op' + (r.ops.length === 1 ? '' : 's') + '</summary>' +
                 '<div style="display:flex;gap:6px;margin:8px 0;flex-wrap:wrap">' +
                 '<input class="sniff-input" style="width:100px" type="number" min="0" max="2047" value="' + (r.id || '') + '" placeholder="CAN ID" onchange="peUpdateField(' + i + ',-1,\'id\',this.value)">' +
                 '<input class="sniff-input" style="width:100px" type="number" min="-1" max="7" value="' + r.mux + '" placeholder="mux (-1=全部)" onchange="peUpdateField(' + i + ',-1,\'mux\',this.value)">' +
@@ -3236,11 +3236,11 @@
         function peParseTestBytes() {
             const raw = ($('pe-test-data').value || '').trim();
             const parts = raw ? raw.split(/[\s,]+/).filter(Boolean) : [];
-            if (parts.length > 8) return {error: '基础数据最多支持 8 字节'};
+            if (parts.length > 8) return {error: 'Base data supports max 8 bytes'};
             const bytes = [];
             for (const part of parts) {
                 const value = peParseInt(part, NaN);
-                if (isNaN(value) || value < 0 || value > 255) return {error: '基础数据须为 0-255 的字节值'};
+                if (isNaN(value) || value < 0 || value > 255) return {error: 'Base data must contain bytes 0-255'};
                 bytes.push(value & 255);
             }
             while (bytes.length < 8) bytes.push(0);
@@ -3330,7 +3330,7 @@
                     $('pe-test-preview').textContent = 'Test CAN 0x' + toHex((d.id || 0) & 0x7FF, 3) + '\nFrame: ' + peFormatBytes(d.data || []) + (d.total ? '\nProgress: ' + d.sent + '/' + d.total : '');
                 }
                 if (d.active) {
-                    peSetTestStatus('运行中 ' + d.sent + '/' + d.total + ' · 间隔 ' + d.interval + ' ms', 'acc');
+                    peSetTestStatus('Running ' + d.sent + '/' + d.total + ' · every ' + d.interval + ' ms', 'acc');
                 } else {
                     peSetTestStatus(d.total ? (d.sent < d.total ? '已停止 ' + d.sent + '/' + d.total : '完成 ' + d.sent + '/' + d.total) : '空闲', d.total && d.sent >= d.total ? 'ok' : '');
                     peStopTestPoll();
@@ -3370,9 +3370,9 @@
             };
             peLoadedPluginName = p.name || '';
             peStopTestPoll();
-            peSetTestStatus('空闲', '');
+            peSetTestStatus('Idle', '');
             peRender();
-            peSetStatus('已加载 "' + p.name + '" 到编辑器', 'ok');
+            peSetStatus('Loaded "' + p.name + '" into editor', 'ok');
             $('pe-name').scrollIntoView({behavior: 'smooth', block: 'center'});
         }
 
@@ -3522,7 +3522,7 @@
         }
 
         async function peReset() {
-            if (peState.rules.length && !await dashConfirm('放弃当前编辑器内容？', '放弃更改', '放弃')) return;
+            if (peState.rules.length && !await dashConfirm('Discard current editor contents?', 'Discard changes', 'Discard')) return;
             peState = {rules: []};
             peLoadedPluginName = '';
             peStopTestPoll();
@@ -3531,7 +3531,7 @@
             $('pe-version').value = '1.0';
             peRender();
             peSetStatus('', '');
-            peSetTestStatus('空闲', '');
+            peSetTestStatus('Idle', '');
         }
 
         dashboardPollTimers.push(setInterval(poll, 2000));
