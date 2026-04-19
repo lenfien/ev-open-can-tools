@@ -22,9 +22,9 @@ struct CarManagerBase
     Shared<bool> enablePrint{true};
     Shared<uint32_t> frameCount{0};
     Shared<uint32_t> framesSent{0};
-    Shared<int> speedOffset{0};
     Shared<uint32_t> banShieldCnt{0};
     Shared<uint32_t> banShieldCheckCnt{0};
+    Shared<int> speedOffset{0};
     Shared<int> speedLimit{0};
 
     void (*onFrame)(const CanFrame &) = nullptr;
@@ -455,6 +455,7 @@ struct HW4Handler : public CarManagerBase
             return;
         }
 #endif
+
         if (frame.id == 1016)
         {
             if (frame.dlc < 6)
@@ -599,6 +600,7 @@ struct HW4Handler : public CarManagerBase
 
                 if (off > 0)
                     frame.data[1] = (frame.data[1] & 0xC0) | (off & 0x3F);
+
                 framesSent++;
                 driver.send(frame);
                 if (onSend)
@@ -624,6 +626,7 @@ struct HW4Handler : public CarManagerBase
     }
 
 private:
+
     uint8_t
     GetSpeedOffset() const
     {
@@ -639,6 +642,43 @@ private:
         return result;
     }
 
+    // std::string
+    // ToHexString(const CanFrame &frame) {
+    //     std::ostringstream result;
+    //     for (size_t i = 0; i < sizeof(frame.data); ++i) {
+    //         result << "0x"
+    //                 << std::hex
+    //                 << std::uppercase // 可选：大写 A-F
+    //                 << std::hex
+    //                 << std::setw(2) // 宽度 2
+    //                 << std::setfill('0')
+    //                 << (int) frame.data[i];
+    //
+    //         if (i < sizeof(frame.data) - 1)
+    //             result << ",";
+    //     }
+    //     return result.str();
+    // }
+    //
+    // __attribute__((optimize("O3"))) std::string
+    // ToBinaryString(uint8_t i) {
+    //     std::string b;
+    //     b.reserve(8);
+    //     for (int index = 0; index < sizeof(i) * 8; index += 1)
+    //         b += ((i << index) & 0b10000000) ? "1" : "0";
+    //
+    //     return b;
+    // }
+    //
+    // __attribute__((optimize("O3"))) std::string
+    // ToBinaryString(const CanFrame &frame) {
+    //     std::ostringstream result;
+    //     for (size_t i = 0; i < sizeof(frame.data); ++i)
+    //         result << i * 8 << ":" << ToBinaryString(frame.data[i]) << ";";
+    //
+    //     return result.str();
+    // }
+
 private:
     CanFrame m_gtw_protector[10] = {             //0          8          16         24         32         40         48         56
         {.id = 0x7FF, .dlc = 8, {0b00000000,0b00000000,0b00000000,0b00000000,0b00000000,0b00000000,0b00000000,0b00000000}}, // 0
@@ -650,7 +690,7 @@ private:
         {.id = 0x7FF, .dlc = 8, {0b00000110,0b01011000,0b10110101,0b01011011,0b00000111,0b10110000,0b11001100,0b11001000}}, // 6
         {.id = 0x7FF, .dlc = 8, {0b00000111,0b00100110,0b00000000,0b10000101,0b00100000,0b00000100,0b00100011,0b01110000}}, // 7
         {.id = 0x7FF, .dlc = 8, {0b00001000,0b00000000,0b01000010,0b00000010,0b10010000,0b01000010,0b00010100,0b00000000}}, // 8
-        {.id = 0x7FF, .dlc = 8, {0b00001001,0b11101111,0b00000000,0b00100000,0b00000000,0b10000000,0b00000000,0b00000000}}  // 9
+        {.id = 0x7FF, .dlc = 8,         {0b00001001,0b11101111,0b00000000,0b00100000,0b00000000,0b10000000,0b00000000,0b00000000}}  // 9
     };
 
     // can_frame m_gtw_protector[10] = {

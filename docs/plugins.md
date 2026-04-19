@@ -1,7 +1,5 @@
 # Plugin System
 
-[Project Home](../) | [Documentation](index.md) | [Dashboard Guide](dashboard.md) | [Build & Flash](building.md) | [Release Notes](../CHANGELOG.md)
-
 The plugin system allows you to create and share CAN frame modification rules as JSON files. Plugins are loaded at runtime on the ESP32 — no recompilation needed, and nothing has to be stored in this repository.
 
 ## How it works
@@ -10,13 +8,6 @@ The plugin system allows you to create and share CAN frame modification rules as
 2. You host it anywhere (GitHub, your own server, etc.)
 3. Users install it via the dashboard — either by entering the URL or uploading the file
 4. The ESP32 stores the plugin on SPIFFS and applies the rules to incoming CAN frames
-
-## Dashboard workflow
-
-- Use the **Plugins** card to install a plugin from URL, upload a `.json`, or paste JSON directly
-- Use the **Plugin Editor** to build a plugin from form fields instead of editing raw JSON by hand
-- Load an installed plugin back into the editor when you want to adjust an existing rule set and reinstall it
-- Use **Rule Test** to generate the resulting frame for one editor rule and send it a chosen number of times before installing the plugin
 
 ## Plugin JSON format
 
@@ -126,27 +117,6 @@ Always place this as the **last** operation if the frame uses checksums.
 ## Examples
 
 > **Note:** The following examples are for illustration purposes only and do not represent real, tested functionality. They demonstrate the plugin JSON syntax and available operations.
-
-### Dashboard feature replacement examples
-
-Example JSON files that match the dashboard features removed from the main Features card are stored in [`docs/examples/`](examples/).
-
-- `ad-activation-hw3.json`
-- `ad-activation-hw4.json`
-- `bypass-tlssc-hw3.json`
-- `bypass-tlssc-hw4.json`
-- `emergency-vehicle-detection-hw4.json`
-- `hw4-speed-offset-plus-5.json`
-- `hw4-speed-offset-plus-7.json`
-- `hw4-speed-offset-plus-10.json`
-- `hw4-speed-offset-plus-15.json`
-- `isa-chime-suppress-hw4.json`
-- `nag-suppression-hw3.json`
-- `nag-suppression-hw4.json`
-- `summon-eu-unlock-hw3.json`
-- `summon-eu-unlock-hw4.json`
-
-Use only the files that match your hardware and intended behavior. The firmware supports at most 8 installed plugins at a time.
 
 ### Example 1: ISA speed chime suppression
 

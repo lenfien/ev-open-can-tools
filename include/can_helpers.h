@@ -52,9 +52,22 @@ inline Shared<bool> enhancedAutopilotRuntime{kEnhancedAutopilotDefaultEnabled};
 inline Shared<bool> nagKillerRuntime{kNagKillerDefaultEnabled};
 inline Shared<bool> speedProfileLocked{false};
 inline Shared<uint8_t> hw4OffsetRuntime{0};
-
 inline Shared<bool> enableCamera{true};
 inline Shared<bool> enableBanShield{true};
+
+/**
+* {sl: 20, v: 60},
+            {sl: 30, v: 60},
+            {sl: 40, v: 50},
+            {sl: 50, v: 40},
+            {sl: 60, v: 33},
+            {sl: 70, v: 12},
+            {sl: 80, v: 11},
+            {sl: 90, v: 10},
+            {sl: 100, v: 10},
+            {sl: 110, v: 9},
+            {sl: 120, v: 8},
+ */
 #define H4O_CUSTOM_COUNT 11
 static uint8_t h4oTab = 0; // 0=preset, 1=custom
 static uint8_t h4oCustomSl[H4O_CUSTOM_COUNT] = {20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120};
