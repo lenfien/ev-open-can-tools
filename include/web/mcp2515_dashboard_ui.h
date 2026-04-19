@@ -2,7 +2,7 @@
 #include <Arduino.h>
 
     static const char DASH_HTML[] PROGMEM = R"HTML(<!DOCTYPE html>
-    <html lang="zh-CN" data-theme="dark">
+    <html lang="en" data-theme="dark">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
@@ -1010,11 +1010,11 @@
                 <div class="hdr-title">ev-open-can-tools</div>
                 <span class="hw-badge" id="hw-badge">HW3</span>
             </div>
-            <button class="theme-btn" onclick="toggleTheme()" id="theme-btn">&#9788; 浅色</button>
+            <button class="theme-btn" onclick="toggleTheme()" id="theme-btn">&#9788; Light</button>
         </div>
         <div class="hdr-status">
             <span class="sdot dot-off" id="dot"></span>
-            <span id="hdr-desc">等待 CAN 帧...</span>
+            <span id="hdr-desc">Waiting for CAN frames</span>
         </div>
     </div>
 
@@ -1024,19 +1024,19 @@
 
     <div class="stat-grid">
         <div class="stat">
-            <div class="stat-lbl">CAN 总线</div>
-            <div class="stat-val" id="s-can">离线</div>
+            <div class="stat-lbl">CAN Bus</div>
+            <div class="stat-val" id="s-can">Offline</div>
         </div>
         <div class="stat">
-            <div class="stat-lbl">注入</div>
+            <div class="stat-lbl">Injection</div>
             <div class="stat-val v-dim" id="s-inj">—</div>
         </div>
         <div class="stat">
             <div class="stat-lbl">AD</div>
-            <div class="stat-val" id="s-AD">未激活</div>
+            <div class="stat-val" id="s-AD">Inactive</div>
         </div>
         <div class="stat">
-            <div class="stat-lbl">帧率</div>
+            <div class="stat-lbl">Frame rate</div>
             <div class="stat-val v-dim" id="s-fps">0.0 Hz</div>
         </div>
         <div class="stat">
@@ -1048,31 +1048,31 @@
             <div class="stat-val v-acc" id="s-tx">0</div>
         </div>
         <div class="stat">
-            <div class="stat-lbl">TX 错误</div>
+            <div class="stat-lbl">TX Errors</div>
             <div class="stat-val v-dim" id="s-txerr">0</div>
         </div>
         <div class="stat">
-            <div class="stat-lbl">跟车距离</div>
+            <div class="stat-lbl">Follow dist</div>
             <div class="stat-val v-dim" id="s-fd">—</div>
         </div>
         <div class="stat">
-            <div class="stat-lbl">速度档位</div>
+            <div class="stat-lbl">Profile</div>
             <div class="stat-val v-dim" id="s-prof">—</div>
         </div>
         <div class="stat">
-            <div class="stat-lbl">速度偏移</div>
+            <div class="stat-lbl">Speed Offset</div>
             <div class="stat-val v-dim" id="s-soff">0</div>
         </div>
         <div class="stat">
-            <div class="stat-lbl">运行时间</div>
+            <div class="stat-lbl">Uptime</div>
             <div class="stat-val v-dim" id="s-up">0s</div>
         </div>
         <div class="stat">
-            <div class="stat-lbl">防封盾</div>
+            <div class="stat-lbl">BanShield</div>
             <div class="stat-val v-dim" id="s-bscnt">0</div>
         </div>
         <div class="stat">
-            <div class="stat-lbl">限速</div>
+            <div class="stat-lbl">Speed Limit</div>
             <div class="stat-val v-dim" id="s-splim">—</div>
         </div>
     </div>
@@ -1082,8 +1082,8 @@
     <div class="card" style="display:none">
 <!--    <div class="card" >-->
         <div class="card-hdr">
-            <div class="card-title">硬件</div>
-            <div class="card-meta">自动驾驶代</div>
+            <div class="card-title">Hardware</div>
+            <div class="card-meta">Autopilot generation</div>
         </div>
         <div class="hw-seg" id="hw-seg">
             <button class="hw-btn" data-v="0" onclick="setHW(0)">Legacy</button>
@@ -1094,37 +1094,42 @@
 
     <div class="card">
         <div class="card-hdr">
-            <div class="card-title">速度档位</div>
-            <div class="card-meta">AD 激进程度 &bull; 自动跟随拨杆</div>
+            <div class="card-title">Speed Profile</div>
+            <div class="card-meta">AD aggressiveness &bull; Auto follows stalk</div>
         </div>
         <div class="pills" id="sp-pills"></div>
     </div>
 
     <div class="card hw4-only" style="margin-top:12px;margin-bottom:12px">
         <div class="card-hdr">
-            <div class="card-title">速度偏移</div>
-            <div class="card-meta">在 mux 2 注入的静态偏移量</div>
+            <div class="card-title">Speed Offset</div>
+            <div class="card-meta">Static offset injected on mux 2</div>
         </div>
 
         <div class="hw-seg" style="margin-bottom:10px">
-            <button class="hw-btn active" id="h4o-tab-preset" onclick="setH4OTab('preset',true)">预设</button>
-            <button class="hw-btn" id="h4o-tab-custom" onclick="setH4OTab('custom',true)">自定义</button>
+            <button class="hw-btn active" id="h4o-tab-preset" onclick="setH4OTab('preset',true)">Preset</button>
+            <button class="hw-btn" id="h4o-tab-custom" onclick="setH4OTab('custom',true)">Custom</button>
         </div>
 
         <div id="h4o-pills" style="display:flex;flex-wrap:wrap;gap:8px"></div>
         <div id="h4o-custom" class="h4o-custom" style="display:none;margin-top:8px"></div>
 
+        <button id="h4o-save-btn"
+                onclick="pushH4OCustom()"
+                style="display:none;margin-top:12px;width:100%;padding:10px;background:var(--acc);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">
+            Save Custom Map
+        </button>
     </div>
 
     <div class="card">
         <div class="card-hdr">
-            <div class="card-title">功能</div>
+            <div class="card-title">Features</div>
         </div>
 
         <div class="feat-row">
             <div class="feat-info">
-                <div class="feat-name">AD 激活</div>
-                <div class="feat-desc">需要有效的 AD 订阅</div>
+                <div class="feat-name">AD Activation</div>
+                <div class="feat-desc">Requires active AD subscription</div>
             </div>
             <label class="tgl"><input type="checkbox" id="tgl-AD" checked onchange="pushFeat()">
                 <div class="tgl-track">
@@ -1135,8 +1140,8 @@
 
         <div class="feat-row">
             <div class="feat-info">
-                <div class="feat-name">驾驶员提醒抑制</div>
-                <div class="feat-desc">关闭方向盘手部警告（ECE R79）</div>
+                <div class="feat-name">Nag Suppression</div>
+                <div class="feat-desc">Remove hands-on-wheel warning (ECE R79)</div>
             </div>
             <label class="tgl"><input type="checkbox" id="tgl-nag" checked onchange="pushFeat()">
                 <div class="tgl-track">
@@ -1147,8 +1152,8 @@
 
         <div class="feat-row">
             <div class="feat-info">
-                <div class="feat-name">召唤欧区解锁</div>
-                <div class="feat-desc">移除智能召唤距离限制</div>
+                <div class="feat-name">Summon EU Unlock</div>
+                <div class="feat-desc">Remove Smart Summon distance restriction</div>
             </div>
             <label class="tgl"><input type="checkbox" id="tgl-summon" checked onchange="pushFeat()">
                 <div class="tgl-track">
@@ -1159,8 +1164,8 @@
 
         <div class="feat-row hw4-only" id="row-isa">
             <div class="feat-info">
-                <div class="feat-name">ISA 提示音抑制</div>
-                <div class="feat-desc">禁用限速警告提示音</div>
+                <div class="feat-name">ISA Chime Suppress</div>
+                <div class="feat-desc">Disable speed limit warning chime</div>
             </div>
             <label class="tgl"><input type="checkbox" id="tgl-isa" onchange="pushFeat()">
                 <div class="tgl-track">
@@ -1171,8 +1176,8 @@
 
         <div class="feat-row" id="row-camera">
             <div class="feat-info">
-                <div class="feat-name">车内摄像头</div>
-                <div class="feat-desc">启用/禁用车内摄像头</div>
+                <div class="feat-name">Cabin Camera</div>
+                <div class="feat-desc">Cabin Camera Enable/Disable</div>
             </div>
             <label class="tgl"><input type="checkbox" id="tgl-camera" checked="true" onchange="pushFeat()">
                 <div class="tgl-track">
@@ -1183,8 +1188,8 @@
 
         <div class="feat-row" id="row-banShield">
             <div class="feat-info">
-                <div class="feat-name">防封盾</div>
-                <div class="feat-desc">启用/禁用防封盾</div>
+                <div class="feat-name">Ban Shield</div>
+                <div class="feat-desc">Ban Shield Enable/Disable</div>
             </div>
             <label class="tgl"><input type="checkbox" id="tgl-banShield" checked="true" onchange="pushFeat()">
                 <div class="tgl-track">
@@ -1195,8 +1200,8 @@
 
         <div class="feat-row hw4-only" id="row-evd">
             <div class="feat-info">
-                <div class="feat-name">紧急车辆检测</div>
-                <div class="feat-desc">启用来车检测功能</div>
+                <div class="feat-name">Emergency Vehicle Detection</div>
+                <div class="feat-desc">Enable approaching EV detection</div>
             </div>
             <label class="tgl"><input type="checkbox" id="tgl-evd" onchange="pushFeat()">
                 <div class="tgl-track">
@@ -1208,8 +1213,9 @@
 
         <div class="feat-row">
             <div class="feat-info">
-                <div class="feat-name">绕过 TLSSC</div>
-                <div class="feat-desc">绕过 TLSSC 要求——无需方向盘检测即可启用 AD（重启后保留）
+                <div class="feat-name">Bypass TLSSC</div>
+                <div class="feat-desc">Bypass TLSSC requirement — enables AD without steering wheel check (persists
+                    reboot)
                 </div>
             </div>
             <label class="tgl"><input type="checkbox" id="tgl-fAD" onchange="pushFeat()">
@@ -1221,8 +1227,8 @@
 
         <div class="feat-row">
             <div class="feat-info">
-                <div class="feat-name">启用日志</div>
-                <div class="feat-desc">切换串口和仪表板日志输出</div>
+                <div class="feat-name">Enable Logging</div>
+                <div class="feat-desc">Toggle serial and dashboard log output</div>
             </div>
             <label class="tgl"><input type="checkbox" id="tgl-eprn" checked onchange="pushFeat()">
                 <div class="tgl-track">
@@ -1232,68 +1238,69 @@
         </div>
 
         <div class="btn-row">
-            <button class="btn btn-stop" id="btn-stop" style="display:none" onclick="emergencyStop()">停止注入
+            <button class="btn btn-stop" id="btn-stop" style="display:none" onclick="emergencyStop()">Stop Injecting
             </button>
             <button class="btn" id="btn-resume"
                     style="display:none;background:var(--accBg);color:var(--acc);border:1px solid var(--accBd)"
-                    onclick="resumeInj()">恢复注入
+                    onclick="resumeInj()">Resume Injection
             </button>
-            <button class="btn btn-reboot" onclick="reboot()">重启</button>
+            <button class="btn btn-reboot" onclick="reboot()">Reboot</button>
         </div>
     </div>
 
     <div class="card collapsible" id="card-sniffer">
         <div class="card-hdr" onclick="toggleCard('card-sniffer')">
-            <div class="card-title">CAN 嗅探器</div>
-            <div class="card-meta" id="sniff-count">0 帧</div>
+            <div class="card-title">CAN Sniffer</div>
+            <div class="card-meta" id="sniff-count">0 frames</div>
         </div>
         <div class="sniff-ctrl">
-            <input class="sniff-input" id="sniff-filter" placeholder="按 ID 或名称过滤" oninput="renderSniffer()">
-            <button class="sniff-btn" id="sniff-id-btn" onclick="toggleSniffIdMode()">原始 ID</button>
-            <button class="sniff-btn" id="sniff-pause-btn" onclick="togglePause()">暂停</button>
+            <input class="sniff-input" id="sniff-filter" placeholder="Filter by ID or name" oninput="renderSniffer()">
+            <button class="sniff-btn" id="sniff-id-btn" onclick="toggleSniffIdMode()">Wire IDs</button>
+            <button class="sniff-btn" id="sniff-pause-btn" onclick="togglePause()">Pause</button>
         </div>
         <div class="sniff-box" id="sniffer">
-            <div style="padding:20px;color:var(--tx3);text-align:center;font-size:12px">等待 CAN 帧...</div>
+            <div style="padding:20px;color:var(--tx3);text-align:center;font-size:12px">Waiting for CAN frames</div>
         </div>
     </div>
 
     <div class="card collapsible" id="card-recorder">
         <div class="card-hdr" onclick="toggleCard('card-recorder')">
-            <div class="card-title">CAN 录制器</div>
-            <div class="card-meta" id="rec-meta">空闲</div>
+            <div class="card-title">CAN Recorder</div>
+            <div class="card-meta" id="rec-meta">Idle</div>
         </div>
         <div class="rec-bar">
             <div class="rec-fill" id="rec-fill"></div>
         </div>
         <div class="rec-info">
-            <span id="rec-count">0 / 2000 帧</span>
-            <span id="rec-status">就绪</span>
+            <span id="rec-count">0 / 2000 frames</span>
+            <span id="rec-status">Ready</span>
         </div>
         <div class="btn-row">
-            <button class="btn" id="rec-btn" onclick="toggleRec()">开始录制</button>
+            <button class="btn" id="rec-btn" onclick="toggleRec()">Start Recording</button>
             <a class="btn" id="rec-dl" href="/rec_download" download="can_recording.csv"
-               style="display:none;text-align:center;text-decoration:none;padding:10px;border:1px solid var(--bd2);color:var(--tx2)">下载 CSV</a>
+               style="display:none;text-align:center;text-decoration:none;padding:10px;border:1px solid var(--bd2);color:var(--tx2)">Download
+                CSV</a>
         </div>
     </div>
 
     <div class="card collapsible" id="card-controller">
         <div class="card-hdr" onclick="toggleCard('card-controller')">
-            <div class="card-title">CAN 控制器</div>
+            <div class="card-title">CAN Controller</div>
             <div style="display:flex;align-items:center;gap:8px">
                 <div class="card-meta" id="s-mcp-raw">MCP2515</div>
                 <button onclick="resetStats()"
                         style="font-size:10px;padding:2px 8px;border:1px solid var(--bd2);border-radius:5px;background:transparent;color:var(--tx3);cursor:pointer;font-family:inherit">
-                    重置
+                    Reset
                 </button>
             </div>
         </div>
         <div class="eflg-row" id="eflg-row"><span class="eflg-pill eflg-ok">OK</span></div>
         <table class="mux-tbl">
             <tr>
-                <th>通道</th>
+                <th>Mux</th>
                 <th>RX</th>
                 <th>TX</th>
-                <th>错误</th>
+                <th>Errors</th>
             </tr>
             <tr>
                 <td>0</td>
@@ -1318,25 +1325,26 @@
 
     <div class="card collapsible" id="card-hotspot">
         <div class="card-hdr" onclick="toggleCard('card-hotspot')">
-            <div class="card-title">WiFi 热点 <span onclick="event.stopPropagation();toggleInfo('ap-info')"
+            <div class="card-title">WiFi Hotspot <span onclick="event.stopPropagation();toggleInfo('ap-info')"
                                                        style="color:var(--tx3);cursor:pointer;font-size:12px;margin-left:4px"
-                                                       title="关于 WiFi 存储">&#9432;</span></div>
+                                                       title="About WiFi storage">&#9432;</span></div>
             <div class="card-meta"><span id="ap-stored" style="margin-right:8px"></span><span
-                    id="ap-clients">0 个客户端</span></div>
+                    id="ap-clients">0 clients</span></div>
         </div>
         <div id="ap-info"
              style="display:none;margin-bottom:10px;padding:10px;background:var(--bg2);border:1px solid var(--bd);border-radius:6px;font-size:12px;color:var(--tx3);line-height:1.5">
-            存储于 NVS（非易失性存储）。SSID 和密码在固件更新及重启后均保留，仅通过 USB 完整擦除才会清除。
+            Stored in NVS (non-volatile storage). The SSID and password survive firmware updates and reboots. Only a full
+            factory erase via USB clears them.
         </div>
-        <div class="feat-desc" style="margin-bottom:8px">修改 WiFi 热点名称和密码</div>
+        <div class="feat-desc" style="margin-bottom:8px">Change the WiFi hotspot name and password</div>
         <div style="display:flex;gap:6px;margin-bottom:6px">
-            <input class="sniff-input" id="ap-ssid" placeholder="热点名称" style="flex:1">
-            <input class="sniff-input" id="ap-pass" placeholder="新密码（最少8位）" type="password" style="flex:1">
+            <input class="sniff-input" id="ap-ssid" placeholder="Hotspot Name" style="flex:1">
+            <input class="sniff-input" id="ap-pass" placeholder="New Password (min 8)" type="password" style="flex:1">
         </div>
         <div class="feat-row" style="padding:8px 0">
             <div class="feat-info">
-                <div class="feat-name">隐藏 SSID</div>
-                <div class="feat-desc">不广播热点名称，客户端需手动输入</div>
+                <div class="feat-name">Hide SSID</div>
+                <div class="feat-desc">Don't broadcast the hotspot name &mdash; clients must enter it manually</div>
             </div>
             <label class="tgl"><input type="checkbox" id="ap-hidden">
                 <div class="tgl-track">
@@ -1345,44 +1353,46 @@
             </label>
         </div>
         <div style="display:flex;gap:6px;align-items:center">
-            <button class="sniff-btn" onclick="saveAP()">保存</button>
+            <button class="sniff-btn" onclick="saveAP()">Save</button>
             <span style="font-size:11px;color:var(--tx3)" id="ap-status"></span>
         </div>
-        <div style="font-size:10px;color:var(--tx3);margin-top:6px">重启后生效。留空密码则保持当前密码不变。
+        <div style="font-size:10px;color:var(--tx3);margin-top:6px">Changes take effect after reboot. Leave password empty
+            to keep current.
         </div>
     </div>
 
     <div class="card collapsible" id="card-wifi">
         <div class="card-hdr" onclick="toggleCard('card-wifi')">
-            <div class="card-title">WiFi 联网 <span id="wifi-stored"
+            <div class="card-title">WiFi Internet <span id="wifi-stored"
                                                         style="font-size:11px;font-weight:normal;color:var(--tx3)"></span>
             </div>
-            <div class="card-meta" id="wifi-status">未配置</div>
+            <div class="card-meta" id="wifi-status">Not configured</div>
         </div>
-        <div class="feat-desc" style="margin-bottom:8px">连接家庭 WiFi。固件更新和插件下载需要此功能。存储于 NVS，固件更新后仍保留。
+        <div class="feat-desc" style="margin-bottom:8px">Connect to your home WiFi. Required for firmware updates and plugin
+            downloads. Stored in NVS &mdash; survives firmware updates.
         </div>
         <div style="display:flex;gap:6px;margin-bottom:6px">
             <input class="sniff-input" id="wifi-ssid" placeholder="WiFi SSID" style="flex:1">
-            <button class="sniff-btn" onclick="scanWifi()" id="scan-btn">扫描</button>
+            <button class="sniff-btn" onclick="scanWifi()" id="scan-btn">Scan</button>
         </div>
         <div id="wifi-nets"
              style="display:none;margin-bottom:6px;max-height:140px;overflow-y:auto;border:1px solid var(--bd);border-radius:6px;background:var(--bg2)"></div>
         <div style="display:flex;gap:6px;margin-bottom:6px">
-            <input class="sniff-input" id="wifi-pass" placeholder="密码" type="password" style="flex:1">
-            <button class="sniff-btn" onclick="saveWifi()">连接</button>
+            <input class="sniff-input" id="wifi-pass" placeholder="Password" type="password" style="flex:1">
+            <button class="sniff-btn" onclick="saveWifi()">Connect</button>
         </div>
         <details style="margin-top:4px">
-            <summary style="font-size:11px;color:var(--acc);cursor:pointer;user-select:none">静态 IP（可选）</summary>
+            <summary style="font-size:11px;color:var(--acc);cursor:pointer;user-select:none">Static IP (optional)</summary>
             <div style="margin-top:6px">
                 <label style="font-size:11px;color:var(--tx3);display:flex;align-items:center;gap:6px;margin-bottom:6px">
-                    <input type="checkbox" id="wifi-static" onchange="toggleStaticIP()"> 使用静态 IP
+                    <input type="checkbox" id="wifi-static" onchange="toggleStaticIP()"> Use static IP
                 </label>
                 <div id="static-fields" style="display:none">
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
-                        <input class="sniff-input" id="wifi-ip" placeholder="IP（如 192.168.1.100）">
-                        <input class="sniff-input" id="wifi-gw" placeholder="网关（如 192.168.1.1）">
-                        <input class="sniff-input" id="wifi-mask" placeholder="子网掩码（255.255.255.0）" value="255.255.255.0">
-                        <input class="sniff-input" id="wifi-dns" placeholder="DNS（如 8.8.8.8）">
+                        <input class="sniff-input" id="wifi-ip" placeholder="IP (e.g. 192.168.1.100)">
+                        <input class="sniff-input" id="wifi-gw" placeholder="Gateway (e.g. 192.168.1.1)">
+                        <input class="sniff-input" id="wifi-mask" placeholder="Mask (255.255.255.0)" value="255.255.255.0">
+                        <input class="sniff-input" id="wifi-dns" placeholder="DNS (e.g. 8.8.8.8)">
                     </div>
                 </div>
             </div>
@@ -1391,71 +1401,74 @@
 
     <div class="card collapsible" id="card-plugins">
         <div class="card-hdr" onclick="toggleCard('card-plugins')">
-            <div class="card-title">插件 <span onclick="event.stopPropagation();toggleInfo('plg-info')"
+            <div class="card-title">Plugins <span onclick="event.stopPropagation();toggleInfo('plg-info')"
                                                   style="color:var(--tx3);cursor:pointer;font-size:12px;margin-left:4px"
-                                                  title="什么是插件？">&#9432;</span></div>
-            <div class="card-meta" id="plg-count">已安装 0 个</div>
+                                                  title="What are plugins?">&#9432;</span></div>
+            <div class="card-meta" id="plg-count">0 installed</div>
         </div>
 
         <div id="plg-info"
              style="display:none;margin-bottom:12px;padding:10px;background:var(--bg2);border:1px solid var(--bd);border-radius:6px;font-size:12px;color:var(--tx3);line-height:1.5">
-            插件是实时修改 CAN 消息的 JSON 规则，可通过 URL、文件上传或粘贴方式安装。&#9888; 标记表示与基础固件处理器冲突——插件规则将在原始处理器<b>之后</b>执行。
+            Plugins are JSON rules that modify CAN messages in real time. Install via URL, file upload or paste. A &#9888;
+            marks conflicts with base firmware handlers &mdash; plugin rules then run <b>after</b> the original handler.
             <div style="margin-top:6px"><a
                     href="https://github.com/ev-open-can-tools/ev-open-can-tools/blob/main/docs/plugins.md" target="_blank"
-                    rel="noopener" style="color:var(--acc);text-decoration:none">文档 &amp; 示例 &rarr;</a>
+                    rel="noopener" style="color:var(--acc);text-decoration:none">Documentation &amp; examples &rarr;</a>
             </div>
         </div>
 
         <div style="margin-bottom:14px">
-            <div class="feat-name" style="margin-bottom:8px">安装插件</div>
-            <div style="font-size:11px;color:var(--tx3);margin-bottom:8px" id="plg-limit">最大插件数量：--</div>
+            <div class="feat-name" style="margin-bottom:8px">Install Plugin</div>
+            <div style="font-size:11px;color:var(--tx3);margin-bottom:8px" id="plg-limit">Maximum plugins: --</div>
             <div style="display:flex;gap:6px;margin-bottom:8px">
-                <input class="sniff-input" id="plg-url" placeholder="插件 JSON 链接（https://...）" style="flex:1">
-                <button class="sniff-btn" onclick="installPlugin()">安装</button>
+                <input class="sniff-input" id="plg-url" placeholder="Plugin JSON URL (https://...)" style="flex:1">
+                <button class="sniff-btn" onclick="installPlugin()">Install</button>
             </div>
             <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
                 <input type="file" id="plg-file" accept=".json" onchange="uploadPlugin(this.files[0])" style="display:none">
-                <button class="sniff-btn" onclick="$('plg-file').click()">上传 .json</button>
+                <button class="sniff-btn" onclick="$('plg-file').click()">Upload .json</button>
                 <span style="font-size:11px;color:var(--tx3)" id="plg-status"></span>
             </div>
-            <div class="feat-name" style="margin-bottom:6px">粘贴 JSON（离线）</div>
+            <div class="feat-name" style="margin-bottom:6px">Paste JSON (offline)</div>
             <textarea id="plg-paste" placeholder='{"name":"...","version":"1.0","rules":[...]}'
                       style="width:100%;height:80px;resize:vertical;background:var(--bg2);color:var(--tx);border:1px solid var(--bd);border-radius:6px;padding:8px;font-family:monospace;font-size:11px;box-sizing:border-box;margin-bottom:6px"></textarea>
-            <button class="sniff-btn" onclick="pastePlugin()">从 JSON 安装</button>
+            <button class="sniff-btn" onclick="pastePlugin()">Install from JSON</button>
         </div>
 
         <div style="padding-top:12px;border-top:1px solid var(--bd)" id="plg-list">
-            <div style="font-size:12px;color:var(--tx3);text-align:center;padding:12px">未安装插件</div>
+            <div style="font-size:12px;color:var(--tx3);text-align:center;padding:12px">No plugins installed</div>
         </div>
     </div>
 
     <div class="card collapsible" id="card-pe">
         <div class="card-hdr" onclick="toggleCard('card-pe')">
-            <div class="card-title">插件编辑器 <span onclick="event.stopPropagation();toggleInfo('pe-info')"
+            <div class="card-title">Plugin Editor <span onclick="event.stopPropagation();toggleInfo('pe-info')"
                                                         style="color:var(--tx3);cursor:pointer;font-size:12px;margin-left:4px"
-                                                        title="关于编辑器">&#9432;</span></div>
-            <div class="card-meta" id="pe-count">0 条规则</div>
+                                                        title="About the editor">&#9432;</span></div>
+            <div class="card-meta" id="pe-count">0 rules</div>
         </div>
         <div id="pe-info"
              style="display:none;margin-bottom:10px;padding:10px;background:var(--bg2);border:1px solid var(--bd);border-radius:6px;font-size:12px;color:var(--tx3);line-height:1.5">
-            通过表单构建或编辑插件——无需手写 JSON。将已安装的插件加载到编辑器，修改规则后重新安装。也可在安装前针对单条规则发送临时测试帧。
+            Build or edit a plugin via form &mdash; no JSON writing needed. Load an installed plugin into the editor, change
+            rules, then reinstall it. You can also send a temporary test frame for one rule before installing.
         </div>
         <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 90px;gap:6px;margin-bottom:10px">
-            <input class="sniff-input" id="pe-name" placeholder="插件名称" maxlength="31" oninput="peRenderPreview()">
-            <input class="sniff-input" id="pe-author" placeholder="作者（可选）" oninput="peRenderPreview()">
-            <input class="sniff-input" id="pe-version" placeholder="版本" value="1.0" oninput="peRenderPreview()">
+            <input class="sniff-input" id="pe-name" placeholder="Plugin name" maxlength="31" oninput="peRenderPreview()">
+            <input class="sniff-input" id="pe-author" placeholder="Author (optional)" oninput="peRenderPreview()">
+            <input class="sniff-input" id="pe-version" placeholder="Version" value="1.0" oninput="peRenderPreview()">
         </div>
         <div id="pe-rules"></div>
-        <button class="sniff-btn" onclick="peAddRule()" style="margin-top:6px">+ 添加规则</button>
+        <button class="sniff-btn" onclick="peAddRule()" style="margin-top:6px">+ Add Rule</button>
         <details style="margin-top:10px">
-            <summary style="font-size:11px;color:var(--acc);cursor:pointer;user-select:none">JSON 预览</summary>
+            <summary style="font-size:11px;color:var(--acc);cursor:pointer;user-select:none">JSON Preview</summary>
             <pre id="pe-preview"
                  style="max-height:200px;overflow:auto;background:var(--bg2);border:1px solid var(--bd);border-radius:6px;padding:8px;font-size:11px;color:var(--tx2);margin-top:6px;white-space:pre-wrap;word-break:break-all"></pre>
         </details>
         <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd)">
-            <div class="feat-name" style="margin-bottom:6px">规则测试</div>
+            <div class="feat-name" style="margin-bottom:6px">Rule Test</div>
             <div style="font-size:11px;color:var(--tx3);line-height:1.5;margin-bottom:8px">
-                从编辑器中选择一条规则，输入基础 8 字节帧，然后在 CAN 总线上发送修改后的帧。次数 = 发送多少次，间隔 = 发送频率。
+                Choose one rule from the editor, enter the base 8-byte frame, then send the resulting modified frame on CAN.
+                Count = how many times, interval = how fast.
             </div>
             <div style="display:grid;grid-template-columns:minmax(0,1fr) 90px 110px;gap:6px;margin-bottom:6px">
                 <select class="sniff-input" id="pe-test-rule" onchange="peUpdateTestPreview()"></select>
@@ -1465,34 +1478,34 @@
                        onchange="peUpdateTestPreview()">
             </div>
             <input class="sniff-input" id="pe-test-data" value="00 00 00 00 00 00 00 00"
-                   placeholder="基础数据字节：00 00 00 00 00 00 00 00" oninput="peUpdateTestPreview()"
+                   placeholder="Base data bytes: 00 00 00 00 00 00 00 00" oninput="peUpdateTestPreview()"
                    style="width:100%;margin-bottom:6px">
             <pre id="pe-test-preview"
-                 style="min-height:54px;overflow:auto;background:var(--bg2);border:1px solid var(--bd);border-radius:6px;padding:8px;font-size:11px;color:var(--tx2);white-space:pre-wrap;word-break:break-word">添加规则以预览测试帧。</pre>
+                 style="min-height:54px;overflow:auto;background:var(--bg2);border:1px solid var(--bd);border-radius:6px;padding:8px;font-size:11px;color:var(--tx2);white-space:pre-wrap;word-break:break-word">Add a rule to preview a test frame.</pre>
             <div style="display:flex;gap:6px;align-items:center;margin-top:8px;flex-wrap:wrap">
-                <button class="sniff-btn" onclick="peStartTest()">开始测试</button>
-                <button class="sniff-btn" onclick="peStopTest()">停止测试</button>
-                <span id="pe-test-status" style="font-size:11px;color:var(--tx3)">空闲</span>
+                <button class="sniff-btn" onclick="peStartTest()">Start Test</button>
+                <button class="sniff-btn" onclick="peStopTest()">Stop Test</button>
+                <span id="pe-test-status" style="font-size:11px;color:var(--tx3)">Idle</span>
             </div>
         </div>
         <div style="display:flex;gap:6px;margin-top:10px">
-            <button class="sniff-btn" onclick="peInstall()">安装</button>
-            <button class="sniff-btn" onclick="peDownload()">下载 JSON</button>
-            <button class="sniff-btn" onclick="peReset()">重置</button>
+            <button class="sniff-btn" onclick="peInstall()">Install</button>
+            <button class="sniff-btn" onclick="peDownload()">Download JSON</button>
+            <button class="sniff-btn" onclick="peReset()">Reset</button>
         </div>
         <div id="pe-status" style="font-size:11px;margin-top:6px;color:var(--tx3)"></div>
     </div>
 
     <div class="card collapsible" id="card-firmware">
         <div class="card-hdr" onclick="toggleCard('card-firmware')">
-            <div class="card-title">固件更新</div>
+            <div class="card-title">Firmware Update</div>
             <div class="card-meta" id="fw-ver"></div>
         </div>
         <div style="margin-bottom:10px">
             <div class="feat-row">
                 <div class="feat-info">
-                    <div class="feat-name">测试版通道</div>
-                    <div class="feat-desc">包含预发布/测试版固件</div>
+                    <div class="feat-name">Beta Channel</div>
+                    <div class="feat-desc">Include pre-release / beta firmware versions</div>
                 </div>
                 <label class="tgl"><input type="checkbox" id="beta-tgl" onchange="toggleBeta()">
                     <div class="tgl-track">
@@ -1502,8 +1515,8 @@
             </div>
             <div class="feat-row">
                 <div class="feat-info">
-                    <div class="feat-name">启动时自动更新</div>
-                    <div class="feat-desc">WiFi 连接后约 15 秒自动检查并安装更新</div>
+                    <div class="feat-name">Auto-Update on Boot</div>
+                    <div class="feat-desc">Check and install updates automatically ~15 s after WiFi connects</div>
                 </div>
                 <label class="tgl"><input type="checkbox" id="auto-upd-tgl" onchange="toggleAutoUpdate()">
                     <div class="tgl-track">
@@ -1513,7 +1526,7 @@
             </div>
         </div>
         <div style="display:flex;gap:6px;align-items:center">
-            <button class="sniff-btn" onclick="checkUpdate()" id="upd-check-btn">检查更新</button>
+            <button class="sniff-btn" onclick="checkUpdate()" id="upd-check-btn">Check for Updates</button>
             <span style="font-size:11px;color:var(--tx3)" id="upd-status"></span>
         </div>
         <div id="upd-info" style="display:none;margin-top:10px;padding:10px;background:var(--bg2);border-radius:6px">
@@ -1523,13 +1536,13 @@
                     <div style="font-size:11px;color:var(--tx3)" id="upd-detail"></div>
                 </div>
                 <button class="sniff-btn" onclick="installUpdate()" id="upd-install-btn"
-                        style="background:var(--ok);color:#fff;border-color:var(--ok)">安装
+                        style="background:var(--ok);color:#fff;border-color:var(--ok)">Install
                 </button>
             </div>
         </div>
 
         <details style="margin-top:14px;padding-top:12px;border-top:1px solid var(--bd)">
-            <summary style="font-size:12px;color:var(--acc);cursor:pointer;user-select:none">手动上传固件（.bin）
+            <summary style="font-size:12px;color:var(--acc);cursor:pointer;user-select:none">Manual firmware upload (.bin)
             </summary>
             <div style="margin-top:10px">
                 <div class="ota-drop" id="ota-drop" onclick="$('ota-file').click()"
@@ -1537,20 +1550,20 @@
                      ondragleave="this.classList.remove('drag')" ondrop="handleDrop(event)">
                     <input type="file" id="ota-file" accept=".bin" onchange="fileSelected(this.files[0])">
                     <div class="ota-icon">&#8679;</div>
-                    <div class="ota-text">点击选择固件 .bin</div>
-                    <div class="ota-sub">或拖放文件到此处</div>
+                    <div class="ota-text">Tap to select firmware .bin</div>
+                    <div class="ota-sub">Or drag and drop a file here</div>
                 </div>
                 <div class="ota-progress" id="ota-progress">
                     <div class="ota-bar">
                         <div class="ota-fill" id="ota-fill"></div>
                     </div>
-                    <div class="ota-status" id="ota-status">上传中...</div>
+                    <div class="ota-status" id="ota-status">Uploading...</div>
                 </div>
-                <button class="ota-btn" id="ota-upload-btn" onclick="uploadFirmware()">刷写固件</button>
+                <button class="ota-btn" id="ota-upload-btn" onclick="uploadFirmware()">Flash Firmware</button>
                 <div style="margin-top:10px;font-size:11px;color:var(--tx3);line-height:1.7">
-                    在 PlatformIO 中编译 .bin：<span
+                    Build your .bin in PlatformIO: <span
                         style="color:var(--acc);font-family:monospace">Ctrl+Alt+B</span><br>
-                    文件路径：<span style="color:var(--acc);font-family:monospace">.pio/build/esp32_ext_mcp2515/firmware.bin</span>
+                    File is at: <span style="color:var(--acc);font-family:monospace">.pio/build/esp32_ext_mcp2515/firmware.bin</span>
                 </div>
             </div>
         </details>
@@ -1558,37 +1571,40 @@
 
     <div class="card collapsible" id="card-pins">
         <div class="card-hdr" onclick="toggleCard('card-pins')">
-            <div class="card-title">CAN 引脚 <span onclick="event.stopPropagation();toggleInfo('can-pins-info')"
+            <div class="card-title">CAN Pins <span onclick="event.stopPropagation();toggleInfo('can-pins-info')"
                                                    style="color:var(--tx3);cursor:pointer;font-size:12px;margin-left:4px"
-                                                   title="关于 CAN 引脚">&#9432;</span></div>
-            <div class="card-meta" id="can-pins-status">默认</div>
+                                                   title="About CAN pins">&#9432;</span></div>
+            <div class="card-meta" id="can-pins-status">default</div>
         </div>
         <div id="can-pins-info"
              style="display:none;margin-bottom:10px;padding:10px;background:var(--bg2);border:1px solid var(--bd);border-radius:6px;font-size:12px;color:var(--tx3);line-height:1.5">
-            CAN 收发器（TWAI）的 GPIO 引脚。存储于 NVS，OTA 更新后仍保留。留空则使用固件编译时的默认值。<b>错误的引脚会禁用 CAN</b>——恢复需通过 USB 重新刷写。大多数 ESP32 开发板的 GPIO 6&ndash;11 保留用于 SPI Flash。
+            GPIO pins for the CAN transceiver (TWAI). Persisted in NVS so they survive OTA updates. Leave empty to use the
+            firmware&#39;s compile-time defaults. <b>Wrong pins disable CAN</b> &mdash; recovery needs a USB re-flash. On
+            most ESP32 boards GPIO 6&ndash;11 remain reserved for SPI flash.
         </div>
         <div style="display:flex;gap:6px;align-items:center">
             <input class="sniff-input" id="can-tx" type="number" min="0" max="39" placeholder="TX GPIO" style="flex:1">
             <input class="sniff-input" id="can-rx" type="number" min="0" max="39" placeholder="RX GPIO" style="flex:1">
-            <button class="sniff-btn" onclick="saveCanPins()">保存</button>
+            <button class="sniff-btn" onclick="saveCanPins()">Save</button>
         </div>
-        <div style="font-size:11px;color:var(--tx3);margin-top:6px" id="can-pins-hint">修改后需要重启</div>
+        <div style="font-size:11px;color:var(--tx3);margin-top:6px" id="can-pins-hint">Reboot required after change</div>
     </div>
 
     <div class="card collapsible" id="card-backup">
         <div class="card-hdr" onclick="toggleCard('card-backup')">
-            <div class="card-title">设置备份 <span onclick="event.stopPropagation();toggleInfo('backup-info')"
+            <div class="card-title">Settings Backup <span onclick="event.stopPropagation();toggleInfo('backup-info')"
                                                           style="color:var(--tx3);cursor:pointer;font-size:12px;margin-left:4px"
-                                                          title="关于备份">&#9432;</span></div>
+                                                          title="About backup">&#9432;</span></div>
             <div class="card-meta" id="backup-status"></div>
         </div>
         <div id="backup-info"
              style="display:none;margin-bottom:10px;padding:10px;background:var(--bg2);border:1px solid var(--bd);border-radius:6px;font-size:12px;color:var(--tx3);line-height:1.5">
-            将 AP 凭据、WiFi 联网、CAN 引脚及测试版通道导出为 JSON。适用于完整刷写前或迁移至其他设备。<b>密码以明文形式包含在内</b>——请妥善保管文件。
+            Exports AP credentials, WiFi Internet, CAN pins and beta channel as JSON. Useful before a full re-flash or when
+            migrating to another device. <b>Passwords are included in clear text</b> &mdash; keep the file safe.
         </div>
         <div style="display:flex;gap:6px">
-            <button class="sniff-btn" onclick="exportSettings()">下载</button>
-            <button class="sniff-btn" onclick="document.getElementById('backup-file').click()">上传并还原</button>
+            <button class="sniff-btn" onclick="exportSettings()">Download</button>
+            <button class="sniff-btn" onclick="document.getElementById('backup-file').click()">Upload &amp; Restore</button>
             <input type="file" id="backup-file" accept=".json,application/json" style="display:none"
                    onchange="importSettings(event)">
         </div>
@@ -1596,21 +1612,22 @@
 
     <div class="card collapsible" id="card-log">
         <div class="card-hdr" onclick="toggleCard('card-log')">
-            <div class="card-title">实时日志</div>
+            <div class="card-title">Live Log</div>
         </div>
-        <div class="log-box" id="log">等待中...</div>
+        <div class="log-box" id="log">Waiting...</div>
     </div>
 
-    <div class="warn-bar">CAN 总线写入会影响车辆行为，如出现异常请立即断开设备。本工具与任何车辆制造商无关。
+    <div class="warn-bar">CAN bus writes affect vehicle behavior. Remove device immediately if unexpected behavior occurs.
+        Not affiliated with any vehicle manufacturer.
     </div>
 
     <div class="modal-backdrop" id="confirm-modal" onclick="dashConfirmBackdrop(event)">
         <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
-            <div class="modal-title" id="confirm-title">确认</div>
+            <div class="modal-title" id="confirm-title">Confirm</div>
             <div class="modal-msg" id="confirm-msg"></div>
             <div class="modal-actions">
-                <button class="sniff-btn" id="confirm-cancel" onclick="dashConfirmResolve(false)">取消</button>
-                <button class="sniff-btn modal-btn-primary" id="confirm-ok" onclick="dashConfirmResolve(true)">继续
+                <button class="sniff-btn" id="confirm-cancel" onclick="dashConfirmResolve(false)">Cancel</button>
+                <button class="sniff-btn modal-btn-primary" id="confirm-ok" onclick="dashConfirmResolve(true)">Continue
                 </button>
             </div>
         </div>
@@ -1627,8 +1644,8 @@
 
     <script>
         const HW = ['Legacy', 'HW3', 'HW4'];
-        const SP3 = ['舒缓', '正常', '激进'];
-        const SP4 = ['舒缓', '正常', '激进', '最大', '蜗牛'];
+        const SP3 = ['Chill', 'Normal', 'Hurry'];
+        const SP4 = ['Chill', 'Normal', 'Hurry', 'Max', 'Sloth'];
         const $ = id => document.getElementById(id);
 
         function spNames() {
@@ -1674,8 +1691,6 @@
         let dashboardPollFailures = 0;
         let h4oCustomLoaded = false;
         let h4oTabLoaded = false;
-        let h4oSaveTimer = null;
-        function debouncedPushH4OCustom() { clearTimeout(h4oSaveTimer); h4oSaveTimer = setTimeout(pushH4OCustom, 300); }
         let dashboardPollStopped = false;
         let dashboardStaIp = '';
         const pollLocks = {};
@@ -1686,9 +1701,9 @@
             dashboardPollTimers.forEach(clearInterval);
             dashboardPollTimers = [];
             $('dot').className = 'sdot dot-off';
-            $('hdr-desc').textContent = '仪表板已断开连接';
-            let msg = '与 ' + location.hostname + ' 的连接已断开，重新连接后刷新页面。';
-            if (dashboardStaIp && dashboardStaIp !== location.hostname) msg = '与 ' + location.hostname + ' 的连接已断开，请切换至正常 WiFi 并打开 http://' + dashboardStaIp;
+            $('hdr-desc').textContent = 'Dashboard disconnected';
+            let msg = 'Connection to ' + location.hostname + ' lost. Reload after reconnecting.';
+            if (dashboardStaIp && dashboardStaIp !== location.hostname) msg = 'Connection to ' + location.hostname + ' lost. Switch to your normal WiFi and open http://' + dashboardStaIp;
             $('wifi-status').textContent = msg;
             $('wifi-status').style.color = 'var(--err)';
         }
@@ -1794,7 +1809,7 @@
             const html = document.documentElement;
             const isDark = html.getAttribute('data-theme') === 'dark';
             html.setAttribute('data-theme', isDark ? 'light' : 'dark');
-            $('theme-btn').innerHTML = isDark ? '&#9790; 深色' : '&#9788; 浅色';
+            $('theme-btn').innerHTML = isDark ? '&#9790; Dark' : '&#9788; Light';
             localStorage.setItem('theme', isDark ? 'light' : 'dark');
         }
 
@@ -1803,7 +1818,7 @@
             document.documentElement.setAttribute('data-theme', t);
             // will be updated after DOM ready
             window.addEventListener('DOMContentLoaded', () => {
-                $('theme-btn').innerHTML = t === 'dark' ? '&#9788; 浅色' : '&#9790; 深色';
+                $('theme-btn').innerHTML = t === 'dark' ? '&#9788; Light' : '&#9790; Dark';
             });
         })();
 
@@ -1812,7 +1827,7 @@
             c.innerHTML = '';
             const auto = document.createElement('button');
             auto.className = 'pill' + (!state.spl ? ' active' : '');
-            auto.textContent = '自动';
+            auto.textContent = 'Auto';
             auto.onclick = () => setSPL(false);
             c.appendChild(auto);
             ns.forEach((n, i) => {
@@ -1877,14 +1892,12 @@
                         }
                         H4O_Custom[i].v = val;
                         bar.value = val;
-                        debouncedPushH4OCustom();
                     };
 
                     bar.oninput = () => {
                         const val = parseInt(bar.value) || 0;
                         H4O_Custom[i].v = val;
                         vInp.value = val;
-                        debouncedPushH4OCustom();
                     };
 
                     const pct = document.createElement('span');
@@ -1913,6 +1926,8 @@
             const isPreset = tab === 'preset';
             $('h4o-pills').style.display = isPreset ? 'flex' : 'none';
             $('h4o-custom').style.display = isPreset ? 'none' : 'flex';
+            const saveBtn = $('h4o-save-btn');
+            if (saveBtn) saveBtn.style.display = isPreset ? 'none' : '';
             const tp = $('h4o-tab-preset'), tc = $('h4o-tab-custom');
             if (tp) tp.classList.toggle('active', isPreset);
             if (tc) tc.classList.toggle('active', !isPreset);
@@ -1984,9 +1999,9 @@
 
         function updateSniffIdToggle() {
             const b = $('sniff-id-btn'), bus = sniffBusLabel();
-            b.textContent = sniffShowDbcIds ? ('DBC ' + bus) : '原始 ID';
-            b.title = sniffShowDbcIds ? ('显示带 ' + bus + ' 前缀的 DBC JSON ID') : ('显示总线上的 11 位 CAN ID');
-            $('sniff-filter').placeholder = '按原始/DBC ID 或名称过滤';
+            b.textContent = sniffShowDbcIds ? ('DBC ' + bus) : 'Wire IDs';
+            b.title = sniffShowDbcIds ? ('Showing DBC JSON IDs with ' + bus + ' prefix') : ('Showing on-wire 11-bit CAN IDs');
+            $('sniff-filter').placeholder = 'Filter by wire/DBC ID or name';
         }
 
         function toggleSniffIdMode() {
@@ -2088,7 +2103,7 @@
         function togglePause() {
             sniffPaused = !sniffPaused;
             const b = $('sniff-pause-btn');
-            b.textContent = sniffPaused ? '继续' : '暂停';
+            b.textContent = sniffPaused ? 'Resume' : 'Pause';
             b.classList.toggle('paused', sniffPaused);
         }
 
@@ -2102,9 +2117,9 @@
                 if (!isNaN(fid)) frames = frames.filter(f => sniffWireId(f.id) === fid || sniffDbcId(f.id) === fid);
                 else frames = frames.filter(f => f.name && f.name.toLowerCase().includes(filter));
             }
-            $('sniff-count').textContent = frames.length + ' 帧';
+            $('sniff-count').textContent = frames.length + ' frames';
             if (!frames.length) {
-                el.innerHTML = '<div style="padding:20px;color:var(--tx3);text-align:center;font-size:12px">无帧</div>';
+                el.innerHTML = '<div style="padding:20px;color:var(--tx3);text-align:center;font-size:12px">No frames</div>';
                 return;
             }
             const ADIds = new Set([1021, 1016, 921]);
@@ -2152,11 +2167,11 @@
         async function uploadFirmware() {
             if (!otaFile) return;
             if (!otaUser) {
-                otaUser = prompt('OTA 用户名：') || '';
+                otaUser = prompt('OTA Username:') || '';
                 localStorage.setItem('otaU', otaUser);
             }
             if (!otaPass) {
-                otaPass = prompt('OTA 密码：') || '';
+                otaPass = prompt('OTA Password:') || '';
                 localStorage.setItem('otaP', otaPass);
             }
             if (!otaUser || !otaPass) return;
@@ -2165,30 +2180,30 @@
             const status = $('ota-status');
             prog.style.display = 'block';
             $('ota-upload-btn').disabled = true;
-            $('ota-upload-btn').textContent = '刷写中...';
+            $('ota-upload-btn').textContent = 'Flashing...';
 
             const xhr = new XMLHttpRequest();
             xhr.upload.onprogress = e => {
                 if (e.lengthComputable) {
                     const pct = Math.round(e.loaded / e.total * 100);
                     fill.style.width = pct + '%';
-                    status.textContent = '上传中... ' + pct + '%';
+                    status.textContent = 'Uploading... ' + pct + '%';
                 }
             };
             xhr.onload = () => {
                 if (xhr.status === 200) {
-                    status.textContent = '完成！设备正在重启...';
+                    status.textContent = 'Done! Device is rebooting...';
                     fill.style.width = '100%';
                     setTimeout(() => window.location.reload(), 5000);
                 } else {
-                    status.textContent = '上传失败：' + xhr.status;
+                    status.textContent = 'Upload failed: ' + xhr.status;
                     status.style.color = 'var(--err)';
                 }
                 $('ota-upload-btn').disabled = false;
-                $('ota-upload-btn').textContent = '刷写固件';
+                $('ota-upload-btn').textContent = 'Flash Firmware';
             };
             xhr.onerror = () => {
-                status.textContent = '连接错误';
+                status.textContent = 'Connection error';
                 status.style.color = 'var(--err)';
                 $('ota-upload-btn').disabled = false;
             };
@@ -2205,11 +2220,11 @@
                 try {
                     const d = await fetchPollJson('/status', 1500);
                     const on = d.can;
-                    $('s-can').textContent = on ? '激活中' : '离线';
+                    $('s-can').textContent = on ? 'Active' : 'Offline';
                     $('s-can').className = 'stat-val ' + (on ? 'v-ok' : 'v-err');
-                    $('s-inj').textContent = d.ci ? '激活中' : '已阻止';
+                    $('s-inj').textContent = d.ci ? 'Active' : 'BLOCKED';
                     $('s-inj').className = 'stat-val ' + (d.ci ? 'v-ok' : 'v-err');
-                    $('s-AD').textContent = d.AD ? '激活中' : '未激活';
+                    $('s-AD').textContent = d.AD ? 'Active' : 'Inactive';
                     $('s-AD').className = 'stat-val ' + (d.AD ? 'v-ok' : 'v-dim');
                     $('s-fps').textContent = d.fps.toFixed(1) + ' Hz';
                     $('s-fps').className = 'stat-val ' + (d.fps > 5 ? 'v-acc' : 'v-dim');
@@ -2227,7 +2242,7 @@
                     $('fps-fill').style.width = Math.min(d.fps / 20 * 100, 100) + '%';
                     $('hw-badge').textContent = HW[d.hw] || '?';
                     $('dot').className = 'sdot ' + (d.txerr > 5 ? 'dot-warn' : on ? 'dot-on' : 'dot-off');
-                    $('hdr-desc').textContent = on ? (d.AD ? 'AD 激活中——注入中' : 'CAN 激活中——监听中') : '等待 CAN 帧...';
+                    $('hdr-desc').textContent = on ? (d.AD ? 'AD active — injecting' : 'CAN active — monitoring') : 'Waiting for CAN frames';
                     renderEflg(d.eflg);
                     if (d.mux) {
                         for (let i = 0; i < 3; i++) {
@@ -2298,7 +2313,7 @@
                     if (!d.lines.length) return;
                     const el = $('log');
                     const newHtml = d.lines.map(colorLog).join('\n');
-                    if (el.textContent === '等待中...') el.innerHTML = newHtml;
+                    if (el.textContent === 'Waiting...') el.innerHTML = newHtml;
                     else el.innerHTML += '\n' + newHtml;
                     // trim to 100 lines
                     const lines = el.innerHTML.split('\n');
@@ -2328,7 +2343,7 @@
                 await fetch('/rec_start', {method: 'POST'});
                 recIsActive = true;
                 const b = $('rec-btn');
-                b.textContent = '停止录制';
+                b.textContent = 'Stop Recording';
                 b.style.borderColor = 'var(--err)';
                 b.style.color = 'var(--err)';
                 $('rec-dl').style.display = 'none';
@@ -2345,7 +2360,7 @@
             } catch (e) {
             }
             const b = $('rec-btn');
-            b.textContent = '开始录制';
+            b.textContent = 'Start Recording';
             b.style.borderColor = '';
             b.style.color = '';
             await pollRec();
@@ -2356,21 +2371,21 @@
                 const d = await (await fetch('/rec_status')).json();
                 const pct = Math.min(d.count / d.cap * 100, 100);
                 $('rec-fill').style.width = pct + '%';
-                $('rec-count').textContent = d.count + ' / ' + d.cap + ' 帧';
+                $('rec-count').textContent = d.count + ' / ' + d.cap + ' frames';
                 if (d.active) {
-                    $('rec-status').textContent = '录制中...';
+                    $('rec-status').textContent = 'Recording...';
                     $('rec-status').style.color = 'var(--err)';
-                    $('rec-meta').textContent = '录制中...';
+                    $('rec-meta').textContent = 'Recording...';
                 } else {
-                    $('rec-meta').textContent = d.saved ? d.count + ' 帧已保存' : '空闲';
-                    $('rec-status').textContent = d.saved ? '已保存' : '就绪';
+                    $('rec-meta').textContent = d.saved ? d.count + ' frames saved' : 'Idle';
+                    $('rec-status').textContent = d.saved ? 'Saved' : 'Ready';
                     $('rec-status').style.color = d.saved ? 'var(--ok)' : '';
                     $('rec-dl').style.display = d.saved ? '' : 'none';
                     if (recIsActive) {
                         recIsActive = false;
                         clearInterval(recInterval);
                         const b = $('rec-btn');
-                        b.textContent = '开始录制';
+                        b.textContent = 'Start Recording';
                         b.style.borderColor = '';
                         b.style.color = '';
                     }
@@ -2383,12 +2398,12 @@
         async function saveAP() {
             const ssid = $('ap-ssid').value, pass = $('ap-pass').value, hidden = $('ap-hidden').checked ? '1' : '0';
             if (!ssid) {
-                $('ap-status').textContent = '请输入热点名称';
+                $('ap-status').textContent = 'Enter hotspot name';
                 $('ap-status').style.color = 'var(--err)';
                 return;
             }
             if (pass && pass.length < 8) {
-                $('ap-status').textContent = '密码最少8位';
+                $('ap-status').textContent = 'Password min 8 chars';
                 $('ap-status').style.color = 'var(--err)';
                 return;
             }
@@ -2400,15 +2415,15 @@
                 });
                 const d = await r.json();
                 if (d.ok) {
-                    $('ap-status').textContent = '已保存！重启后生效。';
+                    $('ap-status').textContent = 'Saved! Reboot to apply.';
                     $('ap-status').style.color = 'var(--ok)';
                     $('ap-pass').value = '';
                 } else {
-                    $('ap-status').textContent = d.error || '错误';
+                    $('ap-status').textContent = d.error || 'Error';
                     $('ap-status').style.color = 'var(--err)';
                 }
             } catch (e) {
-                $('ap-status').textContent = '错误';
+                $('ap-status').textContent = 'Error';
                 $('ap-status').style.color = 'var(--err)';
             }
         }
@@ -2418,13 +2433,13 @@
                 try {
                     const d = await fetchPollJson('/ap_status', 2000);
                     if (d.ssid) $('ap-ssid').value = d.ssid;
-                    $('ap-clients').textContent = d.clients + ' 个客户端';
+                    $('ap-clients').textContent = d.clients + ' client' + (d.clients !== 1 ? 's' : '');
                     if (typeof d.hidden !== 'undefined') $('ap-hidden').checked = !!d.hidden;
                     if (d.stored) {
-                        $('ap-stored').textContent = '已保存';
+                        $('ap-stored').textContent = 'saved';
                         $('ap-stored').style.color = 'var(--ok)';
                     } else {
-                        $('ap-stored').textContent = '固件默认值';
+                        $('ap-stored').textContent = 'firmware default';
                         $('ap-stored').style.color = 'var(--tx3)';
                     }
                 } catch (e) {
@@ -2445,24 +2460,24 @@
         }
 
         async function scanWifi() {
-            $('scan-btn').textContent = '扫描中...';
+            $('scan-btn').textContent = 'Scanning...';
             $('scan-btn').disabled = true;
             try {
                 const r = await fetch('/wifi_scan');
                 const d = await r.json();
                 const el = $('wifi-nets');
                 if (!d.networks.length) {
-                    el.innerHTML = '<div style="padding:8px;font-size:11px;color:var(--tx3);text-align:center">未找到网络</div>';
+                    el.innerHTML = '<div style="padding:8px;font-size:11px;color:var(--tx3);text-align:center">No networks found</div>';
                     el.style.display = 'block';
                 } else {
                     el.innerHTML = d.networks.map(n => '<div onclick="pickWifi(\'' + n.ssid.replace(/'/g, "\\'") + '\')" style="padding:6px 10px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--bd);font-size:12px" onmouseover="this.style.background=\'var(--bg)\'" onmouseout="this.style.background=\'\'"><span>' + (n.enc ? '\uD83D\uDD12 ' : '') + n.ssid + '</span><span style="color:var(--tx3);font-size:10px">' + rssiIcon(n.rssi) + ' ' + n.rssi + 'dBm CH' + n.ch + '</span></div>').join('');
                     el.style.display = 'block';
                 }
             } catch (e) {
-                $('wifi-status').textContent = '扫描失败';
+                $('wifi-status').textContent = 'Scan failed';
                 $('wifi-status').style.color = 'var(--err)';
             }
-            $('scan-btn').textContent = '扫描';
+            $('scan-btn').textContent = 'Scan';
             $('scan-btn').disabled = false;
         }
 
@@ -2485,10 +2500,10 @@
                         $('wifi-stored').textContent = '';
                     }
                     if (d.connected) {
-                        $('wifi-status').textContent = (d.ip && d.ip !== location.hostname) ? ('已连接：' + d.ip + ' \u2022 请切换至该 WiFi 并打开此 IP') : ('已连接：' + d.ip);
+                        $('wifi-status').textContent = (d.ip && d.ip !== location.hostname) ? ('Connected: ' + d.ip + ' \u2022 switch to that WiFi and open this IP') : ('Connected: ' + d.ip);
                         $('wifi-status').style.color = 'var(--ok)';
                     } else if (d.ssid) {
-                        $('wifi-status').textContent = '正在连接到 ' + d.ssid + '...';
+                        $('wifi-status').textContent = 'Connecting to ' + d.ssid + '...';
                         $('wifi-status').style.color = 'var(--acc)';
                     }
                     if (d.static) {
@@ -2507,7 +2522,7 @@
         async function saveWifi() {
             const ssid = $('wifi-ssid').value, pass = $('wifi-pass').value;
             if (!ssid) {
-                $('wifi-status').textContent = '请输入 SSID';
+                $('wifi-status').textContent = 'Enter SSID';
                 return;
             }
             let body = 'ssid=' + encodeURIComponent(ssid) + '&pass=' + encodeURIComponent(pass);
@@ -2520,10 +2535,10 @@
                     headers: {'Content-Type': 'application/x-www-form-urlencoded'},
                     body
                 });
-                $('wifi-status').textContent = '正在连接到 ' + ssid + '...';
+                $('wifi-status').textContent = 'Connecting to ' + ssid + '...';
                 $('wifi-status').style.color = 'var(--acc)';
             } catch (e) {
-                $('wifi-status').textContent = '错误';
+                $('wifi-status').textContent = 'Error';
                 $('wifi-status').style.color = 'var(--err)';
             }
         }
@@ -2532,11 +2547,11 @@
         async function installPlugin() {
             const url = $('plg-url').value;
             if (!url) {
-                $('plg-status').textContent = '请输入链接';
+                $('plg-status').textContent = 'Enter URL';
                 return;
             }
             const beforeSig = pluginStateSignature(installedPlugins);
-            $('plg-status').textContent = '下载中...';
+            $('plg-status').textContent = 'Downloading...';
             $('plg-status').style.color = 'var(--acc)';
             try {
                 await fetchJsonWithTimeout('/plugin_install', {
@@ -2550,15 +2565,15 @@
                 } catch (e) {
                     await refreshPluginsAfterAction(beforeSig);
                 }
-                $('plg-status').textContent = '安装成功！';
+                $('plg-status').textContent = 'Installed!';
                 $('plg-status').style.color = 'var(--ok)';
             } catch (e) {
                 if (await refreshPluginsAfterAction(beforeSig)) {
                     $('plg-url').value = '';
-                    $('plg-status').textContent = '安装成功！';
+                    $('plg-status').textContent = 'Installed!';
                     $('plg-status').style.color = 'var(--ok)';
                 } else {
-                    $('plg-status').textContent = actionErrorMessage(e, '连接错误');
+                    $('plg-status').textContent = actionErrorMessage(e, 'Connection error');
                     $('plg-status').style.color = 'var(--err)';
                 }
             }
@@ -2567,7 +2582,7 @@
         async function uploadPlugin(file) {
             if (!file) return;
             const beforeSig = pluginStateSignature(installedPlugins);
-            $('plg-status').textContent = '上传中...';
+            $('plg-status').textContent = 'Uploading...';
             $('plg-status').style.color = 'var(--acc)';
             try {
                 const text = await file.text();
@@ -2581,14 +2596,14 @@
                 } catch (e) {
                     await refreshPluginsAfterAction(beforeSig);
                 }
-                $('plg-status').textContent = '安装成功！';
+                $('plg-status').textContent = 'Installed!';
                 $('plg-status').style.color = 'var(--ok)';
             } catch (e) {
                 if (await refreshPluginsAfterAction(beforeSig)) {
-                    $('plg-status').textContent = '安装成功！';
+                    $('plg-status').textContent = 'Installed!';
                     $('plg-status').style.color = 'var(--ok)';
                 } else {
-                    $('plg-status').textContent = actionErrorMessage(e, '错误');
+                    $('plg-status').textContent = actionErrorMessage(e, 'Error');
                     $('plg-status').style.color = 'var(--err)';
                 }
             }
@@ -2597,19 +2612,19 @@
         async function pastePlugin() {
             const text = $('plg-paste').value.trim();
             if (!text) {
-                $('plg-status').textContent = '请先粘贴 JSON';
+                $('plg-status').textContent = 'Paste JSON first';
                 $('plg-status').style.color = 'var(--err)';
                 return;
             }
             try {
                 JSON.parse(text);
             } catch (e) {
-                $('plg-status').textContent = '无效的 JSON：' + e.message;
+                $('plg-status').textContent = 'Invalid JSON: ' + e.message;
                 $('plg-status').style.color = 'var(--err)';
                 return;
             }
             const beforeSig = pluginStateSignature(installedPlugins);
-            $('plg-status').textContent = '安装中...';
+            $('plg-status').textContent = 'Installing...';
             $('plg-status').style.color = 'var(--acc)';
             try {
                 await fetchJsonWithTimeout('/plugin_upload', {
@@ -2623,15 +2638,15 @@
                 } catch (e) {
                     await refreshPluginsAfterAction(beforeSig);
                 }
-                $('plg-status').textContent = '安装成功！';
+                $('plg-status').textContent = 'Installed!';
                 $('plg-status').style.color = 'var(--ok)';
             } catch (e) {
                 if (await refreshPluginsAfterAction(beforeSig)) {
                     $('plg-paste').value = '';
-                    $('plg-status').textContent = '安装成功！';
+                    $('plg-status').textContent = 'Installed!';
                     $('plg-status').style.color = 'var(--ok)';
                 } else {
-                    $('plg-status').textContent = actionErrorMessage(e, '连接错误');
+                    $('plg-status').textContent = actionErrorMessage(e, 'Connection error');
                     $('plg-status').style.color = 'var(--err)';
                 }
             }
@@ -2656,7 +2671,7 @@
         }
 
         async function removePlugin(idx) {
-            if (!await dashConfirm('确定要删除此插件吗？', '删除插件', '删除')) return;
+            if (!await dashConfirm('Remove this plugin?', 'Remove plugin', 'Remove')) return;
             const beforeSig = pluginStateSignature(installedPlugins);
             try {
                 await fetchJsonWithTimeout('/plugin_remove', {
@@ -2688,7 +2703,7 @@
                 + details.map(r => {
                     let hdr = '<div style="margin-bottom:4px"><b>CAN ' + r.hex + ' (' + r.id + ')</b>';
                     if (r.mux >= 0) hdr += ' <span style="color:var(--acc)">mux=' + r.mux + '</span>';
-                    if (r.conflict) hdr += ' <span style="color:var(--err);font-weight:bold" title="此 CAN ID 也由基础固件处理">&#9888; 固件冲突</span>';
+                    if (r.conflict) hdr += ' <span style="color:var(--err);font-weight:bold" title="This CAN ID is also handled by the base firmware">&#9888; Firmware overlap</span>';
                     hdr += '</div>';
                     let ops = r.ops.map(o => '<div style="padding-left:12px;color:var(--tx2)">' + fmtOp(o) + '</div>').join('');
                     return hdr + ops;
@@ -2721,15 +2736,15 @@
             });
             pluginDetailOpen = nextOpen;
             const max = d.maxPlugins || 0;
-            $('plg-count').textContent = max ? '已安装 ' + installedPlugins.length + ' / ' + max + ' 个' : '已安装 ' + installedPlugins.length + ' 个';
+            $('plg-count').textContent = max ? installedPlugins.length + ' / ' + max + ' installed' : installedPlugins.length + ' installed';
             if ($('plg-limit')) {
                 const full = max && installedPlugins.length >= max;
-                $('plg-limit').textContent = max ? (full ? '最多 ' + max + ' 个插件，已达上限，请先删除一个。' : '最多 ' + max + ' 个插件，安装前请先删除一个。') : '最大插件数量：--';
+                $('plg-limit').textContent = max ? (full ? 'Maximum ' + max + ' plugins reached. Remove one before installing another.' : 'Maximum ' + max + ' plugins total. Remove one before installing another.') : 'Maximum plugins: --';
                 $('plg-limit').style.color = full ? 'var(--err)' : 'var(--tx3)';
             }
             const el = $('plg-list');
             if (!installedPlugins.length) {
-                el.innerHTML = '<div style="font-size:12px;color:var(--tx3);text-align:center;padding:12px">未安装插件</div>';
+                el.innerHTML = '<div style="font-size:12px;color:var(--tx3);text-align:center;padding:12px">No plugins installed</div>';
                 return;
             }
             el.innerHTML = installedPlugins.map((p, i) => {
@@ -2740,14 +2755,14 @@
                 row += '<div class="feat-name">' + p.name + ' <span style="color:var(--tx3);font-size:11px">v' + p.version + '</span>';
                 if (hasConflict) row += ' <span style="color:var(--err);font-size:11px">&#9888;</span>';
                 row += '</div>';
-                row += '<div class="feat-desc">' + p.rules + ' 条规则' + (p.author ? ' &bull; ' + p.author : '') + ' &bull; <span style="color:var(--acc);cursor:pointer">详情</span></div>';
+                row += '<div class="feat-desc">' + p.rules + ' rule' + (p.rules !== 1 ? 's' : '') + (p.author ? ' &bull; ' + p.author : '') + ' &bull; <span style="color:var(--acc);cursor:pointer">details</span></div>';
                 row += '</div>';
                 row += '<label class="tgl"><input type="checkbox" ' + (p.enabled ? 'checked' : '') + ' onchange="togglePlugin(' + i + ')"><div class="tgl-track"><div class="tgl-thumb"></div></div></label>';
-                row += '<button onclick="peLoadInstalledPlugin(' + i + ')" style="margin-left:8px;padding:4px 8px;border:1px solid var(--bd);border-radius:5px;background:transparent;color:var(--acc);cursor:pointer;font-size:10px;font-family:inherit">编辑</button>';
+                row += '<button onclick="peLoadInstalledPlugin(' + i + ')" style="margin-left:8px;padding:4px 8px;border:1px solid var(--bd);border-radius:5px;background:transparent;color:var(--acc);cursor:pointer;font-size:10px;font-family:inherit">Edit</button>';
                 row += '<button onclick="removePlugin(' + i + ')" style="margin-left:8px;padding:4px 8px;border:1px solid var(--errBd);border-radius:5px;background:transparent;color:var(--err);cursor:pointer;font-size:10px;font-family:inherit">X</button></div>';
                 if (p.details) {
                     row += '<div id="plg-det-' + i + '" style="display:' + (detailsOpen ? 'block' : 'none') + '">';
-                    if (hasConflict) row += '<div style="margin-top:6px;padding:6px 8px;background:var(--errBg,#3a1a1a);border:1px solid var(--errBd);border-radius:6px;font-size:11px;color:var(--err)">&#9888; 部分 CAN ID 与基础固件冲突，插件规则将在原始处理器<b>之后</b>执行，两者均会发送修改帧。</div>';
+                    if (hasConflict) row += '<div style="margin-top:6px;padding:6px 8px;background:var(--errBg,#3a1a1a);border:1px solid var(--errBd);border-radius:6px;font-size:11px;color:var(--err)">&#9888; Some CAN IDs overlap with base firmware. Plugin rules run <b>after</b> the original handler. Both will send modified frames.</div>';
                     row += renderPluginDetails(p.details);
                     row += '</div>';
                 }
@@ -2802,7 +2817,7 @@
 
         async function checkUpdate() {
             $('upd-check-btn').disabled = true;
-            $('upd-status').textContent = '检查中...';
+            $('upd-status').textContent = 'Checking...';
             $('upd-status').style.color = 'var(--acc)';
             $('upd-info').style.display = 'none';
             pendingUpdateUrl = '';
@@ -2810,25 +2825,25 @@
                 const r = await fetch('/update_check');
                 const d = await r.json();
                 if (!d.ok) {
-                    $('upd-status').textContent = d.error || '错误';
+                    $('upd-status').textContent = d.error || 'Error';
                     $('upd-status').style.color = 'var(--err)';
                     $('upd-check-btn').disabled = false;
                     return;
                 }
                 $('fw-ver').textContent = 'v' + d.current;
                 if (d.update) {
-                    $('upd-status').textContent = '发现新版本！';
+                    $('upd-status').textContent = 'Update available!';
                     $('upd-status').style.color = 'var(--ok)';
                     $('upd-ver').textContent = 'v' + d.latest + (d.prerelease ? ' (beta)' : '');
                     $('upd-detail').textContent = d.artifact + ' \u2022 ' + d.tag;
                     pendingUpdateUrl = d.url;
                     $('upd-info').style.display = 'block';
                 } else {
-                    $('upd-status').textContent = '已是最新（v' + d.current + '）';
+                    $('upd-status').textContent = 'Up to date (v' + d.current + ')';
                     $('upd-status').style.color = 'var(--ok)';
                 }
             } catch (e) {
-                $('upd-status').textContent = '连接错误';
+                $('upd-status').textContent = 'Connection error';
                 $('upd-status').style.color = 'var(--err)';
             }
             $('upd-check-btn').disabled = false;
@@ -2836,12 +2851,12 @@
 
         async function installUpdate() {
             if (!pendingUpdateUrl) {
-                $('upd-status').textContent = '无更新链接';
+                $('upd-status').textContent = 'No update URL';
                 return;
             }
-            if (!await dashConfirm('确定安装固件更新？设备将重启。', '安装更新', '安装')) return;
+            if (!await dashConfirm('Install firmware update? The device will reboot.', 'Install update', 'Install')) return;
             $('upd-install-btn').disabled = true;
-            $('upd-status').textContent = '下载并安装中...';
+            $('upd-status').textContent = 'Downloading & installing...';
             $('upd-status').style.color = 'var(--acc)';
             try {
                 await fetch('/update_install', {
@@ -2849,11 +2864,11 @@
                     headers: {'Content-Type': 'application/x-www-form-urlencoded'},
                     body: 'url=' + encodeURIComponent(pendingUpdateUrl)
                 });
-                $('upd-status').textContent = '更新完成！正在重启...';
+                $('upd-status').textContent = 'Update installed! Rebooting...';
                 $('upd-status').style.color = 'var(--ok)';
                 setTimeout(() => location.reload(), 15000);
             } catch (e) {
-                $('upd-status').textContent = '更新失败';
+                $('upd-status').textContent = 'Update failed';
                 $('upd-status').style.color = 'var(--err)';
                 $('upd-install-btn').disabled = false;
             }
@@ -2905,7 +2920,7 @@
                 const d = await r.json();
                 if (d.tx >= 0) $('can-tx').value = d.tx;
                 if (d.rx >= 0) $('can-rx').value = d.rx;
-                $('can-pins-status').textContent = d.customized ? ('自定义 TX=' + d.tx + ' RX=' + d.rx) : ('固件默认 TX=' + d.tx + ' RX=' + d.rx);
+                $('can-pins-status').textContent = d.customized ? ('custom TX=' + d.tx + ' RX=' + d.rx) : ('firmware default TX=' + d.tx + ' RX=' + d.rx);
             } catch (e) {
             }
         }
@@ -2913,11 +2928,11 @@
         async function saveCanPins() {
             var tx = parseInt($('can-tx').value, 10), rx = parseInt($('can-rx').value, 10);
             if (isNaN(tx) || isNaN(rx)) {
-                $('can-pins-hint').textContent = '请输入 TX 和 RX';
+                $('can-pins-hint').textContent = 'Enter both TX and RX';
                 $('can-pins-hint').style.color = 'var(--err)';
                 return;
             }
-            if (!await dashConfirm('保存 CAN 引脚 TX=' + tx + ' RX=' + rx + ' 并重启？引脚错误将禁用 CAN。', '保存 CAN 引脚', '保存')) return;
+            if (!await dashConfirm('Save CAN pins TX=' + tx + ' RX=' + rx + ' and reboot? Wrong pins disable CAN.', 'Save CAN pins', 'Save')) return;
             try {
                 const r = await fetch('/can_pins', {
                     method: 'POST',
@@ -2926,22 +2941,22 @@
                 });
                 const d = await r.json();
                 if (d.ok) {
-                    $('can-pins-hint').textContent = '已保存，正在重启...';
+                    $('can-pins-hint').textContent = 'Saved. Rebooting...';
                     $('can-pins-hint').style.color = 'var(--ok)';
                     await fetch('/reboot', {method: 'POST'});
                     setTimeout(() => location.reload(), 8000);
                 } else {
-                    $('can-pins-hint').textContent = d.error || '保存失败';
+                    $('can-pins-hint').textContent = d.error || 'Save failed';
                     $('can-pins-hint').style.color = 'var(--err)';
                 }
             } catch (e) {
-                $('can-pins-hint').textContent = '连接错误';
+                $('can-pins-hint').textContent = 'Connection error';
                 $('can-pins-hint').style.color = 'var(--err)';
             }
         }
 
         async function exportSettings() {
-            $('backup-status').textContent = '准备中...';
+            $('backup-status').textContent = 'Preparing...';
             $('backup-status').style.color = 'var(--tx3)';
             try {
                 const r = await fetch('/settings_export');
@@ -2958,10 +2973,10 @@
                 a.click();
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
-                $('backup-status').textContent = '已下载';
+                $('backup-status').textContent = 'Downloaded';
                 $('backup-status').style.color = 'var(--ok)';
             } catch (e) {
-                $('backup-status').textContent = '导出失败';
+                $('backup-status').textContent = 'Export failed';
                 $('backup-status').style.color = 'var(--err)';
             }
         }
@@ -2973,12 +2988,12 @@
             try {
                 JSON.parse(text);
             } catch (e) {
-                $('backup-status').textContent = '无效的 JSON';
+                $('backup-status').textContent = 'Invalid JSON';
                 $('backup-status').style.color = 'var(--err)';
                 return;
             }
-            if (!await dashConfirm('从 ' + f.name + ' 还原设置并重启？', '还原设置', '还原')) return;
-            $('backup-status').textContent = '上传中...';
+            if (!await dashConfirm('Restore settings from ' + f.name + ' and reboot?', 'Restore settings', 'Restore')) return;
+            $('backup-status').textContent = 'Uploading...';
             $('backup-status').style.color = 'var(--acc)';
             try {
                 const r = await fetch('/settings_import', {
@@ -2988,16 +3003,16 @@
                 });
                 const d = await r.json();
                 if (d.ok) {
-                    $('backup-status').textContent = '已还原，正在重启...';
+                    $('backup-status').textContent = 'Restored. Rebooting...';
                     $('backup-status').style.color = 'var(--ok)';
                     await fetch('/reboot', {method: 'POST'});
                     setTimeout(() => location.reload(), 8000);
                 } else {
-                    $('backup-status').textContent = d.error || '导入失败';
+                    $('backup-status').textContent = d.error || 'Import failed';
                     $('backup-status').style.color = 'var(--err)';
                 }
             } catch (e) {
-                $('backup-status').textContent = '上传失败';
+                $('backup-status').textContent = 'Upload failed';
                 $('backup-status').style.color = 'var(--err)';
             }
             ev.target.value = '';
@@ -3059,7 +3074,7 @@
 
         function peAddRule() {
             if (peState.rules.length >= 16) {
-                peSetStatus('每个插件最多 16 条规则', 'err');
+                peSetStatus('Max 16 rules per plugin', 'err');
                 return;
             }
             peState.rules.push({id: 0, mux: -1, send: true, ops: []});
@@ -3075,7 +3090,7 @@
             const r = peState.rules[i];
             if (!r) return;
             if (r.ops.length >= 8) {
-                peSetStatus('每条规则最多 8 个操作', 'err');
+                peSetStatus('Max 8 ops per rule', 'err');
                 return;
             }
             const op = {type: type};
@@ -3191,7 +3206,7 @@
         function peRender() {
             const el = $('pe-rules');
             if (!peState.rules.length) {
-                el.innerHTML = '<div style="font-size:12px;color:var(--tx3);text-align:center;padding:12px;border:1px dashed var(--bd);border-radius:6px">暂无规则，点击下方 &ldquo;+ 添加规则&rdquo;。</div>';
+                el.innerHTML = '<div style="font-size:12px;color:var(--tx3);text-align:center;padding:12px;border:1px dashed var(--bd);border-radius:6px">No rules yet. Click &ldquo;+ Add Rule&rdquo; below.</div>';
             } else {
                 el.innerHTML = peState.rules.map((r, i) => peRuleBlock(i, r)).join('');
             }
@@ -3415,7 +3430,7 @@
             } catch (e) {
             }
             const beforeSig = pluginStateSignature(installedPlugins);
-            peSetStatus('安装中...', 'acc');
+            peSetStatus('Installing...', 'acc');
             try {
                 await fetchJsonWithTimeout('/plugin_upload', {
                     method: 'POST',
