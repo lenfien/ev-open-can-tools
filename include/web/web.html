@@ -1606,11 +1606,11 @@
 
     <div class="modal-backdrop" id="confirm-modal" onclick="dashConfirmBackdrop(event)">
         <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
-            <div class="modal-title" id="confirm-title">Confirm</div>
+            <div class="modal-title" id="confirm-title">确认</div>
             <div class="modal-msg" id="confirm-msg"></div>
             <div class="modal-actions">
-                <button class="sniff-btn" id="confirm-cancel" onclick="dashConfirmResolve(false)">Cancel</button>
-                <button class="sniff-btn modal-btn-primary" id="confirm-ok" onclick="dashConfirmResolve(true)">Continue
+                <button class="sniff-btn" id="confirm-cancel" onclick="dashConfirmResolve(false)">取消</button>
+                <button class="sniff-btn modal-btn-primary" id="confirm-ok" onclick="dashConfirmResolve(true)">继续
                 </button>
             </div>
         </div>
@@ -1627,8 +1627,8 @@
 
     <script>
         const HW = ['Legacy', 'HW3', 'HW4'];
-        const SP3 = ['Chill', 'Normal', 'Hurry'];
-        const SP4 = ['Chill', 'Normal', 'Hurry', 'Max', 'Sloth'];
+        const SP3 = ['舒缓', '正常', '激进'];
+        const SP4 = ['舒缓', '正常', '激进', '最大', '蜗牛'];
         const $ = id => document.getElementById(id);
 
         function spNames() {
@@ -1686,9 +1686,9 @@
             dashboardPollTimers.forEach(clearInterval);
             dashboardPollTimers = [];
             $('dot').className = 'sdot dot-off';
-            $('hdr-desc').textContent = 'Dashboard disconnected';
-            let msg = 'Connection to ' + location.hostname + ' lost. Reload after reconnecting.';
-            if (dashboardStaIp && dashboardStaIp !== location.hostname) msg = 'Connection to ' + location.hostname + ' lost. Switch to your normal WiFi and open http://' + dashboardStaIp;
+            $('hdr-desc').textContent = '仪表板已断开连接';
+            let msg = '与 ' + location.hostname + ' 的连接已断开，重新连接后刷新页面。';
+            if (dashboardStaIp && dashboardStaIp !== location.hostname) msg = '与 ' + location.hostname + ' 的连接已断开，请切换至正常 WiFi 并打开 http://' + dashboardStaIp;
             $('wifi-status').textContent = msg;
             $('wifi-status').style.color = 'var(--err)';
         }
@@ -1774,10 +1774,10 @@
             if (dashConfirmState) dashConfirmResolve(false);
             return new Promise(resolve => {
                 dashConfirmState = {resolve};
-                $('confirm-title').textContent = title || 'Confirm';
+                $('confirm-title').textContent = title || '确认';
                 $('confirm-msg').textContent = message || '';
-                $('confirm-ok').textContent = okText || 'Continue';
-                $('confirm-cancel').textContent = cancelText || 'Cancel';
+                $('confirm-ok').textContent = okText || '继续';
+                $('confirm-cancel').textContent = cancelText || '取消';
                 $('confirm-modal').style.display = 'flex';
                 document.body.style.overflow = 'hidden';
                 setTimeout(() => {
@@ -1794,7 +1794,7 @@
             const html = document.documentElement;
             const isDark = html.getAttribute('data-theme') === 'dark';
             html.setAttribute('data-theme', isDark ? 'light' : 'dark');
-            $('theme-btn').innerHTML = isDark ? '&#9790; Dark' : '&#9788; Light';
+            $('theme-btn').innerHTML = isDark ? '&#9790; 深色' : '&#9788; 浅色';
             localStorage.setItem('theme', isDark ? 'light' : 'dark');
         }
 
@@ -1803,7 +1803,7 @@
             document.documentElement.setAttribute('data-theme', t);
             // will be updated after DOM ready
             window.addEventListener('DOMContentLoaded', () => {
-                $('theme-btn').innerHTML = t === 'dark' ? '&#9788; Light' : '&#9790; Dark';
+                $('theme-btn').innerHTML = t === 'dark' ? '&#9788; 浅色' : '&#9790; 深色';
             });
         })();
 
@@ -1812,7 +1812,7 @@
             c.innerHTML = '';
             const auto = document.createElement('button');
             auto.className = 'pill' + (!state.spl ? ' active' : '');
-            auto.textContent = 'Auto';
+            auto.textContent = '自动';
             auto.onclick = () => setSPL(false);
             c.appendChild(auto);
             ns.forEach((n, i) => {
@@ -1984,9 +1984,9 @@
 
         function updateSniffIdToggle() {
             const b = $('sniff-id-btn'), bus = sniffBusLabel();
-            b.textContent = sniffShowDbcIds ? ('DBC ' + bus) : 'Wire IDs';
-            b.title = sniffShowDbcIds ? ('Showing DBC JSON IDs with ' + bus + ' prefix') : ('Showing on-wire 11-bit CAN IDs');
-            $('sniff-filter').placeholder = 'Filter by wire/DBC ID or name';
+            b.textContent = sniffShowDbcIds ? ('DBC ' + bus) : '原始 ID';
+            b.title = sniffShowDbcIds ? ('显示带 ' + bus + ' 前缀的 DBC JSON ID') : ('显示总线上的 11 位 CAN ID');
+            $('sniff-filter').placeholder = '按原始/DBC ID 或名称过滤';
         }
 
         function toggleSniffIdMode() {
@@ -2031,7 +2031,7 @@
         }
 
         async function emergencyStop() {
-            if (!await dashConfirm('Stop injecting? This remains disabled after reboot until you press Resume Injection.', 'Stop injection', 'Stop')) return;
+            if (!await dashConfirm('停止注入？重启后仍保持禁用状态，直到点击"恢复注入"。', '停止注入', '停止')) return;
             try {
                 await fetch('/disable', {method: 'POST'});
             } catch (e) {
@@ -2052,7 +2052,7 @@
         }
 
         async function reboot() {
-            if (!await dashConfirm('Reboot device?', 'Reboot', 'Reboot')) return;
+            if (!await dashConfirm('确定重启设备？', '重启', '重启')) return;
             try {
                 await fetch('/reboot', {method: 'POST'});
             } catch (e) {
@@ -2088,7 +2088,7 @@
         function togglePause() {
             sniffPaused = !sniffPaused;
             const b = $('sniff-pause-btn');
-            b.textContent = sniffPaused ? 'Resume' : 'Pause';
+            b.textContent = sniffPaused ? '继续' : '暂停';
             b.classList.toggle('paused', sniffPaused);
         }
 
@@ -2102,9 +2102,9 @@
                 if (!isNaN(fid)) frames = frames.filter(f => sniffWireId(f.id) === fid || sniffDbcId(f.id) === fid);
                 else frames = frames.filter(f => f.name && f.name.toLowerCase().includes(filter));
             }
-            $('sniff-count').textContent = frames.length + ' frames';
+            $('sniff-count').textContent = frames.length + ' 帧';
             if (!frames.length) {
-                el.innerHTML = '<div style="padding:20px;color:var(--tx3);text-align:center;font-size:12px">No frames</div>';
+                el.innerHTML = '<div style="padding:20px;color:var(--tx3);text-align:center;font-size:12px">无帧</div>';
                 return;
             }
             const ADIds = new Set([1021, 1016, 921]);
@@ -2152,11 +2152,11 @@
         async function uploadFirmware() {
             if (!otaFile) return;
             if (!otaUser) {
-                otaUser = prompt('OTA Username:') || '';
+                otaUser = prompt('OTA 用户名：') || '';
                 localStorage.setItem('otaU', otaUser);
             }
             if (!otaPass) {
-                otaPass = prompt('OTA Password:') || '';
+                otaPass = prompt('OTA 密码：') || '';
                 localStorage.setItem('otaP', otaPass);
             }
             if (!otaUser || !otaPass) return;
@@ -2165,30 +2165,30 @@
             const status = $('ota-status');
             prog.style.display = 'block';
             $('ota-upload-btn').disabled = true;
-            $('ota-upload-btn').textContent = 'Flashing...';
+            $('ota-upload-btn').textContent = '刷写中...';
 
             const xhr = new XMLHttpRequest();
             xhr.upload.onprogress = e => {
                 if (e.lengthComputable) {
                     const pct = Math.round(e.loaded / e.total * 100);
                     fill.style.width = pct + '%';
-                    status.textContent = 'Uploading... ' + pct + '%';
+                    status.textContent = '上传中... ' + pct + '%';
                 }
             };
             xhr.onload = () => {
                 if (xhr.status === 200) {
-                    status.textContent = 'Done! Device is rebooting...';
+                    status.textContent = '完成！设备正在重启...';
                     fill.style.width = '100%';
                     setTimeout(() => window.location.reload(), 5000);
                 } else {
-                    status.textContent = 'Upload failed: ' + xhr.status;
+                    status.textContent = '上传失败：' + xhr.status;
                     status.style.color = 'var(--err)';
                 }
                 $('ota-upload-btn').disabled = false;
-                $('ota-upload-btn').textContent = 'Flash Firmware';
+                $('ota-upload-btn').textContent = '刷写固件';
             };
             xhr.onerror = () => {
-                status.textContent = 'Connection error';
+                status.textContent = '连接错误';
                 status.style.color = 'var(--err)';
                 $('ota-upload-btn').disabled = false;
             };
@@ -2205,11 +2205,11 @@
                 try {
                     const d = await fetchPollJson('/status', 1500);
                     const on = d.can;
-                    $('s-can').textContent = on ? 'Active' : 'Offline';
+                    $('s-can').textContent = on ? '激活中' : '离线';
                     $('s-can').className = 'stat-val ' + (on ? 'v-ok' : 'v-err');
-                    $('s-inj').textContent = d.ci ? 'Active' : 'BLOCKED';
+                    $('s-inj').textContent = d.ci ? '激活中' : '已阻止';
                     $('s-inj').className = 'stat-val ' + (d.ci ? 'v-ok' : 'v-err');
-                    $('s-AD').textContent = d.AD ? 'Active' : 'Inactive';
+                    $('s-AD').textContent = d.AD ? '激活中' : '未激活';
                     $('s-AD').className = 'stat-val ' + (d.AD ? 'v-ok' : 'v-dim');
                     $('s-fps').textContent = d.fps.toFixed(1) + ' Hz';
                     $('s-fps').className = 'stat-val ' + (d.fps > 5 ? 'v-acc' : 'v-dim');
@@ -2227,7 +2227,7 @@
                     $('fps-fill').style.width = Math.min(d.fps / 20 * 100, 100) + '%';
                     $('hw-badge').textContent = HW[d.hw] || '?';
                     $('dot').className = 'sdot ' + (d.txerr > 5 ? 'dot-warn' : on ? 'dot-on' : 'dot-off');
-                    $('hdr-desc').textContent = on ? (d.AD ? 'AD active — injecting' : 'CAN active — monitoring') : 'Waiting for CAN frames';
+                    $('hdr-desc').textContent = on ? (d.AD ? 'AD 激活中——注入中' : 'CAN 激活中——监听中') : '等待 CAN 帧...';
                     renderEflg(d.eflg);
                     if (d.mux) {
                         for (let i = 0; i < 3; i++) {
@@ -2298,7 +2298,7 @@
                     if (!d.lines.length) return;
                     const el = $('log');
                     const newHtml = d.lines.map(colorLog).join('\n');
-                    if (el.textContent === 'Waiting...') el.innerHTML = newHtml;
+                    if (el.textContent === '等待中...') el.innerHTML = newHtml;
                     else el.innerHTML += '\n' + newHtml;
                     // trim to 100 lines
                     const lines = el.innerHTML.split('\n');
@@ -2328,7 +2328,7 @@
                 await fetch('/rec_start', {method: 'POST'});
                 recIsActive = true;
                 const b = $('rec-btn');
-                b.textContent = 'Stop Recording';
+                b.textContent = '停止录制';
                 b.style.borderColor = 'var(--err)';
                 b.style.color = 'var(--err)';
                 $('rec-dl').style.display = 'none';
@@ -2345,7 +2345,7 @@
             } catch (e) {
             }
             const b = $('rec-btn');
-            b.textContent = 'Start Recording';
+            b.textContent = '开始录制';
             b.style.borderColor = '';
             b.style.color = '';
             await pollRec();
@@ -2356,21 +2356,21 @@
                 const d = await (await fetch('/rec_status')).json();
                 const pct = Math.min(d.count / d.cap * 100, 100);
                 $('rec-fill').style.width = pct + '%';
-                $('rec-count').textContent = d.count + ' / ' + d.cap + ' frames';
+                $('rec-count').textContent = d.count + ' / ' + d.cap + ' 帧';
                 if (d.active) {
-                    $('rec-status').textContent = 'Recording...';
+                    $('rec-status').textContent = '录制中...';
                     $('rec-status').style.color = 'var(--err)';
-                    $('rec-meta').textContent = 'Recording...';
+                    $('rec-meta').textContent = '录制中...';
                 } else {
-                    $('rec-meta').textContent = d.saved ? d.count + ' frames saved' : 'Idle';
-                    $('rec-status').textContent = d.saved ? 'Saved' : 'Ready';
+                    $('rec-meta').textContent = d.saved ? d.count + ' 帧已保存' : '空闲';
+                    $('rec-status').textContent = d.saved ? '已保存' : '就绪';
                     $('rec-status').style.color = d.saved ? 'var(--ok)' : '';
                     $('rec-dl').style.display = d.saved ? '' : 'none';
                     if (recIsActive) {
                         recIsActive = false;
                         clearInterval(recInterval);
                         const b = $('rec-btn');
-                        b.textContent = 'Start Recording';
+                        b.textContent = '开始录制';
                         b.style.borderColor = '';
                         b.style.color = '';
                     }
@@ -2383,12 +2383,12 @@
         async function saveAP() {
             const ssid = $('ap-ssid').value, pass = $('ap-pass').value, hidden = $('ap-hidden').checked ? '1' : '0';
             if (!ssid) {
-                $('ap-status').textContent = 'Enter hotspot name';
+                $('ap-status').textContent = '请输入热点名称';
                 $('ap-status').style.color = 'var(--err)';
                 return;
             }
             if (pass && pass.length < 8) {
-                $('ap-status').textContent = 'Password min 8 chars';
+                $('ap-status').textContent = '密码最少8位';
                 $('ap-status').style.color = 'var(--err)';
                 return;
             }
@@ -2400,15 +2400,15 @@
                 });
                 const d = await r.json();
                 if (d.ok) {
-                    $('ap-status').textContent = 'Saved! Reboot to apply.';
+                    $('ap-status').textContent = '已保存！重启后生效。';
                     $('ap-status').style.color = 'var(--ok)';
                     $('ap-pass').value = '';
                 } else {
-                    $('ap-status').textContent = d.error || 'Error';
+                    $('ap-status').textContent = d.error || '错误';
                     $('ap-status').style.color = 'var(--err)';
                 }
             } catch (e) {
-                $('ap-status').textContent = 'Error';
+                $('ap-status').textContent = '错误';
                 $('ap-status').style.color = 'var(--err)';
             }
         }
@@ -2418,13 +2418,13 @@
                 try {
                     const d = await fetchPollJson('/ap_status', 2000);
                     if (d.ssid) $('ap-ssid').value = d.ssid;
-                    $('ap-clients').textContent = d.clients + ' client' + (d.clients !== 1 ? 's' : '');
+                    $('ap-clients').textContent = d.clients + ' 个客户端';
                     if (typeof d.hidden !== 'undefined') $('ap-hidden').checked = !!d.hidden;
                     if (d.stored) {
-                        $('ap-stored').textContent = 'saved';
+                        $('ap-stored').textContent = '已保存';
                         $('ap-stored').style.color = 'var(--ok)';
                     } else {
-                        $('ap-stored').textContent = 'firmware default';
+                        $('ap-stored').textContent = '固件默认值';
                         $('ap-stored').style.color = 'var(--tx3)';
                     }
                 } catch (e) {
@@ -2445,24 +2445,24 @@
         }
 
         async function scanWifi() {
-            $('scan-btn').textContent = 'Scanning...';
+            $('scan-btn').textContent = '扫描中...';
             $('scan-btn').disabled = true;
             try {
                 const r = await fetch('/wifi_scan');
                 const d = await r.json();
                 const el = $('wifi-nets');
                 if (!d.networks.length) {
-                    el.innerHTML = '<div style="padding:8px;font-size:11px;color:var(--tx3);text-align:center">No networks found</div>';
+                    el.innerHTML = '<div style="padding:8px;font-size:11px;color:var(--tx3);text-align:center">未找到网络</div>';
                     el.style.display = 'block';
                 } else {
                     el.innerHTML = d.networks.map(n => '<div onclick="pickWifi(\'' + n.ssid.replace(/'/g, "\\'") + '\')" style="padding:6px 10px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--bd);font-size:12px" onmouseover="this.style.background=\'var(--bg)\'" onmouseout="this.style.background=\'\'"><span>' + (n.enc ? '\uD83D\uDD12 ' : '') + n.ssid + '</span><span style="color:var(--tx3);font-size:10px">' + rssiIcon(n.rssi) + ' ' + n.rssi + 'dBm CH' + n.ch + '</span></div>').join('');
                     el.style.display = 'block';
                 }
             } catch (e) {
-                $('wifi-status').textContent = 'Scan failed';
+                $('wifi-status').textContent = '扫描失败';
                 $('wifi-status').style.color = 'var(--err)';
             }
-            $('scan-btn').textContent = 'Scan';
+            $('scan-btn').textContent = '扫描';
             $('scan-btn').disabled = false;
         }
 
@@ -2485,10 +2485,10 @@
                         $('wifi-stored').textContent = '';
                     }
                     if (d.connected) {
-                        $('wifi-status').textContent = (d.ip && d.ip !== location.hostname) ? ('Connected: ' + d.ip + ' \u2022 switch to that WiFi and open this IP') : ('Connected: ' + d.ip);
+                        $('wifi-status').textContent = (d.ip && d.ip !== location.hostname) ? ('已连接：' + d.ip + ' \u2022 请切换至该 WiFi 并打开此 IP') : ('已连接：' + d.ip);
                         $('wifi-status').style.color = 'var(--ok)';
                     } else if (d.ssid) {
-                        $('wifi-status').textContent = 'Connecting to ' + d.ssid + '...';
+                        $('wifi-status').textContent = '正在连接到 ' + d.ssid + '...';
                         $('wifi-status').style.color = 'var(--acc)';
                     }
                     if (d.static) {
@@ -2507,7 +2507,7 @@
         async function saveWifi() {
             const ssid = $('wifi-ssid').value, pass = $('wifi-pass').value;
             if (!ssid) {
-                $('wifi-status').textContent = 'Enter SSID';
+                $('wifi-status').textContent = '请输入 SSID';
                 return;
             }
             let body = 'ssid=' + encodeURIComponent(ssid) + '&pass=' + encodeURIComponent(pass);
@@ -2520,10 +2520,10 @@
                     headers: {'Content-Type': 'application/x-www-form-urlencoded'},
                     body
                 });
-                $('wifi-status').textContent = 'Connecting to ' + ssid + '...';
+                $('wifi-status').textContent = '正在连接到 ' + ssid + '...';
                 $('wifi-status').style.color = 'var(--acc)';
             } catch (e) {
-                $('wifi-status').textContent = 'Error';
+                $('wifi-status').textContent = '错误';
                 $('wifi-status').style.color = 'var(--err)';
             }
         }
@@ -2532,11 +2532,11 @@
         async function installPlugin() {
             const url = $('plg-url').value;
             if (!url) {
-                $('plg-status').textContent = 'Enter URL';
+                $('plg-status').textContent = '请输入链接';
                 return;
             }
             const beforeSig = pluginStateSignature(installedPlugins);
-            $('plg-status').textContent = 'Downloading...';
+            $('plg-status').textContent = '下载中...';
             $('plg-status').style.color = 'var(--acc)';
             try {
                 await fetchJsonWithTimeout('/plugin_install', {
@@ -2550,15 +2550,15 @@
                 } catch (e) {
                     await refreshPluginsAfterAction(beforeSig);
                 }
-                $('plg-status').textContent = 'Installed!';
+                $('plg-status').textContent = '安装成功！';
                 $('plg-status').style.color = 'var(--ok)';
             } catch (e) {
                 if (await refreshPluginsAfterAction(beforeSig)) {
                     $('plg-url').value = '';
-                    $('plg-status').textContent = 'Installed!';
+                    $('plg-status').textContent = '安装成功！';
                     $('plg-status').style.color = 'var(--ok)';
                 } else {
-                    $('plg-status').textContent = actionErrorMessage(e, 'Connection error');
+                    $('plg-status').textContent = actionErrorMessage(e, '连接错误');
                     $('plg-status').style.color = 'var(--err)';
                 }
             }
@@ -2567,7 +2567,7 @@
         async function uploadPlugin(file) {
             if (!file) return;
             const beforeSig = pluginStateSignature(installedPlugins);
-            $('plg-status').textContent = 'Uploading...';
+            $('plg-status').textContent = '上传中...';
             $('plg-status').style.color = 'var(--acc)';
             try {
                 const text = await file.text();
@@ -2581,14 +2581,14 @@
                 } catch (e) {
                     await refreshPluginsAfterAction(beforeSig);
                 }
-                $('plg-status').textContent = 'Installed!';
+                $('plg-status').textContent = '安装成功！';
                 $('plg-status').style.color = 'var(--ok)';
             } catch (e) {
                 if (await refreshPluginsAfterAction(beforeSig)) {
-                    $('plg-status').textContent = 'Installed!';
+                    $('plg-status').textContent = '安装成功！';
                     $('plg-status').style.color = 'var(--ok)';
                 } else {
-                    $('plg-status').textContent = actionErrorMessage(e, 'Error');
+                    $('plg-status').textContent = actionErrorMessage(e, '错误');
                     $('plg-status').style.color = 'var(--err)';
                 }
             }
@@ -2597,19 +2597,19 @@
         async function pastePlugin() {
             const text = $('plg-paste').value.trim();
             if (!text) {
-                $('plg-status').textContent = 'Paste JSON first';
+                $('plg-status').textContent = '请先粘贴 JSON';
                 $('plg-status').style.color = 'var(--err)';
                 return;
             }
             try {
                 JSON.parse(text);
             } catch (e) {
-                $('plg-status').textContent = 'Invalid JSON: ' + e.message;
+                $('plg-status').textContent = '无效的 JSON：' + e.message;
                 $('plg-status').style.color = 'var(--err)';
                 return;
             }
             const beforeSig = pluginStateSignature(installedPlugins);
-            $('plg-status').textContent = 'Installing...';
+            $('plg-status').textContent = '安装中...';
             $('plg-status').style.color = 'var(--acc)';
             try {
                 await fetchJsonWithTimeout('/plugin_upload', {
@@ -2623,15 +2623,15 @@
                 } catch (e) {
                     await refreshPluginsAfterAction(beforeSig);
                 }
-                $('plg-status').textContent = 'Installed!';
+                $('plg-status').textContent = '安装成功！';
                 $('plg-status').style.color = 'var(--ok)';
             } catch (e) {
                 if (await refreshPluginsAfterAction(beforeSig)) {
                     $('plg-paste').value = '';
-                    $('plg-status').textContent = 'Installed!';
+                    $('plg-status').textContent = '安装成功！';
                     $('plg-status').style.color = 'var(--ok)';
                 } else {
-                    $('plg-status').textContent = actionErrorMessage(e, 'Connection error');
+                    $('plg-status').textContent = actionErrorMessage(e, '连接错误');
                     $('plg-status').style.color = 'var(--err)';
                 }
             }
@@ -2656,7 +2656,7 @@
         }
 
         async function removePlugin(idx) {
-            if (!await dashConfirm('Remove this plugin?', 'Remove plugin', 'Remove')) return;
+            if (!await dashConfirm('确定要删除此插件吗？', '删除插件', '删除')) return;
             const beforeSig = pluginStateSignature(installedPlugins);
             try {
                 await fetchJsonWithTimeout('/plugin_remove', {
@@ -2688,7 +2688,7 @@
                 + details.map(r => {
                     let hdr = '<div style="margin-bottom:4px"><b>CAN ' + r.hex + ' (' + r.id + ')</b>';
                     if (r.mux >= 0) hdr += ' <span style="color:var(--acc)">mux=' + r.mux + '</span>';
-                    if (r.conflict) hdr += ' <span style="color:var(--err);font-weight:bold" title="This CAN ID is also handled by the base firmware">&#9888; Firmware overlap</span>';
+                    if (r.conflict) hdr += ' <span style="color:var(--err);font-weight:bold" title="此 CAN ID 也由基础固件处理">&#9888; 固件冲突</span>';
                     hdr += '</div>';
                     let ops = r.ops.map(o => '<div style="padding-left:12px;color:var(--tx2)">' + fmtOp(o) + '</div>').join('');
                     return hdr + ops;
@@ -2721,15 +2721,15 @@
             });
             pluginDetailOpen = nextOpen;
             const max = d.maxPlugins || 0;
-            $('plg-count').textContent = max ? installedPlugins.length + ' / ' + max + ' installed' : installedPlugins.length + ' installed';
+            $('plg-count').textContent = max ? '已安装 ' + installedPlugins.length + ' / ' + max + ' 个' : '已安装 ' + installedPlugins.length + ' 个';
             if ($('plg-limit')) {
                 const full = max && installedPlugins.length >= max;
-                $('plg-limit').textContent = max ? (full ? 'Maximum ' + max + ' plugins reached. Remove one before installing another.' : 'Maximum ' + max + ' plugins total. Remove one before installing another.') : 'Maximum plugins: --';
+                $('plg-limit').textContent = max ? (full ? '最多 ' + max + ' 个插件，已达上限，请先删除一个。' : '最多 ' + max + ' 个插件，安装前请先删除一个。') : '最大插件数量：--';
                 $('plg-limit').style.color = full ? 'var(--err)' : 'var(--tx3)';
             }
             const el = $('plg-list');
             if (!installedPlugins.length) {
-                el.innerHTML = '<div style="font-size:12px;color:var(--tx3);text-align:center;padding:12px">No plugins installed</div>';
+                el.innerHTML = '<div style="font-size:12px;color:var(--tx3);text-align:center;padding:12px">未安装插件</div>';
                 return;
             }
             el.innerHTML = installedPlugins.map((p, i) => {
@@ -2740,14 +2740,14 @@
                 row += '<div class="feat-name">' + p.name + ' <span style="color:var(--tx3);font-size:11px">v' + p.version + '</span>';
                 if (hasConflict) row += ' <span style="color:var(--err);font-size:11px">&#9888;</span>';
                 row += '</div>';
-                row += '<div class="feat-desc">' + p.rules + ' rule' + (p.rules !== 1 ? 's' : '') + (p.author ? ' &bull; ' + p.author : '') + ' &bull; <span style="color:var(--acc);cursor:pointer">details</span></div>';
+                row += '<div class="feat-desc">' + p.rules + ' 条规则' + (p.author ? ' &bull; ' + p.author : '') + ' &bull; <span style="color:var(--acc);cursor:pointer">详情</span></div>';
                 row += '</div>';
                 row += '<label class="tgl"><input type="checkbox" ' + (p.enabled ? 'checked' : '') + ' onchange="togglePlugin(' + i + ')"><div class="tgl-track"><div class="tgl-thumb"></div></div></label>';
-                row += '<button onclick="peLoadInstalledPlugin(' + i + ')" style="margin-left:8px;padding:4px 8px;border:1px solid var(--bd);border-radius:5px;background:transparent;color:var(--acc);cursor:pointer;font-size:10px;font-family:inherit">Edit</button>';
+                row += '<button onclick="peLoadInstalledPlugin(' + i + ')" style="margin-left:8px;padding:4px 8px;border:1px solid var(--bd);border-radius:5px;background:transparent;color:var(--acc);cursor:pointer;font-size:10px;font-family:inherit">编辑</button>';
                 row += '<button onclick="removePlugin(' + i + ')" style="margin-left:8px;padding:4px 8px;border:1px solid var(--errBd);border-radius:5px;background:transparent;color:var(--err);cursor:pointer;font-size:10px;font-family:inherit">X</button></div>';
                 if (p.details) {
                     row += '<div id="plg-det-' + i + '" style="display:' + (detailsOpen ? 'block' : 'none') + '">';
-                    if (hasConflict) row += '<div style="margin-top:6px;padding:6px 8px;background:var(--errBg,#3a1a1a);border:1px solid var(--errBd);border-radius:6px;font-size:11px;color:var(--err)">&#9888; Some CAN IDs overlap with base firmware. Plugin rules run <b>after</b> the original handler. Both will send modified frames.</div>';
+                    if (hasConflict) row += '<div style="margin-top:6px;padding:6px 8px;background:var(--errBg,#3a1a1a);border:1px solid var(--errBd);border-radius:6px;font-size:11px;color:var(--err)">&#9888; 部分 CAN ID 与基础固件冲突，插件规则将在原始处理器<b>之后</b>执行，两者均会发送修改帧。</div>';
                     row += renderPluginDetails(p.details);
                     row += '</div>';
                 }
@@ -2802,7 +2802,7 @@
 
         async function checkUpdate() {
             $('upd-check-btn').disabled = true;
-            $('upd-status').textContent = 'Checking...';
+            $('upd-status').textContent = '检查中...';
             $('upd-status').style.color = 'var(--acc)';
             $('upd-info').style.display = 'none';
             pendingUpdateUrl = '';
@@ -2810,25 +2810,25 @@
                 const r = await fetch('/update_check');
                 const d = await r.json();
                 if (!d.ok) {
-                    $('upd-status').textContent = d.error || 'Error';
+                    $('upd-status').textContent = d.error || '错误';
                     $('upd-status').style.color = 'var(--err)';
                     $('upd-check-btn').disabled = false;
                     return;
                 }
                 $('fw-ver').textContent = 'v' + d.current;
                 if (d.update) {
-                    $('upd-status').textContent = 'Update available!';
+                    $('upd-status').textContent = '发现新版本！';
                     $('upd-status').style.color = 'var(--ok)';
                     $('upd-ver').textContent = 'v' + d.latest + (d.prerelease ? ' (beta)' : '');
                     $('upd-detail').textContent = d.artifact + ' \u2022 ' + d.tag;
                     pendingUpdateUrl = d.url;
                     $('upd-info').style.display = 'block';
                 } else {
-                    $('upd-status').textContent = 'Up to date (v' + d.current + ')';
+                    $('upd-status').textContent = '已是最新（v' + d.current + '）';
                     $('upd-status').style.color = 'var(--ok)';
                 }
             } catch (e) {
-                $('upd-status').textContent = 'Connection error';
+                $('upd-status').textContent = '连接错误';
                 $('upd-status').style.color = 'var(--err)';
             }
             $('upd-check-btn').disabled = false;
@@ -2836,12 +2836,12 @@
 
         async function installUpdate() {
             if (!pendingUpdateUrl) {
-                $('upd-status').textContent = 'No update URL';
+                $('upd-status').textContent = '无更新链接';
                 return;
             }
-            if (!await dashConfirm('Install firmware update? The device will reboot.', 'Install update', 'Install')) return;
+            if (!await dashConfirm('确定安装固件更新？设备将重启。', '安装更新', '安装')) return;
             $('upd-install-btn').disabled = true;
-            $('upd-status').textContent = 'Downloading & installing...';
+            $('upd-status').textContent = '下载并安装中...';
             $('upd-status').style.color = 'var(--acc)';
             try {
                 await fetch('/update_install', {
@@ -2849,11 +2849,11 @@
                     headers: {'Content-Type': 'application/x-www-form-urlencoded'},
                     body: 'url=' + encodeURIComponent(pendingUpdateUrl)
                 });
-                $('upd-status').textContent = 'Update installed! Rebooting...';
+                $('upd-status').textContent = '更新完成！正在重启...';
                 $('upd-status').style.color = 'var(--ok)';
                 setTimeout(() => location.reload(), 15000);
             } catch (e) {
-                $('upd-status').textContent = 'Update failed';
+                $('upd-status').textContent = '更新失败';
                 $('upd-status').style.color = 'var(--err)';
                 $('upd-install-btn').disabled = false;
             }
@@ -2905,7 +2905,7 @@
                 const d = await r.json();
                 if (d.tx >= 0) $('can-tx').value = d.tx;
                 if (d.rx >= 0) $('can-rx').value = d.rx;
-                $('can-pins-status').textContent = d.customized ? ('custom TX=' + d.tx + ' RX=' + d.rx) : ('firmware default TX=' + d.tx + ' RX=' + d.rx);
+                $('can-pins-status').textContent = d.customized ? ('自定义 TX=' + d.tx + ' RX=' + d.rx) : ('固件默认 TX=' + d.tx + ' RX=' + d.rx);
             } catch (e) {
             }
         }
@@ -2913,11 +2913,11 @@
         async function saveCanPins() {
             var tx = parseInt($('can-tx').value, 10), rx = parseInt($('can-rx').value, 10);
             if (isNaN(tx) || isNaN(rx)) {
-                $('can-pins-hint').textContent = 'Enter both TX and RX';
+                $('can-pins-hint').textContent = '请输入 TX 和 RX';
                 $('can-pins-hint').style.color = 'var(--err)';
                 return;
             }
-            if (!await dashConfirm('Save CAN pins TX=' + tx + ' RX=' + rx + ' and reboot? Wrong pins disable CAN.', 'Save CAN pins', 'Save')) return;
+            if (!await dashConfirm('保存 CAN 引脚 TX=' + tx + ' RX=' + rx + ' 并重启？引脚错误将禁用 CAN。', '保存 CAN 引脚', '保存')) return;
             try {
                 const r = await fetch('/can_pins', {
                     method: 'POST',
@@ -2926,22 +2926,22 @@
                 });
                 const d = await r.json();
                 if (d.ok) {
-                    $('can-pins-hint').textContent = 'Saved. Rebooting...';
+                    $('can-pins-hint').textContent = '已保存，正在重启...';
                     $('can-pins-hint').style.color = 'var(--ok)';
                     await fetch('/reboot', {method: 'POST'});
                     setTimeout(() => location.reload(), 8000);
                 } else {
-                    $('can-pins-hint').textContent = d.error || 'Save failed';
+                    $('can-pins-hint').textContent = d.error || '保存失败';
                     $('can-pins-hint').style.color = 'var(--err)';
                 }
             } catch (e) {
-                $('can-pins-hint').textContent = 'Connection error';
+                $('can-pins-hint').textContent = '连接错误';
                 $('can-pins-hint').style.color = 'var(--err)';
             }
         }
 
         async function exportSettings() {
-            $('backup-status').textContent = 'Preparing...';
+            $('backup-status').textContent = '准备中...';
             $('backup-status').style.color = 'var(--tx3)';
             try {
                 const r = await fetch('/settings_export');
@@ -2958,10 +2958,10 @@
                 a.click();
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
-                $('backup-status').textContent = 'Downloaded';
+                $('backup-status').textContent = '已下载';
                 $('backup-status').style.color = 'var(--ok)';
             } catch (e) {
-                $('backup-status').textContent = 'Export failed';
+                $('backup-status').textContent = '导出失败';
                 $('backup-status').style.color = 'var(--err)';
             }
         }
@@ -2973,12 +2973,12 @@
             try {
                 JSON.parse(text);
             } catch (e) {
-                $('backup-status').textContent = 'Invalid JSON';
+                $('backup-status').textContent = '无效的 JSON';
                 $('backup-status').style.color = 'var(--err)';
                 return;
             }
-            if (!await dashConfirm('Restore settings from ' + f.name + ' and reboot?', 'Restore settings', 'Restore')) return;
-            $('backup-status').textContent = 'Uploading...';
+            if (!await dashConfirm('从 ' + f.name + ' 还原设置并重启？', '还原设置', '还原')) return;
+            $('backup-status').textContent = '上传中...';
             $('backup-status').style.color = 'var(--acc)';
             try {
                 const r = await fetch('/settings_import', {
@@ -2988,16 +2988,16 @@
                 });
                 const d = await r.json();
                 if (d.ok) {
-                    $('backup-status').textContent = 'Restored. Rebooting...';
+                    $('backup-status').textContent = '已还原，正在重启...';
                     $('backup-status').style.color = 'var(--ok)';
                     await fetch('/reboot', {method: 'POST'});
                     setTimeout(() => location.reload(), 8000);
                 } else {
-                    $('backup-status').textContent = d.error || 'Import failed';
+                    $('backup-status').textContent = d.error || '导入失败';
                     $('backup-status').style.color = 'var(--err)';
                 }
             } catch (e) {
-                $('backup-status').textContent = 'Upload failed';
+                $('backup-status').textContent = '上传失败';
                 $('backup-status').style.color = 'var(--err)';
             }
             ev.target.value = '';
@@ -3049,7 +3049,7 @@
             const prev = parseInt(sel.value, 10);
             if (!peState.rules.length) {
                 sel.disabled = true;
-                sel.innerHTML = '<option value="">No rules</option>';
+                sel.innerHTML = '<option value="">无规则</option>';
                 return;
             }
             sel.disabled = false;
@@ -3059,7 +3059,7 @@
 
         function peAddRule() {
             if (peState.rules.length >= 16) {
-                peSetStatus('Max 16 rules per plugin', 'err');
+                peSetStatus('每个插件最多 16 条规则', 'err');
                 return;
             }
             peState.rules.push({id: 0, mux: -1, send: true, ops: []});
@@ -3075,7 +3075,7 @@
             const r = peState.rules[i];
             if (!r) return;
             if (r.ops.length >= 8) {
-                peSetStatus('Max 8 ops per rule', 'err');
+                peSetStatus('每条规则最多 8 个操作', 'err');
                 return;
             }
             const op = {type: type};
@@ -3161,21 +3161,21 @@
                 fields = '<input class="sniff-input" style="width:48px" type="number" min="0" max="7" value="' + op.byte + '" title="byte (0-7)" onchange="peUpdateField(' + i + ',' + j + ',\'byte\',this.value)">' +
                     '<input class="sniff-input" style="width:70px" value="0x' + ((op.val || 0) & 255).toString(16) + '" title="val (0-255)" onchange="peUpdateField(' + i + ',' + j + ',\'val\',this.value)">';
             } else {
-                fields = '<span style="font-size:11px;color:var(--tx3);align-self:center;padding:0 4px">recalc byte 7 checksum</span>';
+                fields = '<span style="font-size:11px;color:var(--tx3);align-self:center;padding:0 4px">重算第7字节校验和</span>';
             }
             return '<div style="display:flex;gap:4px;align-items:center;margin-bottom:4px;flex-wrap:wrap">' + sel + fields + '<button class="sniff-btn" style="margin-left:auto;padding:2px 8px" onclick="peRemoveOp(' + i + ',' + j + ')" title="Remove op">&times;</button></div>';
         }
 
         function peRuleBlock(i, r) {
-            const ops = r.ops.length ? r.ops.map((op, j) => peOpRow(i, j, op)).join('') : '<div style="font-size:11px;color:var(--tx3);padding:4px 0">No ops &mdash; add one below</div>';
+            const ops = r.ops.length ? r.ops.map((op, j) => peOpRow(i, j, op)).join('') : '<div style="font-size:11px;color:var(--tx3);padding:4px 0">无操作 &mdash; 在下方添加</div>';
             const hex = r.id ? '0x' + r.id.toString(16).toUpperCase() : '?';
             return '<details open style="margin-bottom:10px;border:1px solid var(--bd);border-radius:6px;padding:8px;background:var(--bg2)">' +
                 '<summary style="cursor:pointer;font-size:12px;color:var(--tx);user-select:none">Rule ' + (i + 1) + ' &mdash; CAN ' + hex + (r.id ? ' (' + r.id + ')' : '') + (r.mux >= 0 ? ' mux=' + r.mux : '') + ' &middot; ' + r.ops.length + ' op' + (r.ops.length === 1 ? '' : 's') + '</summary>' +
                 '<div style="display:flex;gap:6px;margin:8px 0;flex-wrap:wrap">' +
                 '<input class="sniff-input" style="width:100px" type="number" min="0" max="2047" value="' + (r.id || '') + '" placeholder="CAN ID" onchange="peUpdateField(' + i + ',-1,\'id\',this.value)">' +
-                '<input class="sniff-input" style="width:100px" type="number" min="-1" max="7" value="' + r.mux + '" placeholder="mux (-1=any)" onchange="peUpdateField(' + i + ',-1,\'mux\',this.value)">' +
-                '<label style="font-size:11px;color:var(--tx3);display:flex;align-items:center;gap:4px"><input type="checkbox"' + (r.send ? ' checked' : '') + ' onchange="peUpdateField(' + i + ',-1,\'send\',this.checked)"> send</label>' +
-                '<button class="sniff-btn" style="margin-left:auto" onclick="peRemoveRule(' + i + ')">Remove Rule</button>' +
+                '<input class="sniff-input" style="width:100px" type="number" min="-1" max="7" value="' + r.mux + '" placeholder="mux (-1=全部)" onchange="peUpdateField(' + i + ',-1,\'mux\',this.value)">' +
+                '<label style="font-size:11px;color:var(--tx3);display:flex;align-items:center;gap:4px"><input type="checkbox"' + (r.send ? ' checked' : '') + ' onchange="peUpdateField(' + i + ',-1,\'send\',this.checked)"> 发送</label>' +
+                '<button class="sniff-btn" style="margin-left:auto" onclick="peRemoveRule(' + i + ')">删除规则</button>' +
                 '</div>' +
                 ops +
                 '<div style="margin-top:6px;display:flex;gap:4px;flex-wrap:wrap">' +
@@ -3191,11 +3191,11 @@
         function peRender() {
             const el = $('pe-rules');
             if (!peState.rules.length) {
-                el.innerHTML = '<div style="font-size:12px;color:var(--tx3);text-align:center;padding:12px;border:1px dashed var(--bd);border-radius:6px">No rules yet. Click &ldquo;+ Add Rule&rdquo; below.</div>';
+                el.innerHTML = '<div style="font-size:12px;color:var(--tx3);text-align:center;padding:12px;border:1px dashed var(--bd);border-radius:6px">暂无规则，点击下方 &ldquo;+ 添加规则&rdquo;。</div>';
             } else {
                 el.innerHTML = peState.rules.map((r, i) => peRuleBlock(i, r)).join('');
             }
-            $('pe-count').textContent = peState.rules.length + ' rule' + (peState.rules.length === 1 ? '' : 's');
+            $('pe-count').textContent = peState.rules.length + ' 条规则';
             peUpdateRuleOptions();
             peRenderPreview();
             peUpdateTestPreview();
@@ -3288,13 +3288,13 @@
             const el = $('pe-test-preview');
             if (!el) return;
             if (!peState.rules.length) {
-                el.textContent = 'Add a rule to preview a test frame.';
-                peSetTestStatus('Idle', '');
+                el.textContent = '添加规则以预览测试帧。';
+                peSetTestStatus('空闲', '');
                 return;
             }
             const idx = parseInt($('pe-test-rule').value, 10);
             if (isNaN(idx) || idx < 0 || idx >= peState.rules.length) {
-                el.textContent = 'Select a rule to test.';
+                el.textContent = '请选择要测试的规则。';
                 return;
             }
             const parsed = peParseTestBytes();
@@ -3304,7 +3304,7 @@
             }
             const count = parseInt($('pe-test-count').value, 10), interval = parseInt($('pe-test-interval').value, 10);
             if (isNaN(count) || count < 1 || count > 200) {
-                el.textContent = 'Count must be 1-200.';
+                el.textContent = '次数须在 1-200 之间。';
                 return;
             }
             if (isNaN(interval) || interval < 10 || interval > 5000) {
@@ -3415,7 +3415,7 @@
             } catch (e) {
             }
             const beforeSig = pluginStateSignature(installedPlugins);
-            peSetStatus('Installing...', 'acc');
+            peSetStatus('安装中...', 'acc');
             try {
                 await fetchJsonWithTimeout('/plugin_upload', {
                     method: 'POST',
