@@ -1774,10 +1774,10 @@
             if (dashConfirmState) dashConfirmResolve(false);
             return new Promise(resolve => {
                 dashConfirmState = {resolve};
-                $('confirm-title').textContent = title || '确认';
+                $('confirm-title').textContent = title || 'Confirm';
                 $('confirm-msg').textContent = message || '';
-                $('confirm-ok').textContent = okText || '继续';
-                $('confirm-cancel').textContent = cancelText || '取消';
+                $('confirm-ok').textContent = okText || 'Continue';
+                $('confirm-cancel').textContent = cancelText || 'Cancel';
                 $('confirm-modal').style.display = 'flex';
                 document.body.style.overflow = 'hidden';
                 setTimeout(() => {
@@ -2031,7 +2031,7 @@
         }
 
         async function emergencyStop() {
-            if (!await dashConfirm('停止注入？重启后仍保持禁用状态，直到点击"恢复注入"。', '停止注入', '停止')) return;
+            if (!await dashConfirm('Stop injecting? This remains disabled after reboot until you press Resume Injection.', 'Stop injection', 'Stop')) return;
             try {
                 await fetch('/disable', {method: 'POST'});
             } catch (e) {
@@ -2052,7 +2052,7 @@
         }
 
         async function reboot() {
-            if (!await dashConfirm('确定重启设备？', '重启', '重启')) return;
+            if (!await dashConfirm('Reboot device?', 'Reboot', 'Reboot')) return;
             try {
                 await fetch('/reboot', {method: 'POST'});
             } catch (e) {
@@ -3049,7 +3049,7 @@
             const prev = parseInt(sel.value, 10);
             if (!peState.rules.length) {
                 sel.disabled = true;
-                sel.innerHTML = '<option value="">无规则</option>';
+                sel.innerHTML = '<option value="">No rules</option>';
                 return;
             }
             sel.disabled = false;
@@ -3161,21 +3161,21 @@
                 fields = '<input class="sniff-input" style="width:48px" type="number" min="0" max="7" value="' + op.byte + '" title="byte (0-7)" onchange="peUpdateField(' + i + ',' + j + ',\'byte\',this.value)">' +
                     '<input class="sniff-input" style="width:70px" value="0x' + ((op.val || 0) & 255).toString(16) + '" title="val (0-255)" onchange="peUpdateField(' + i + ',' + j + ',\'val\',this.value)">';
             } else {
-                fields = '<span style="font-size:11px;color:var(--tx3);align-self:center;padding:0 4px">重算第7字节校验和</span>';
+                fields = '<span style="font-size:11px;color:var(--tx3);align-self:center;padding:0 4px">recalc byte 7 checksum</span>';
             }
             return '<div style="display:flex;gap:4px;align-items:center;margin-bottom:4px;flex-wrap:wrap">' + sel + fields + '<button class="sniff-btn" style="margin-left:auto;padding:2px 8px" onclick="peRemoveOp(' + i + ',' + j + ')" title="Remove op">&times;</button></div>';
         }
 
         function peRuleBlock(i, r) {
-            const ops = r.ops.length ? r.ops.map((op, j) => peOpRow(i, j, op)).join('') : '<div style="font-size:11px;color:var(--tx3);padding:4px 0">无操作 &mdash; 在下方添加</div>';
+            const ops = r.ops.length ? r.ops.map((op, j) => peOpRow(i, j, op)).join('') : '<div style="font-size:11px;color:var(--tx3);padding:4px 0">No ops &mdash; add one below</div>';
             const hex = r.id ? '0x' + r.id.toString(16).toUpperCase() : '?';
             return '<details open style="margin-bottom:10px;border:1px solid var(--bd);border-radius:6px;padding:8px;background:var(--bg2)">' +
                 '<summary style="cursor:pointer;font-size:12px;color:var(--tx);user-select:none">Rule ' + (i + 1) + ' &mdash; CAN ' + hex + (r.id ? ' (' + r.id + ')' : '') + (r.mux >= 0 ? ' mux=' + r.mux : '') + ' &middot; ' + r.ops.length + ' op' + (r.ops.length === 1 ? '' : 's') + '</summary>' +
                 '<div style="display:flex;gap:6px;margin:8px 0;flex-wrap:wrap">' +
                 '<input class="sniff-input" style="width:100px" type="number" min="0" max="2047" value="' + (r.id || '') + '" placeholder="CAN ID" onchange="peUpdateField(' + i + ',-1,\'id\',this.value)">' +
-                '<input class="sniff-input" style="width:100px" type="number" min="-1" max="7" value="' + r.mux + '" placeholder="mux (-1=全部)" onchange="peUpdateField(' + i + ',-1,\'mux\',this.value)">' +
-                '<label style="font-size:11px;color:var(--tx3);display:flex;align-items:center;gap:4px"><input type="checkbox"' + (r.send ? ' checked' : '') + ' onchange="peUpdateField(' + i + ',-1,\'send\',this.checked)"> 发送</label>' +
-                '<button class="sniff-btn" style="margin-left:auto" onclick="peRemoveRule(' + i + ')">删除规则</button>' +
+                '<input class="sniff-input" style="width:100px" type="number" min="-1" max="7" value="' + r.mux + '" placeholder="mux (-1=any)" onchange="peUpdateField(' + i + ',-1,\'mux\',this.value)">' +
+                '<label style="font-size:11px;color:var(--tx3);display:flex;align-items:center;gap:4px"><input type="checkbox"' + (r.send ? ' checked' : '') + ' onchange="peUpdateField(' + i + ',-1,\'send\',this.checked)"> send</label>' +
+                '<button class="sniff-btn" style="margin-left:auto" onclick="peRemoveRule(' + i + ')">Remove Rule</button>' +
                 '</div>' +
                 ops +
                 '<div style="margin-top:6px;display:flex;gap:4px;flex-wrap:wrap">' +
@@ -3195,7 +3195,7 @@
             } else {
                 el.innerHTML = peState.rules.map((r, i) => peRuleBlock(i, r)).join('');
             }
-            $('pe-count').textContent = peState.rules.length + ' 条规则';
+            $('pe-count').textContent = peState.rules.length + ' rule' + (peState.rules.length === 1 ? '' : 's');
             peUpdateRuleOptions();
             peRenderPreview();
             peUpdateTestPreview();
@@ -3288,13 +3288,13 @@
             const el = $('pe-test-preview');
             if (!el) return;
             if (!peState.rules.length) {
-                el.textContent = '添加规则以预览测试帧。';
-                peSetTestStatus('空闲', '');
+                el.textContent = 'Add a rule to preview a test frame.';
+                peSetTestStatus('Idle', '');
                 return;
             }
             const idx = parseInt($('pe-test-rule').value, 10);
             if (isNaN(idx) || idx < 0 || idx >= peState.rules.length) {
-                el.textContent = '请选择要测试的规则。';
+                el.textContent = 'Select a rule to test.';
                 return;
             }
             const parsed = peParseTestBytes();
@@ -3304,15 +3304,15 @@
             }
             const count = parseInt($('pe-test-count').value, 10), interval = parseInt($('pe-test-interval').value, 10);
             if (isNaN(count) || count < 1 || count > 200) {
-                el.textContent = '次数须在 1-200 之间。';
+                el.textContent = 'Count must be 1-200.';
                 return;
             }
             if (isNaN(interval) || interval < 10 || interval > 5000) {
-                el.textContent = '间隔须在 10-5000 ms 之间。';
+                el.textContent = 'Interval must be 10-5000 ms.';
                 return;
             }
             const rule = peState.rules[idx], out = peApplyRuleToBytes(rule, parsed.bytes);
-            el.textContent = '预览 ' + peRuleLabel(rule, idx) + '\n帧：' + peFormatBytes(out) + '\n发送 ' + count + ' 次，间隔 ' + interval + ' ms';
+            el.textContent = 'Preview ' + peRuleLabel(rule, idx) + '\nFrame: ' + peFormatBytes(out) + '\nSend ' + count + 'x every ' + interval + ' ms';
         }
 
         function peStopTestPoll() {
@@ -3332,7 +3332,7 @@
                 if (d.active) {
                     peSetTestStatus('Running ' + d.sent + '/' + d.total + ' · every ' + d.interval + ' ms', 'acc');
                 } else {
-                    peSetTestStatus(d.total ? (d.sent < d.total ? '已停止 ' + d.sent + '/' + d.total : '完成 ' + d.sent + '/' + d.total) : '空闲', d.total && d.sent >= d.total ? 'ok' : '');
+                    peSetTestStatus(d.total ? (d.sent < d.total ? 'Stopped ' + d.sent + '/' + d.total : 'Done ' + d.sent + '/' + d.total) : 'Idle', d.total && d.sent >= d.total ? 'ok' : '');
                     peStopTestPoll();
                 }
             } catch (e) {
@@ -3342,7 +3342,7 @@
         async function peLoadInstalledPlugin(idx) {
             const p = installedPlugins[idx];
             if (!p) return;
-            if (peHasContent() && !await dashConfirm('将已安装的插件加载到编辑器？当前内容将被替换。', '加载插件', '加载')) return;
+            if (peHasContent() && !await dashConfirm('Load installed plugin into the editor? Current editor contents will be replaced.', 'Load plugin', 'Load')) return;
             $('pe-name').value = p.name || '';
             $('pe-author').value = p.author || '';
             $('pe-version').value = p.version || '1.0';
@@ -3378,21 +3378,21 @@
 
         function peValidate() {
             const meta = peGetMeta();
-            if (!meta.name) return '请填写插件名称';
-            if (meta.name.length > 31) return '名称过长（最多31字符）';
-            if (!peState.rules.length) return '请至少添加一条规则';
+            if (!meta.name) return 'Plugin name required';
+            if (meta.name.length > 31) return 'Name too long (max 31)';
+            if (!peState.rules.length) return 'Add at least one rule';
             for (let i = 0; i < peState.rules.length; i++) {
                 const r = peState.rules[i];
-                if (!r.id || r.id < 1 || r.id > 2047) return '规则 ' + (i + 1) + '：CAN ID 须在 1-2047 之间';
-                if (r.mux < -1 || r.mux > 7) return '规则 ' + (i + 1) + '：mux 须在 -1..7 之间';
-                if (!r.ops.length) return '规则 ' + (i + 1) + '：请至少添加一个操作';
+                if (!r.id || r.id < 1 || r.id > 2047) return 'Rule ' + (i + 1) + ': CAN ID must be 1-2047';
+                if (r.mux < -1 || r.mux > 7) return 'Rule ' + (i + 1) + ': mux must be -1..7';
+                if (!r.ops.length) return 'Rule ' + (i + 1) + ': add at least one op';
                 for (let j = 0; j < r.ops.length; j++) {
                     const op = r.ops[j];
                     if (op.type === 'set_bit') {
-                        if (op.bit < 0 || op.bit > 63) return '规则 ' + (i + 1) + ' 操作 ' + (j + 1) + '：bit 须在 0-63 之间';
+                        if (op.bit < 0 || op.bit > 63) return 'Rule ' + (i + 1) + ' op ' + (j + 1) + ': bit must be 0-63';
                     } else if (op.type === 'set_byte' || op.type === 'or_byte' || op.type === 'and_byte') {
-                        if (op.byte < 0 || op.byte > 7) return '规则 ' + (i + 1) + ' 操作 ' + (j + 1) + '：byte 须在 0-7 之间';
-                        if (op.val < 0 || op.val > 255) return '规则 ' + (i + 1) + ' 操作 ' + (j + 1) + '：val 须在 0-255 之间';
+                        if (op.byte < 0 || op.byte > 7) return 'Rule ' + (i + 1) + ' op ' + (j + 1) + ': byte must be 0-7';
+                        if (op.val < 0 || op.val > 255) return 'Rule ' + (i + 1) + ' op ' + (j + 1) + ': val must be 0-255';
                     }
                 }
             }
@@ -3410,7 +3410,7 @@
                 const r = await fetch('/plugins');
                 const d = await r.json();
                 if (d.plugins && d.plugins.some(p => p.name === obj.name) && obj.name !== peLoadedPluginName) {
-                    if (!await dashConfirm('插件 "' + obj.name + '" 已存在，是否覆盖？', '覆盖插件', '覆盖')) return;
+                    if (!await dashConfirm('A plugin named "' + obj.name + '" already exists. Overwrite?', 'Overwrite plugin', 'Overwrite')) return;
                 }
             } catch (e) {
             }
@@ -3428,25 +3428,25 @@
                 } catch (e) {
                     await refreshPluginsAfterAction(beforeSig);
                 }
-                peSetStatus('安装成功！', 'ok');
+                peSetStatus('Installed!', 'ok');
             } catch (e) {
                 if (await refreshPluginsAfterAction(beforeSig)) {
                     peLoadedPluginName = obj.name;
-                    peSetStatus('安装成功！', 'ok');
+                    peSetStatus('Installed!', 'ok');
                 } else {
-                    peSetStatus(actionErrorMessage(e, '连接错误'), 'err');
+                    peSetStatus(actionErrorMessage(e, 'Connection error'), 'err');
                 }
             }
         }
 
         async function peStartTest() {
             if (!peState.rules.length) {
-                peSetTestStatus('请先添加一条规则', 'err');
+                peSetTestStatus('Add a rule first', 'err');
                 return;
             }
             const idx = parseInt($('pe-test-rule').value, 10);
             if (isNaN(idx) || idx < 0 || idx >= peState.rules.length) {
-                peSetTestStatus('请选择有效的规则', 'err');
+                peSetTestStatus('Select a valid rule', 'err');
                 return;
             }
             const parsed = peParseTestBytes();
@@ -3456,14 +3456,14 @@
             }
             const count = parseInt($('pe-test-count').value, 10), interval = parseInt($('pe-test-interval').value, 10);
             if (isNaN(count) || count < 1 || count > 200) {
-                peSetTestStatus('次数须在 1-200 之间', 'err');
+                peSetTestStatus('Count must be 1-200', 'err');
                 return;
             }
             if (isNaN(interval) || interval < 10 || interval > 5000) {
-                peSetTestStatus('间隔须在 10-5000 ms 之间', 'err');
+                peSetTestStatus('Interval must be 10-5000 ms', 'err');
                 return;
             }
-            peSetTestStatus('启动中...', 'acc');
+            peSetTestStatus('Starting...', 'acc');
             try {
                 const r = await fetch('/plugin_test', {
                     method: 'POST',
@@ -3479,15 +3479,15 @@
                 const d = await r.json();
                 if (d.ok) {
                     $('pe-test-preview').textContent = 'Test CAN 0x' + toHex((d.id || 0) & 0x7FF, 3) + '\nFrame: ' + peFormatBytes(d.data || []) + '\nProgress: ' + (d.sent || 0) + '/' + (d.total || 0);
-                    peSetTestStatus(d.active ? ('运行中 ' + (d.sent || 0) + '/' + (d.total || 0) + ' · 间隔 ' + (d.interval || interval) + ' ms') : '完成', 'acc');
+                    peSetTestStatus(d.active ? ('Running ' + (d.sent || 0) + '/' + (d.total || 0) + ' · every ' + (d.interval || interval) + ' ms') : 'Done', 'acc');
                     peStopTestPoll();
                     peTestPollTimer = setInterval(pePollTestStatus, 500);
                     pePollTestStatus();
                 } else {
-                    peSetTestStatus(d.error || '测试失败', 'err');
+                    peSetTestStatus(d.error || 'Test failed', 'err');
                 }
             } catch (e) {
-                peSetTestStatus('连接错误', 'err');
+                peSetTestStatus('Connection error', 'err');
             }
         }
 
@@ -3496,9 +3496,9 @@
                 const r = await fetch('/plugin_test_stop', {method: 'POST'});
                 const d = await r.json();
                 peStopTestPoll();
-                peSetTestStatus(d.total ? (d.sent < d.total ? '已停止 ' + d.sent + '/' + d.total : '完成 ' + d.sent + '/' + d.total) : '空闲', d.total && d.sent >= d.total ? 'ok' : '');
+                peSetTestStatus(d.total ? (d.sent < d.total ? 'Stopped ' + d.sent + '/' + d.total : 'Done ' + d.sent + '/' + d.total) : 'Idle', d.total && d.sent >= d.total ? 'ok' : '');
             } catch (e) {
-                peSetTestStatus('连接错误', 'err');
+                peSetTestStatus('Connection error', 'err');
             }
         }
 
@@ -3518,7 +3518,7 @@
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
-            peSetStatus('已下载', 'ok');
+            peSetStatus('Downloaded', 'ok');
         }
 
         async function peReset() {
