@@ -2,7 +2,7 @@
 #include <Arduino.h>
 
     static const char DASH_HTML[] PROGMEM = R"HTML(<!DOCTYPE html>
-    <html lang="en" data-theme="dark">
+    <html lang="zh-CN" data-theme="dark">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
@@ -1010,11 +1010,11 @@
                 <div class="hdr-title">ev-open-can-tools</div>
                 <span class="hw-badge" id="hw-badge">HW3</span>
             </div>
-            <button class="theme-btn" onclick="toggleTheme()" id="theme-btn">&#9788; Light</button>
+            <button class="theme-btn" onclick="toggleTheme()" id="theme-btn">&#9788; 浅色</button>
         </div>
         <div class="hdr-status">
             <span class="sdot dot-off" id="dot"></span>
-            <span id="hdr-desc">Waiting for CAN frames</span>
+            <span id="hdr-desc">等待 CAN 帧...</span>
         </div>
     </div>
 
@@ -1024,19 +1024,19 @@
 
     <div class="stat-grid">
         <div class="stat">
-            <div class="stat-lbl">CAN Bus</div>
-            <div class="stat-val" id="s-can">Offline</div>
+            <div class="stat-lbl">CAN 总线</div>
+            <div class="stat-val" id="s-can">离线</div>
         </div>
         <div class="stat">
-            <div class="stat-lbl">Injection</div>
+            <div class="stat-lbl">注入</div>
             <div class="stat-val v-dim" id="s-inj">—</div>
         </div>
         <div class="stat">
             <div class="stat-lbl">AD</div>
-            <div class="stat-val" id="s-AD">Inactive</div>
+            <div class="stat-val" id="s-AD">未激活</div>
         </div>
         <div class="stat">
-            <div class="stat-lbl">Frame rate</div>
+            <div class="stat-lbl">帧率</div>
             <div class="stat-val v-dim" id="s-fps">0.0 Hz</div>
         </div>
         <div class="stat">
@@ -1048,31 +1048,31 @@
             <div class="stat-val v-acc" id="s-tx">0</div>
         </div>
         <div class="stat">
-            <div class="stat-lbl">TX Errors</div>
+            <div class="stat-lbl">TX 错误</div>
             <div class="stat-val v-dim" id="s-txerr">0</div>
         </div>
         <div class="stat">
-            <div class="stat-lbl">Follow dist</div>
+            <div class="stat-lbl">跟车距离</div>
             <div class="stat-val v-dim" id="s-fd">—</div>
         </div>
         <div class="stat">
-            <div class="stat-lbl">Profile</div>
+            <div class="stat-lbl">速度档位</div>
             <div class="stat-val v-dim" id="s-prof">—</div>
         </div>
         <div class="stat">
-            <div class="stat-lbl">Speed Offset</div>
+            <div class="stat-lbl">速度偏移</div>
             <div class="stat-val v-dim" id="s-soff">0</div>
         </div>
         <div class="stat">
-            <div class="stat-lbl">Uptime</div>
+            <div class="stat-lbl">运行时间</div>
             <div class="stat-val v-dim" id="s-up">0s</div>
         </div>
         <div class="stat">
-            <div class="stat-lbl">BanShield</div>
+            <div class="stat-lbl">防封盾</div>
             <div class="stat-val v-dim" id="s-bscnt">0</div>
         </div>
         <div class="stat">
-            <div class="stat-lbl">Speed Limit</div>
+            <div class="stat-lbl">限速</div>
             <div class="stat-val v-dim" id="s-splim">—</div>
         </div>
     </div>
@@ -1080,10 +1080,10 @@
     <div style="height:12px"></div>
 
     <div class="card" style="display:none">
-<!--    <div class="card" >-->
+        <!--    <div class="card" >-->
         <div class="card-hdr">
-            <div class="card-title">Hardware</div>
-            <div class="card-meta">Autopilot generation</div>
+            <div class="card-title">硬件</div>
+            <div class="card-meta">自动驾驶代</div>
         </div>
         <div class="hw-seg" id="hw-seg">
             <button class="hw-btn" data-v="0" onclick="setHW(0)">Legacy</button>
@@ -1094,42 +1094,37 @@
 
     <div class="card">
         <div class="card-hdr">
-            <div class="card-title">Speed Profile</div>
-            <div class="card-meta">AD aggressiveness &bull; Auto follows stalk</div>
+            <div class="card-title">速度档位</div>
+            <div class="card-meta">AD 激进程度 &bull; 自动跟随拨杆</div>
         </div>
         <div class="pills" id="sp-pills"></div>
     </div>
 
     <div class="card hw4-only" style="margin-top:12px;margin-bottom:12px">
         <div class="card-hdr">
-            <div class="card-title">Speed Offset</div>
-            <div class="card-meta">Static offset injected on mux 2</div>
+            <div class="card-title">速度偏移</div>
+            <div class="card-meta">在 mux 2 注入的静态偏移量</div>
         </div>
 
         <div class="hw-seg" style="margin-bottom:10px">
-            <button class="hw-btn active" id="h4o-tab-preset" onclick="setH4OTab('preset',true)">Preset</button>
-            <button class="hw-btn" id="h4o-tab-custom" onclick="setH4OTab('custom',true)">Custom</button>
+            <button class="hw-btn active" id="h4o-tab-preset" onclick="setH4OTab('preset',true)">预设</button>
+            <button class="hw-btn" id="h4o-tab-custom" onclick="setH4OTab('custom',true)">自定义</button>
         </div>
 
         <div id="h4o-pills" style="display:flex;flex-wrap:wrap;gap:8px"></div>
         <div id="h4o-custom" class="h4o-custom" style="display:none;margin-top:8px"></div>
 
-        <button id="h4o-save-btn"
-                onclick="pushH4OCustom()"
-                style="display:none;margin-top:12px;width:100%;padding:10px;background:var(--acc);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">
-            Save Custom Map
-        </button>
     </div>
 
     <div class="card">
         <div class="card-hdr">
-            <div class="card-title">Features</div>
+            <div class="card-title">功能</div>
         </div>
 
         <div class="feat-row">
             <div class="feat-info">
-                <div class="feat-name">AD Activation</div>
-                <div class="feat-desc">Requires active AD subscription</div>
+                <div class="feat-name">AD 激活</div>
+                <div class="feat-desc">需要有效的 AD 订阅</div>
             </div>
             <label class="tgl"><input type="checkbox" id="tgl-AD" checked onchange="pushFeat()">
                 <div class="tgl-track">
@@ -1140,8 +1135,8 @@
 
         <div class="feat-row">
             <div class="feat-info">
-                <div class="feat-name">Nag Suppression</div>
-                <div class="feat-desc">Remove hands-on-wheel warning (ECE R79)</div>
+                <div class="feat-name">驾驶员提醒抑制</div>
+                <div class="feat-desc">关闭方向盘手部警告（ECE R79）</div>
             </div>
             <label class="tgl"><input type="checkbox" id="tgl-nag" checked onchange="pushFeat()">
                 <div class="tgl-track">
@@ -1152,8 +1147,8 @@
 
         <div class="feat-row">
             <div class="feat-info">
-                <div class="feat-name">Summon EU Unlock</div>
-                <div class="feat-desc">Remove Smart Summon distance restriction</div>
+                <div class="feat-name">召唤欧区解锁</div>
+                <div class="feat-desc">移除智能召唤距离限制</div>
             </div>
             <label class="tgl"><input type="checkbox" id="tgl-summon" checked onchange="pushFeat()">
                 <div class="tgl-track">
@@ -1164,8 +1159,8 @@
 
         <div class="feat-row hw4-only" id="row-isa">
             <div class="feat-info">
-                <div class="feat-name">ISA Chime Suppress</div>
-                <div class="feat-desc">Disable speed limit warning chime</div>
+                <div class="feat-name">ISA 提示音抑制</div>
+                <div class="feat-desc">禁用限速警告提示音</div>
             </div>
             <label class="tgl"><input type="checkbox" id="tgl-isa" onchange="pushFeat()">
                 <div class="tgl-track">
@@ -1176,8 +1171,8 @@
 
         <div class="feat-row" id="row-camera">
             <div class="feat-info">
-                <div class="feat-name">Cabin Camera</div>
-                <div class="feat-desc">Cabin Camera Enable/Disable</div>
+                <div class="feat-name">车内摄像头</div>
+                <div class="feat-desc">启用/禁用车内摄像头</div>
             </div>
             <label class="tgl"><input type="checkbox" id="tgl-camera" checked="true" onchange="pushFeat()">
                 <div class="tgl-track">
@@ -1188,8 +1183,8 @@
 
         <div class="feat-row" id="row-banShield">
             <div class="feat-info">
-                <div class="feat-name">Ban Shield</div>
-                <div class="feat-desc">Ban Shield Enable/Disable</div>
+                <div class="feat-name">防封盾</div>
+                <div class="feat-desc">启用/禁用防封盾</div>
             </div>
             <label class="tgl"><input type="checkbox" id="tgl-banShield" checked="true" onchange="pushFeat()">
                 <div class="tgl-track">
@@ -1200,8 +1195,8 @@
 
         <div class="feat-row hw4-only" id="row-evd">
             <div class="feat-info">
-                <div class="feat-name">Emergency Vehicle Detection</div>
-                <div class="feat-desc">Enable approaching EV detection</div>
+                <div class="feat-name">紧急车辆检测</div>
+                <div class="feat-desc">启用来车检测功能</div>
             </div>
             <label class="tgl"><input type="checkbox" id="tgl-evd" onchange="pushFeat()">
                 <div class="tgl-track">
@@ -1213,9 +1208,8 @@
 
         <div class="feat-row">
             <div class="feat-info">
-                <div class="feat-name">Bypass TLSSC</div>
-                <div class="feat-desc">Bypass TLSSC requirement — enables AD without steering wheel check (persists
-                    reboot)
+                <div class="feat-name">绕过 TLSSC</div>
+                <div class="feat-desc">绕过 TLSSC 要求——无需方向盘检测即可启用 AD（重启后保留）
                 </div>
             </div>
             <label class="tgl"><input type="checkbox" id="tgl-fAD" onchange="pushFeat()">
@@ -1227,8 +1221,8 @@
 
         <div class="feat-row">
             <div class="feat-info">
-                <div class="feat-name">Enable Logging</div>
-                <div class="feat-desc">Toggle serial and dashboard log output</div>
+                <div class="feat-name">启用日志</div>
+                <div class="feat-desc">切换串口和仪表板日志输出</div>
             </div>
             <label class="tgl"><input type="checkbox" id="tgl-eprn" checked onchange="pushFeat()">
                 <div class="tgl-track">
@@ -1238,69 +1232,68 @@
         </div>
 
         <div class="btn-row">
-            <button class="btn btn-stop" id="btn-stop" style="display:none" onclick="emergencyStop()">Stop Injecting
+            <button class="btn btn-stop" id="btn-stop" style="display:none" onclick="emergencyStop()">停止注入
             </button>
             <button class="btn" id="btn-resume"
                     style="display:none;background:var(--accBg);color:var(--acc);border:1px solid var(--accBd)"
-                    onclick="resumeInj()">Resume Injection
+                    onclick="resumeInj()">恢复注入
             </button>
-            <button class="btn btn-reboot" onclick="reboot()">Reboot</button>
+            <button class="btn btn-reboot" onclick="reboot()">重启</button>
         </div>
     </div>
 
     <div class="card collapsible" id="card-sniffer">
         <div class="card-hdr" onclick="toggleCard('card-sniffer')">
-            <div class="card-title">CAN Sniffer</div>
-            <div class="card-meta" id="sniff-count">0 frames</div>
+            <div class="card-title">CAN 嗅探器</div>
+            <div class="card-meta" id="sniff-count">0 帧</div>
         </div>
         <div class="sniff-ctrl">
-            <input class="sniff-input" id="sniff-filter" placeholder="Filter by ID or name" oninput="renderSniffer()">
-            <button class="sniff-btn" id="sniff-id-btn" onclick="toggleSniffIdMode()">Wire IDs</button>
-            <button class="sniff-btn" id="sniff-pause-btn" onclick="togglePause()">Pause</button>
+            <input class="sniff-input" id="sniff-filter" placeholder="按 ID 或名称过滤" oninput="renderSniffer()">
+            <button class="sniff-btn" id="sniff-id-btn" onclick="toggleSniffIdMode()">原始 ID</button>
+            <button class="sniff-btn" id="sniff-pause-btn" onclick="togglePause()">暂停</button>
         </div>
         <div class="sniff-box" id="sniffer">
-            <div style="padding:20px;color:var(--tx3);text-align:center;font-size:12px">Waiting for CAN frames</div>
+            <div style="padding:20px;color:var(--tx3);text-align:center;font-size:12px">等待 CAN 帧...</div>
         </div>
     </div>
 
     <div class="card collapsible" id="card-recorder">
         <div class="card-hdr" onclick="toggleCard('card-recorder')">
-            <div class="card-title">CAN Recorder</div>
-            <div class="card-meta" id="rec-meta">Idle</div>
+            <div class="card-title">CAN 录制器</div>
+            <div class="card-meta" id="rec-meta">空闲</div>
         </div>
         <div class="rec-bar">
             <div class="rec-fill" id="rec-fill"></div>
         </div>
         <div class="rec-info">
-            <span id="rec-count">0 / 2000 frames</span>
-            <span id="rec-status">Ready</span>
+            <span id="rec-count">0 / 2000 帧</span>
+            <span id="rec-status">就绪</span>
         </div>
         <div class="btn-row">
-            <button class="btn" id="rec-btn" onclick="toggleRec()">Start Recording</button>
+            <button class="btn" id="rec-btn" onclick="toggleRec()">开始录制</button>
             <a class="btn" id="rec-dl" href="/rec_download" download="can_recording.csv"
-               style="display:none;text-align:center;text-decoration:none;padding:10px;border:1px solid var(--bd2);color:var(--tx2)">Download
-                CSV</a>
+               style="display:none;text-align:center;text-decoration:none;padding:10px;border:1px solid var(--bd2);color:var(--tx2)">下载 CSV</a>
         </div>
     </div>
 
     <div class="card collapsible" id="card-controller">
         <div class="card-hdr" onclick="toggleCard('card-controller')">
-            <div class="card-title">CAN Controller</div>
+            <div class="card-title">CAN 控制器</div>
             <div style="display:flex;align-items:center;gap:8px">
                 <div class="card-meta" id="s-mcp-raw">MCP2515</div>
                 <button onclick="resetStats()"
                         style="font-size:10px;padding:2px 8px;border:1px solid var(--bd2);border-radius:5px;background:transparent;color:var(--tx3);cursor:pointer;font-family:inherit">
-                    Reset
+                    重置
                 </button>
             </div>
         </div>
         <div class="eflg-row" id="eflg-row"><span class="eflg-pill eflg-ok">OK</span></div>
         <table class="mux-tbl">
             <tr>
-                <th>Mux</th>
+                <th>通道</th>
                 <th>RX</th>
                 <th>TX</th>
-                <th>Errors</th>
+                <th>错误</th>
             </tr>
             <tr>
                 <td>0</td>
@@ -1325,26 +1318,25 @@
 
     <div class="card collapsible" id="card-hotspot">
         <div class="card-hdr" onclick="toggleCard('card-hotspot')">
-            <div class="card-title">WiFi Hotspot <span onclick="event.stopPropagation();toggleInfo('ap-info')"
-                                                       style="color:var(--tx3);cursor:pointer;font-size:12px;margin-left:4px"
-                                                       title="About WiFi storage">&#9432;</span></div>
+            <div class="card-title">WiFi 热点 <span onclick="event.stopPropagation();toggleInfo('ap-info')"
+                                                    style="color:var(--tx3);cursor:pointer;font-size:12px;margin-left:4px"
+                                                    title="关于 WiFi 存储">&#9432;</span></div>
             <div class="card-meta"><span id="ap-stored" style="margin-right:8px"></span><span
-                    id="ap-clients">0 clients</span></div>
+                    id="ap-clients">0 个客户端</span></div>
         </div>
         <div id="ap-info"
              style="display:none;margin-bottom:10px;padding:10px;background:var(--bg2);border:1px solid var(--bd);border-radius:6px;font-size:12px;color:var(--tx3);line-height:1.5">
-            Stored in NVS (non-volatile storage). The SSID and password survive firmware updates and reboots. Only a full
-            factory erase via USB clears them.
+            存储于 NVS（非易失性存储）。SSID 和密码在固件更新及重启后均保留，仅通过 USB 完整擦除才会清除。
         </div>
-        <div class="feat-desc" style="margin-bottom:8px">Change the WiFi hotspot name and password</div>
+        <div class="feat-desc" style="margin-bottom:8px">修改 WiFi 热点名称和密码</div>
         <div style="display:flex;gap:6px;margin-bottom:6px">
-            <input class="sniff-input" id="ap-ssid" placeholder="Hotspot Name" style="flex:1">
-            <input class="sniff-input" id="ap-pass" placeholder="New Password (min 8)" type="password" style="flex:1">
+            <input class="sniff-input" id="ap-ssid" placeholder="热点名称" style="flex:1">
+            <input class="sniff-input" id="ap-pass" placeholder="新密码（最少8位）" type="password" style="flex:1">
         </div>
         <div class="feat-row" style="padding:8px 0">
             <div class="feat-info">
-                <div class="feat-name">Hide SSID</div>
-                <div class="feat-desc">Don't broadcast the hotspot name &mdash; clients must enter it manually</div>
+                <div class="feat-name">隐藏 SSID</div>
+                <div class="feat-desc">不广播热点名称，客户端需手动输入</div>
             </div>
             <label class="tgl"><input type="checkbox" id="ap-hidden">
                 <div class="tgl-track">
@@ -1353,46 +1345,44 @@
             </label>
         </div>
         <div style="display:flex;gap:6px;align-items:center">
-            <button class="sniff-btn" onclick="saveAP()">Save</button>
+            <button class="sniff-btn" onclick="saveAP()">保存</button>
             <span style="font-size:11px;color:var(--tx3)" id="ap-status"></span>
         </div>
-        <div style="font-size:10px;color:var(--tx3);margin-top:6px">Changes take effect after reboot. Leave password empty
-            to keep current.
+        <div style="font-size:10px;color:var(--tx3);margin-top:6px">重启后生效。留空密码则保持当前密码不变。
         </div>
     </div>
 
     <div class="card collapsible" id="card-wifi">
         <div class="card-hdr" onclick="toggleCard('card-wifi')">
-            <div class="card-title">WiFi Internet <span id="wifi-stored"
-                                                        style="font-size:11px;font-weight:normal;color:var(--tx3)"></span>
+            <div class="card-title">WiFi 联网 <span id="wifi-stored"
+                                                    style="font-size:11px;font-weight:normal;color:var(--tx3)"></span>
             </div>
-            <div class="card-meta" id="wifi-status">Not configured</div>
+            <div class="card-meta" id="wifi-status">未配置</div>
         </div>
-        <div class="feat-desc" style="margin-bottom:8px">Connect to your home WiFi. Required for firmware updates and plugin
-            downloads. Stored in NVS &mdash; survives firmware updates.
+        <div class="feat-desc" style="margin-bottom:8px">连接家庭 WiFi。固件更新和插件下载需要此功能。存储于 NVS，固件更新后仍保留。
         </div>
         <div style="display:flex;gap:6px;margin-bottom:6px">
             <input class="sniff-input" id="wifi-ssid" placeholder="WiFi SSID" style="flex:1">
-            <button class="sniff-btn" onclick="scanWifi()" id="scan-btn">Scan</button>
+            <button class="sniff-btn" onclick="scanWifi()" id="scan-btn">扫描</button>
         </div>
         <div id="wifi-nets"
              style="display:none;margin-bottom:6px;max-height:140px;overflow-y:auto;border:1px solid var(--bd);border-radius:6px;background:var(--bg2)"></div>
         <div style="display:flex;gap:6px;margin-bottom:6px">
-            <input class="sniff-input" id="wifi-pass" placeholder="Password" type="password" style="flex:1">
-            <button class="sniff-btn" onclick="saveWifi()">Connect</button>
+            <input class="sniff-input" id="wifi-pass" placeholder="密码" type="password" style="flex:1">
+            <button class="sniff-btn" onclick="saveWifi()">连接</button>
         </div>
         <details style="margin-top:4px">
-            <summary style="font-size:11px;color:var(--acc);cursor:pointer;user-select:none">Static IP (optional)</summary>
+            <summary style="font-size:11px;color:var(--acc);cursor:pointer;user-select:none">静态 IP（可选）</summary>
             <div style="margin-top:6px">
                 <label style="font-size:11px;color:var(--tx3);display:flex;align-items:center;gap:6px;margin-bottom:6px">
-                    <input type="checkbox" id="wifi-static" onchange="toggleStaticIP()"> Use static IP
+                    <input type="checkbox" id="wifi-static" onchange="toggleStaticIP()"> 使用静态 IP
                 </label>
                 <div id="static-fields" style="display:none">
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
-                        <input class="sniff-input" id="wifi-ip" placeholder="IP (e.g. 192.168.1.100)">
-                        <input class="sniff-input" id="wifi-gw" placeholder="Gateway (e.g. 192.168.1.1)">
-                        <input class="sniff-input" id="wifi-mask" placeholder="Mask (255.255.255.0)" value="255.255.255.0">
-                        <input class="sniff-input" id="wifi-dns" placeholder="DNS (e.g. 8.8.8.8)">
+                        <input class="sniff-input" id="wifi-ip" placeholder="IP（如 192.168.1.100）">
+                        <input class="sniff-input" id="wifi-gw" placeholder="网关（如 192.168.1.1）">
+                        <input class="sniff-input" id="wifi-mask" placeholder="子网掩码（255.255.255.0）" value="255.255.255.0">
+                        <input class="sniff-input" id="wifi-dns" placeholder="DNS（如 8.8.8.8）">
                     </div>
                 </div>
             </div>
@@ -1401,74 +1391,71 @@
 
     <div class="card collapsible" id="card-plugins">
         <div class="card-hdr" onclick="toggleCard('card-plugins')">
-            <div class="card-title">Plugins <span onclick="event.stopPropagation();toggleInfo('plg-info')"
-                                                  style="color:var(--tx3);cursor:pointer;font-size:12px;margin-left:4px"
-                                                  title="What are plugins?">&#9432;</span></div>
-            <div class="card-meta" id="plg-count">0 installed</div>
+            <div class="card-title">插件 <span onclick="event.stopPropagation();toggleInfo('plg-info')"
+                                               style="color:var(--tx3);cursor:pointer;font-size:12px;margin-left:4px"
+                                               title="什么是插件？">&#9432;</span></div>
+            <div class="card-meta" id="plg-count">已安装 0 个</div>
         </div>
 
         <div id="plg-info"
              style="display:none;margin-bottom:12px;padding:10px;background:var(--bg2);border:1px solid var(--bd);border-radius:6px;font-size:12px;color:var(--tx3);line-height:1.5">
-            Plugins are JSON rules that modify CAN messages in real time. Install via URL, file upload or paste. A &#9888;
-            marks conflicts with base firmware handlers &mdash; plugin rules then run <b>after</b> the original handler.
+            插件是实时修改 CAN 消息的 JSON 规则，可通过 URL、文件上传或粘贴方式安装。&#9888; 标记表示与基础固件处理器冲突——插件规则将在原始处理器<b>之后</b>执行。
             <div style="margin-top:6px"><a
                     href="https://github.com/ev-open-can-tools/ev-open-can-tools/blob/main/docs/plugins.md" target="_blank"
-                    rel="noopener" style="color:var(--acc);text-decoration:none">Documentation &amp; examples &rarr;</a>
+                    rel="noopener" style="color:var(--acc);text-decoration:none">文档 &amp; 示例 &rarr;</a>
             </div>
         </div>
 
         <div style="margin-bottom:14px">
-            <div class="feat-name" style="margin-bottom:8px">Install Plugin</div>
-            <div style="font-size:11px;color:var(--tx3);margin-bottom:8px" id="plg-limit">Maximum plugins: --</div>
+            <div class="feat-name" style="margin-bottom:8px">安装插件</div>
+            <div style="font-size:11px;color:var(--tx3);margin-bottom:8px" id="plg-limit">最大插件数量：--</div>
             <div style="display:flex;gap:6px;margin-bottom:8px">
-                <input class="sniff-input" id="plg-url" placeholder="Plugin JSON URL (https://...)" style="flex:1">
-                <button class="sniff-btn" onclick="installPlugin()">Install</button>
+                <input class="sniff-input" id="plg-url" placeholder="插件 JSON 链接（https://...）" style="flex:1">
+                <button class="sniff-btn" onclick="installPlugin()">安装</button>
             </div>
             <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
                 <input type="file" id="plg-file" accept=".json" onchange="uploadPlugin(this.files[0])" style="display:none">
-                <button class="sniff-btn" onclick="$('plg-file').click()">Upload .json</button>
+                <button class="sniff-btn" onclick="$('plg-file').click()">上传 .json</button>
                 <span style="font-size:11px;color:var(--tx3)" id="plg-status"></span>
             </div>
-            <div class="feat-name" style="margin-bottom:6px">Paste JSON (offline)</div>
+            <div class="feat-name" style="margin-bottom:6px">粘贴 JSON（离线）</div>
             <textarea id="plg-paste" placeholder='{"name":"...","version":"1.0","rules":[...]}'
                       style="width:100%;height:80px;resize:vertical;background:var(--bg2);color:var(--tx);border:1px solid var(--bd);border-radius:6px;padding:8px;font-family:monospace;font-size:11px;box-sizing:border-box;margin-bottom:6px"></textarea>
-            <button class="sniff-btn" onclick="pastePlugin()">Install from JSON</button>
+            <button class="sniff-btn" onclick="pastePlugin()">从 JSON 安装</button>
         </div>
 
         <div style="padding-top:12px;border-top:1px solid var(--bd)" id="plg-list">
-            <div style="font-size:12px;color:var(--tx3);text-align:center;padding:12px">No plugins installed</div>
+            <div style="font-size:12px;color:var(--tx3);text-align:center;padding:12px">未安装插件</div>
         </div>
     </div>
 
     <div class="card collapsible" id="card-pe">
         <div class="card-hdr" onclick="toggleCard('card-pe')">
-            <div class="card-title">Plugin Editor <span onclick="event.stopPropagation();toggleInfo('pe-info')"
-                                                        style="color:var(--tx3);cursor:pointer;font-size:12px;margin-left:4px"
-                                                        title="About the editor">&#9432;</span></div>
-            <div class="card-meta" id="pe-count">0 rules</div>
+            <div class="card-title">插件编辑器 <span onclick="event.stopPropagation();toggleInfo('pe-info')"
+                                                     style="color:var(--tx3);cursor:pointer;font-size:12px;margin-left:4px"
+                                                     title="关于编辑器">&#9432;</span></div>
+            <div class="card-meta" id="pe-count">0 条规则</div>
         </div>
         <div id="pe-info"
              style="display:none;margin-bottom:10px;padding:10px;background:var(--bg2);border:1px solid var(--bd);border-radius:6px;font-size:12px;color:var(--tx3);line-height:1.5">
-            Build or edit a plugin via form &mdash; no JSON writing needed. Load an installed plugin into the editor, change
-            rules, then reinstall it. You can also send a temporary test frame for one rule before installing.
+            通过表单构建或编辑插件——无需手写 JSON。将已安装的插件加载到编辑器，修改规则后重新安装。也可在安装前针对单条规则发送临时测试帧。
         </div>
         <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 90px;gap:6px;margin-bottom:10px">
-            <input class="sniff-input" id="pe-name" placeholder="Plugin name" maxlength="31" oninput="peRenderPreview()">
-            <input class="sniff-input" id="pe-author" placeholder="Author (optional)" oninput="peRenderPreview()">
-            <input class="sniff-input" id="pe-version" placeholder="Version" value="1.0" oninput="peRenderPreview()">
+            <input class="sniff-input" id="pe-name" placeholder="插件名称" maxlength="31" oninput="peRenderPreview()">
+            <input class="sniff-input" id="pe-author" placeholder="作者（可选）" oninput="peRenderPreview()">
+            <input class="sniff-input" id="pe-version" placeholder="版本" value="1.0" oninput="peRenderPreview()">
         </div>
         <div id="pe-rules"></div>
-        <button class="sniff-btn" onclick="peAddRule()" style="margin-top:6px">+ Add Rule</button>
+        <button class="sniff-btn" onclick="peAddRule()" style="margin-top:6px">+ 添加规则</button>
         <details style="margin-top:10px">
-            <summary style="font-size:11px;color:var(--acc);cursor:pointer;user-select:none">JSON Preview</summary>
+            <summary style="font-size:11px;color:var(--acc);cursor:pointer;user-select:none">JSON 预览</summary>
             <pre id="pe-preview"
                  style="max-height:200px;overflow:auto;background:var(--bg2);border:1px solid var(--bd);border-radius:6px;padding:8px;font-size:11px;color:var(--tx2);margin-top:6px;white-space:pre-wrap;word-break:break-all"></pre>
         </details>
         <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd)">
-            <div class="feat-name" style="margin-bottom:6px">Rule Test</div>
+            <div class="feat-name" style="margin-bottom:6px">规则测试</div>
             <div style="font-size:11px;color:var(--tx3);line-height:1.5;margin-bottom:8px">
-                Choose one rule from the editor, enter the base 8-byte frame, then send the resulting modified frame on CAN.
-                Count = how many times, interval = how fast.
+                从编辑器中选择一条规则，输入基础 8 字节帧，然后在 CAN 总线上发送修改后的帧。次数 = 发送多少次，间隔 = 发送频率。
             </div>
             <div style="display:grid;grid-template-columns:minmax(0,1fr) 90px 110px;gap:6px;margin-bottom:6px">
                 <select class="sniff-input" id="pe-test-rule" onchange="peUpdateTestPreview()"></select>
@@ -1478,34 +1465,34 @@
                        onchange="peUpdateTestPreview()">
             </div>
             <input class="sniff-input" id="pe-test-data" value="00 00 00 00 00 00 00 00"
-                   placeholder="Base data bytes: 00 00 00 00 00 00 00 00" oninput="peUpdateTestPreview()"
+                   placeholder="基础数据字节：00 00 00 00 00 00 00 00" oninput="peUpdateTestPreview()"
                    style="width:100%;margin-bottom:6px">
             <pre id="pe-test-preview"
-                 style="min-height:54px;overflow:auto;background:var(--bg2);border:1px solid var(--bd);border-radius:6px;padding:8px;font-size:11px;color:var(--tx2);white-space:pre-wrap;word-break:break-word">Add a rule to preview a test frame.</pre>
+                 style="min-height:54px;overflow:auto;background:var(--bg2);border:1px solid var(--bd);border-radius:6px;padding:8px;font-size:11px;color:var(--tx2);white-space:pre-wrap;word-break:break-word">添加规则以预览测试帧。</pre>
             <div style="display:flex;gap:6px;align-items:center;margin-top:8px;flex-wrap:wrap">
-                <button class="sniff-btn" onclick="peStartTest()">Start Test</button>
-                <button class="sniff-btn" onclick="peStopTest()">Stop Test</button>
-                <span id="pe-test-status" style="font-size:11px;color:var(--tx3)">Idle</span>
+                <button class="sniff-btn" onclick="peStartTest()">开始测试</button>
+                <button class="sniff-btn" onclick="peStopTest()">停止测试</button>
+                <span id="pe-test-status" style="font-size:11px;color:var(--tx3)">空闲</span>
             </div>
         </div>
         <div style="display:flex;gap:6px;margin-top:10px">
-            <button class="sniff-btn" onclick="peInstall()">Install</button>
-            <button class="sniff-btn" onclick="peDownload()">Download JSON</button>
-            <button class="sniff-btn" onclick="peReset()">Reset</button>
+            <button class="sniff-btn" onclick="peInstall()">安装</button>
+            <button class="sniff-btn" onclick="peDownload()">下载 JSON</button>
+            <button class="sniff-btn" onclick="peReset()">重置</button>
         </div>
         <div id="pe-status" style="font-size:11px;margin-top:6px;color:var(--tx3)"></div>
     </div>
 
     <div class="card collapsible" id="card-firmware">
         <div class="card-hdr" onclick="toggleCard('card-firmware')">
-            <div class="card-title">Firmware Update</div>
+            <div class="card-title">固件更新</div>
             <div class="card-meta" id="fw-ver"></div>
         </div>
         <div style="margin-bottom:10px">
             <div class="feat-row">
                 <div class="feat-info">
-                    <div class="feat-name">Beta Channel</div>
-                    <div class="feat-desc">Include pre-release / beta firmware versions</div>
+                    <div class="feat-name">测试版通道</div>
+                    <div class="feat-desc">包含预发布/测试版固件</div>
                 </div>
                 <label class="tgl"><input type="checkbox" id="beta-tgl" onchange="toggleBeta()">
                     <div class="tgl-track">
@@ -1515,8 +1502,8 @@
             </div>
             <div class="feat-row">
                 <div class="feat-info">
-                    <div class="feat-name">Auto-Update on Boot</div>
-                    <div class="feat-desc">Check and install updates automatically ~15 s after WiFi connects</div>
+                    <div class="feat-name">启动时自动更新</div>
+                    <div class="feat-desc">WiFi 连接后约 15 秒自动检查并安装更新</div>
                 </div>
                 <label class="tgl"><input type="checkbox" id="auto-upd-tgl" onchange="toggleAutoUpdate()">
                     <div class="tgl-track">
@@ -1526,7 +1513,7 @@
             </div>
         </div>
         <div style="display:flex;gap:6px;align-items:center">
-            <button class="sniff-btn" onclick="checkUpdate()" id="upd-check-btn">Check for Updates</button>
+            <button class="sniff-btn" onclick="checkUpdate()" id="upd-check-btn">检查更新</button>
             <span style="font-size:11px;color:var(--tx3)" id="upd-status"></span>
         </div>
         <div id="upd-info" style="display:none;margin-top:10px;padding:10px;background:var(--bg2);border-radius:6px">
@@ -1536,13 +1523,13 @@
                     <div style="font-size:11px;color:var(--tx3)" id="upd-detail"></div>
                 </div>
                 <button class="sniff-btn" onclick="installUpdate()" id="upd-install-btn"
-                        style="background:var(--ok);color:#fff;border-color:var(--ok)">Install
+                        style="background:var(--ok);color:#fff;border-color:var(--ok)">安装
                 </button>
             </div>
         </div>
 
         <details style="margin-top:14px;padding-top:12px;border-top:1px solid var(--bd)">
-            <summary style="font-size:12px;color:var(--acc);cursor:pointer;user-select:none">Manual firmware upload (.bin)
+            <summary style="font-size:12px;color:var(--acc);cursor:pointer;user-select:none">手动上传固件（.bin）
             </summary>
             <div style="margin-top:10px">
                 <div class="ota-drop" id="ota-drop" onclick="$('ota-file').click()"
@@ -1550,20 +1537,20 @@
                      ondragleave="this.classList.remove('drag')" ondrop="handleDrop(event)">
                     <input type="file" id="ota-file" accept=".bin" onchange="fileSelected(this.files[0])">
                     <div class="ota-icon">&#8679;</div>
-                    <div class="ota-text">Tap to select firmware .bin</div>
-                    <div class="ota-sub">Or drag and drop a file here</div>
+                    <div class="ota-text">点击选择固件 .bin</div>
+                    <div class="ota-sub">或拖放文件到此处</div>
                 </div>
                 <div class="ota-progress" id="ota-progress">
                     <div class="ota-bar">
                         <div class="ota-fill" id="ota-fill"></div>
                     </div>
-                    <div class="ota-status" id="ota-status">Uploading...</div>
+                    <div class="ota-status" id="ota-status">上传中...</div>
                 </div>
-                <button class="ota-btn" id="ota-upload-btn" onclick="uploadFirmware()">Flash Firmware</button>
+                <button class="ota-btn" id="ota-upload-btn" onclick="uploadFirmware()">刷写固件</button>
                 <div style="margin-top:10px;font-size:11px;color:var(--tx3);line-height:1.7">
-                    Build your .bin in PlatformIO: <span
+                    在 PlatformIO 中编译 .bin：<span
                         style="color:var(--acc);font-family:monospace">Ctrl+Alt+B</span><br>
-                    File is at: <span style="color:var(--acc);font-family:monospace">.pio/build/esp32_ext_mcp2515/firmware.bin</span>
+                    文件路径：<span style="color:var(--acc);font-family:monospace">.pio/build/esp32_ext_mcp2515/firmware.bin</span>
                 </div>
             </div>
         </details>
@@ -1571,40 +1558,37 @@
 
     <div class="card collapsible" id="card-pins">
         <div class="card-hdr" onclick="toggleCard('card-pins')">
-            <div class="card-title">CAN Pins <span onclick="event.stopPropagation();toggleInfo('can-pins-info')"
+            <div class="card-title">CAN 引脚 <span onclick="event.stopPropagation();toggleInfo('can-pins-info')"
                                                    style="color:var(--tx3);cursor:pointer;font-size:12px;margin-left:4px"
-                                                   title="About CAN pins">&#9432;</span></div>
-            <div class="card-meta" id="can-pins-status">default</div>
+                                                   title="关于 CAN 引脚">&#9432;</span></div>
+            <div class="card-meta" id="can-pins-status">默认</div>
         </div>
         <div id="can-pins-info"
              style="display:none;margin-bottom:10px;padding:10px;background:var(--bg2);border:1px solid var(--bd);border-radius:6px;font-size:12px;color:var(--tx3);line-height:1.5">
-            GPIO pins for the CAN transceiver (TWAI). Persisted in NVS so they survive OTA updates. Leave empty to use the
-            firmware&#39;s compile-time defaults. <b>Wrong pins disable CAN</b> &mdash; recovery needs a USB re-flash. On
-            most ESP32 boards GPIO 6&ndash;11 remain reserved for SPI flash.
+            CAN 收发器（TWAI）的 GPIO 引脚。存储于 NVS，OTA 更新后仍保留。留空则使用固件编译时的默认值。<b>错误的引脚会禁用 CAN</b>——恢复需通过 USB 重新刷写。大多数 ESP32 开发板的 GPIO 6&ndash;11 保留用于 SPI Flash。
         </div>
         <div style="display:flex;gap:6px;align-items:center">
             <input class="sniff-input" id="can-tx" type="number" min="0" max="39" placeholder="TX GPIO" style="flex:1">
             <input class="sniff-input" id="can-rx" type="number" min="0" max="39" placeholder="RX GPIO" style="flex:1">
-            <button class="sniff-btn" onclick="saveCanPins()">Save</button>
+            <button class="sniff-btn" onclick="saveCanPins()">保存</button>
         </div>
-        <div style="font-size:11px;color:var(--tx3);margin-top:6px" id="can-pins-hint">Reboot required after change</div>
+        <div style="font-size:11px;color:var(--tx3);margin-top:6px" id="can-pins-hint">修改后需要重启</div>
     </div>
 
     <div class="card collapsible" id="card-backup">
         <div class="card-hdr" onclick="toggleCard('card-backup')">
-            <div class="card-title">Settings Backup <span onclick="event.stopPropagation();toggleInfo('backup-info')"
-                                                          style="color:var(--tx3);cursor:pointer;font-size:12px;margin-left:4px"
-                                                          title="About backup">&#9432;</span></div>
+            <div class="card-title">设置备份 <span onclick="event.stopPropagation();toggleInfo('backup-info')"
+                                                   style="color:var(--tx3);cursor:pointer;font-size:12px;margin-left:4px"
+                                                   title="关于备份">&#9432;</span></div>
             <div class="card-meta" id="backup-status"></div>
         </div>
         <div id="backup-info"
              style="display:none;margin-bottom:10px;padding:10px;background:var(--bg2);border:1px solid var(--bd);border-radius:6px;font-size:12px;color:var(--tx3);line-height:1.5">
-            Exports AP credentials, WiFi Internet, CAN pins and beta channel as JSON. Useful before a full re-flash or when
-            migrating to another device. <b>Passwords are included in clear text</b> &mdash; keep the file safe.
+            将 AP 凭据、WiFi 联网、CAN 引脚及测试版通道导出为 JSON。适用于完整刷写前或迁移至其他设备。<b>密码以明文形式包含在内</b>——请妥善保管文件。
         </div>
         <div style="display:flex;gap:6px">
-            <button class="sniff-btn" onclick="exportSettings()">Download</button>
-            <button class="sniff-btn" onclick="document.getElementById('backup-file').click()">Upload &amp; Restore</button>
+            <button class="sniff-btn" onclick="exportSettings()">下载</button>
+            <button class="sniff-btn" onclick="document.getElementById('backup-file').click()">上传并还原</button>
             <input type="file" id="backup-file" accept=".json,application/json" style="display:none"
                    onchange="importSettings(event)">
         </div>
@@ -1612,13 +1596,12 @@
 
     <div class="card collapsible" id="card-log">
         <div class="card-hdr" onclick="toggleCard('card-log')">
-            <div class="card-title">Live Log</div>
+            <div class="card-title">实时日志</div>
         </div>
-        <div class="log-box" id="log">Waiting...</div>
+        <div class="log-box" id="log">等待中...</div>
     </div>
 
-    <div class="warn-bar">CAN bus writes affect vehicle behavior. Remove device immediately if unexpected behavior occurs.
-        Not affiliated with any vehicle manufacturer.
+    <div class="warn-bar">CAN 总线写入会影响车辆行为，如出现异常请立即断开设备。本工具与任何车辆制造商无关。
     </div>
 
     <div class="modal-backdrop" id="confirm-modal" onclick="dashConfirmBackdrop(event)">
@@ -1691,6 +1674,8 @@
         let dashboardPollFailures = 0;
         let h4oCustomLoaded = false;
         let h4oTabLoaded = false;
+        let h4oSaveTimer = null;
+        function debouncedPushH4OCustom() { clearTimeout(h4oSaveTimer); h4oSaveTimer = setTimeout(pushH4OCustom, 300); }
         let dashboardPollStopped = false;
         let dashboardStaIp = '';
         const pollLocks = {};
@@ -1892,12 +1877,14 @@
                         }
                         H4O_Custom[i].v = val;
                         bar.value = val;
+                        debouncedPushH4OCustom();
                     };
 
                     bar.oninput = () => {
                         const val = parseInt(bar.value) || 0;
                         H4O_Custom[i].v = val;
                         vInp.value = val;
+                        debouncedPushH4OCustom();
                     };
 
                     const pct = document.createElement('span');
@@ -1926,8 +1913,6 @@
             const isPreset = tab === 'preset';
             $('h4o-pills').style.display = isPreset ? 'flex' : 'none';
             $('h4o-custom').style.display = isPreset ? 'none' : 'flex';
-            const saveBtn = $('h4o-save-btn');
-            if (saveBtn) saveBtn.style.display = isPreset ? 'none' : '';
             const tp = $('h4o-tab-preset'), tc = $('h4o-tab-custom');
             if (tp) tp.classList.toggle('active', isPreset);
             if (tc) tc.classList.toggle('active', !isPreset);
