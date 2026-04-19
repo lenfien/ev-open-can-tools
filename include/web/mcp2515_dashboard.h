@@ -67,6 +67,7 @@ struct Features
     bool summonUnlock = kEnhancedAutopilotDefaultEnabled;
     bool isaSuppress = kIsaSpeedChimeSuppressDefaultEnabled;
     bool evDetection = kEmergencyVehicleDetectionDefaultEnabled;
+
     uint8_t hw4Offset = 0;
     bool cameraEnabled = true;
     bool enableBanShield = true;
@@ -348,11 +349,11 @@ static void dashSavePrefs()
     prefs.putBool("f_nag", feat.nagSuppress);
     prefs.putBool("f_sum", feat.summonUnlock);
     prefs.putBool("f_isa", feat.isaSuppress);
-    prefs.putBool("f_camera", feat.cameraEnabled);
-    prefs.putBool("f_banShield", feat.enableBanShield);
     prefs.putBool("f_evd", feat.evDetection);
     prefs.putUChar("f_h4o", feat.hw4Offset);
     prefs.putBool("sp_lock", (bool)speedProfileLocked);
+    prefs.putBool("f_camera", feat.cameraEnabled);
+    prefs.putBool("f_banShield", feat.enableBanShield);
     prefs.putUChar("h4o_tab", h4oTab);
     prefs.putBytes("h4o_csl", h4oCustomSl, H4O_CUSTOM_COUNT);
     prefs.putBytes("h4o_cv",  h4oCustomV,  H4O_CUSTOM_COUNT);
@@ -638,12 +639,6 @@ static void handleStatus()
     j += mcpEflg;
     j += ",\"up\":";
     j += (millis() - startMs) / 1000;
-    j += ",\"bsCnt\":";
-    j += dashHandler ? (uint32_t)dashHandler->banShieldCnt : 0;
-    j += ",\"bsCheckCnt\":";
-    j += dashHandler ? (uint32_t)dashHandler->banShieldCheckCnt : 0;
-    j += ",\"spLim\":";
-    j += dashHandler ? (int)dashHandler->speedLimit : 0;
     j += ",\"feat\":{\"AD\":";
     j += feat.ADEnabled ? "true" : "false";
     j += ",\"nag\":";
@@ -652,10 +647,24 @@ static void handleStatus()
     j += feat.summonUnlock ? "true" : "false";
     j += ",\"isa\":";
     j += feat.isaSuppress ? "true" : "false";
+    j += ",\"bsCnt\":";
+    j += dashHandler ? (uint32_t)dashHandler->banShieldCnt : 0;
+    j += ",\"bsCheckCnt\":";
+    j += dashHandler ? (uint32_t)dashHandler->banShieldCheckCnt : 0;
+    j += ",\"spLim\":";
+    j += dashHandler ? (int)dashHandler->speedLimit : 0;
     j += ",\"camera\":";
     j += feat.cameraEnabled ? "true" : "false";
     j += ",\"banShield\":";
     j += feat.enableBanShield ? "true" : "false";
+    j += "],\"h4oTab\":";
+    j += h4oTab;
+    j += ",\"h4oCust\":[";
+    for (int i = 0; i < H4O_CUSTOM_COUNT; i++)
+    {
+        if (i) j += ",";
+        j += "{\"sl\":" + String(h4oCustomSl[i]) + ",\"v\":" + String(h4oCustomV[i]) + "}";
+    }
     j += ",\"evd\":";
     j += feat.evDetection ? "true" : "false";
     j += ",\"h4o\":";
@@ -670,14 +679,6 @@ static void handleStatus()
         j += "{\"rx\":" + String(muxRx[i]) +
              ",\"tx\":" + String(muxTx[i]) +
              ",\"err\":" + String(muxErr[i]) + "}";
-    }
-    j += "],\"h4oTab\":";
-    j += h4oTab;
-    j += ",\"h4oCust\":[";
-    for (int i = 0; i < H4O_CUSTOM_COUNT; i++)
-    {
-        if (i) j += ",";
-        j += "{\"sl\":" + String(h4oCustomSl[i]) + ",\"v\":" + String(h4oCustomV[i]) + "}";
     }
     j += "]}";
     server.send(200, "application/json", j);
