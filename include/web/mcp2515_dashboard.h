@@ -104,7 +104,6 @@ static const uint8_t mcpEflg = 0;
 
 static uint8_t hwMode = DASH_DEFAULT_HW;
 static bool canActive = kDashInjectionDefaultEnabled;
-static bool bypassTlssc = kBypassTlsscRequirementDefaultEnabled;
 
 // WiFi AP (hotspot) — overridable at runtime
 static char apSSID[33] = "";
@@ -313,7 +312,6 @@ static bool dashCheckNagEnabled()
 
 static void dashApplyRuntimeState()
 {
-    bypassTlsscRequirementRuntime = canActive && bypassTlssc;
     emergencyVehicleDetectionRuntime = canActive && feat.evDetection;
     isaSpeedChimeSuppressRuntime = canActive && feat.isaSuppress;
     enhancedAutopilotRuntime = canActive && (feat.nagSuppress || feat.summonUnlock);
@@ -342,7 +340,6 @@ static void dashSavePrefs()
     prefs.putUChar("hw", hwMode);
     prefs.putUChar("sp", dashHandler ? (int)dashHandler->speedProfile : 1);
     prefs.putBool("can", canActive);
-    prefs.putBool("fAD", bypassTlssc);
     prefs.putBool("eprn", dashHandler ? (bool)dashHandler->enablePrint : true);
     prefs.putBool("f_AD", feat.ADEnabled);
     prefs.putBool("f_nag", feat.nagSuppress);
@@ -384,7 +381,6 @@ static void dashLoadPrefs()
     prefs.begin(PREFS_NS, false);
     hwMode = prefs.getUChar("hw", DASH_DEFAULT_HW);
     canActive = prefs.getBool("can", kDashInjectionDefaultEnabled);
-    bypassTlssc = prefs.getBool("fAD", kBypassTlsscRequirementDefaultEnabled);
     feat.ADEnabled = prefs.getBool("f_AD", true);
     feat.nagSuppress = prefs.getBool("f_nag", kEnhancedAutopilotDefaultEnabled);
     feat.summonUnlock = prefs.getBool("f_sum", kEnhancedAutopilotDefaultEnabled);
@@ -438,8 +434,7 @@ static void dashLoadPrefs()
     prefs.end();
 
     dashLog("[BOOT] Prefs loaded HW=" + String(hwMode) + " SP=" + String(sp));
-    dashLog("[BOOT] canActive=" + String(canActive ? "YES" : "NO") +
-            " bypassTlssc=" + String(bypassTlssc ? "YES" : "NO"));
+    dashLog("[BOOT] canActive=" + String(canActive ? "YES" : "NO"));
     dashLog("[BOOT] feat: AD=" + String(feat.ADEnabled ? "ON" : "OFF") +
             " nag=" + String(feat.nagSuppress ? "ON" : "OFF") +
             " summon=" + String(feat.summonUnlock ? "ON" : "OFF") +
@@ -616,8 +611,6 @@ static void handleStatus()
     j += gtwAp;
     j += ",\"AD\":";
     j += ADActive ? "true" : "false";
-    j += ",\"fAD\":";
-    j += bypassTlssc ? "true" : "false";
     j += ",\"eprn\":";
     j += ep ? "true" : "false";
     j += ",\"can\":";
@@ -764,11 +757,6 @@ static void handleFeatures()
         uint8_t v = (uint8_t)constrain(server.arg("h4o").toInt(), 0, 63);
         feat.hw4Offset = v;
         dashLog("[FEAT] HW4 offset raw=" + String(v) + (v == 0 ? " (off)" : ""));
-    }
-    if (server.hasArg("fAD"))
-    {
-        bypassTlssc = server.arg("fAD") == "1";
-        dashLog("[FEAT] Bypass TLSSC " + String(bypassTlssc ? "ON" : "OFF"));
     }
     if (server.hasArg("eprn") && dashHandler)
     {
@@ -2341,12 +2329,14 @@ static void dashSwapHandler(uint8_t mode)
 {
     if (mode > 2 || !handlerPool[mode])
         return;
+
     CarManagerBase *next = handlerPool[mode];
     if (dashHandler)
     {
         next->speedProfile = (int)dashHandler->speedProfile;
         next->enablePrint = (bool)dashHandler->enablePrint;
     }
+
     appActiveHandler = next;
     dashHandler = next;
     dashApplyRuntimeState();

@@ -45,7 +45,6 @@ inline constexpr bool kNagKillerDefaultEnabled = false;
 inline constexpr bool kNagKillerBuildEnabled = false;
 #endif
 
-inline Shared<bool> bypassTlsscRequirementRuntime{kBypassTlsscRequirementDefaultEnabled};
 inline Shared<bool> isaSpeedChimeSuppressRuntime{kIsaSpeedChimeSuppressDefaultEnabled};
 inline Shared<bool> emergencyVehicleDetectionRuntime{kEmergencyVehicleDetectionDefaultEnabled};
 inline Shared<bool> enhancedAutopilotRuntime{kEnhancedAutopilotDefaultEnabled};
@@ -76,13 +75,6 @@ static uint8_t h4oCustomV [H4O_CUSTOM_COUNT] = {60, 60, 50, 40, 33, 12, 11, 10, 
 inline uint8_t readMuxID(const CanFrame &frame)
 {
     return frame.data[0] & 0x07;
-}
-
-inline bool isADSelectedInUI(const CanFrame &frame)
-{
-    if (bypassTlsscRequirementRuntime)
-        return true;
-    return (frame.data[4] >> 6) & 0x01;
 }
 
 inline uint8_t readGTWAutopilot(const CanFrame &frame)

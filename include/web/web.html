@@ -1080,7 +1080,7 @@
     <div style="height:12px"></div>
 
     <div class="card" style="display:none">
-<!--    <div class="card" >-->
+        <!--    <div class="card" >-->
         <div class="card-hdr">
             <div class="card-title">Hardware</div>
             <div class="card-meta">Autopilot generation</div>
@@ -1204,21 +1204,6 @@
                 <div class="feat-desc">Enable approaching EV detection</div>
             </div>
             <label class="tgl"><input type="checkbox" id="tgl-evd" onchange="pushFeat()">
-                <div class="tgl-track">
-                    <div class="tgl-thumb"></div>
-                </div>
-            </label>
-        </div>
-
-
-        <div class="feat-row">
-            <div class="feat-info">
-                <div class="feat-name">Bypass TLSSC</div>
-                <div class="feat-desc">Bypass TLSSC requirement — enables AD without steering wheel check (persists
-                    reboot)
-                </div>
-            </div>
-            <label class="tgl"><input type="checkbox" id="tgl-fAD" onchange="pushFeat()">
                 <div class="tgl-track">
                     <div class="tgl-thumb"></div>
                 </div>
@@ -2031,7 +2016,6 @@
                 + '&camera=' + ($('tgl-camera').checked ? '1' : '0')
                 + '&banShield=' + ($('tgl-banShield').checked ? '1' : '0')
                 + '&evd=' + ($('tgl-evd').checked ? '1' : '0')
-                + '&fAD=' + ($('tgl-fAD').checked ? '1' : '0')
                 + '&eprn=' + ($('tgl-eprn').checked ? '1' : '0')
                 + '&h4o=' + state.h4o;
             try {
@@ -2277,7 +2261,6 @@
                             state.spl = d.feat.spl;
                         }
                     }
-                    if (typeof d.fAD !== 'undefined') $('tgl-fAD').checked = d.fAD;
                     if (typeof d.eprn !== 'undefined') $('tgl-eprn').checked = d.eprn;
                     if (!h4oCustomLoaded && d.h4oCust) {
                         h4oCustomLoaded = true;
