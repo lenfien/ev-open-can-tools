@@ -26,6 +26,7 @@ struct CarManagerBase
     Shared<uint32_t> banShieldCheckCnt{0};
     Shared<int> speedOffset{0};
     Shared<int> speedLimit{0};
+    Shared<int> speedLimitVisionOnly{0};
 
     void (*onFrame)(const CanFrame &) = nullptr;
     void (*onSend)(uint8_t mux, bool ok) = nullptr;
@@ -430,36 +431,22 @@ struct HW4Handler : public CarManagerBase
         }
 #endif
 
-
-#if defined(ISA_SPEED_CHIME_SUPPRESS) || defined(ESP32_DASHBOARD)
-
         if (frame.id == 921)
         {
             if (frame.dlc < 8)
                 return;
 
             speedLimit = (frame.data[1] & 0x1F) * 5;
+            // speedLimitVisionOnly = (frame.data[2] & 0x1F) * 5;
 
-            if (!isaSpeedChimeSuppressRuntime)
-                return;
-            frame.data[1] |= 0x20;
-            uint8_t sum = 0;
-            for (int i = 0; i < 7; i++)
-                sum += frame.data[i];
-            sum += (921 & 0xFF) + (921 >> 8);
-            frame.data[7] = sum & 0xFF;
-            framesSent++;
-            driver.send(frame);
-            if (onSend)
-                onSend(0, true);
             return;
         }
-#endif
 
         if (frame.id == 1016)
         {
-            if (frame.dlc < 6)
+            if (frame.dlc < 8)
                 return;
+
             if (!speedProfileLocked)
             {
                 auto fd = (frame.data[5] & 0b11100000) >> 5;
@@ -483,9 +470,10 @@ struct HW4Handler : public CarManagerBase
                 }
             }
         }
+
         if (frame.id == 2047)
         {
-            if (frame.dlc < 6)
+            if (frame.dlc < 8)
                 return;
 
             int32_t mux = frame.data[0] & 0x0F;
@@ -539,45 +527,69 @@ struct HW4Handler : public CarManagerBase
 
             return;
         }
+
         if (frame.id == 1021)
         {
             if (frame.dlc < 8)
                 return;
+
             auto index = readMuxID(frame);
             if (index == 0)
                 ADEnabled = (!checkAD || checkAD());
+
             if (index == 0 && ADEnabled && (!checkAD || checkAD()))
             {
                 setBit(frame, 46, true);
                 setBit(frame, 60, true);
-#if defined(EMERGENCY_VEHICLE_DETECTION) || defined(ESP32_DASHBOARD)
+
                 if (emergencyVehicleDetectionRuntime)
                     setBit(frame, 59, true);
-#endif
+
+                // china only logic
+                {
+                    uint8_t speed_profile_for_hw3 = 2;
+                    switch (speedProfile)
+                    {
+                    case 0:
+                    case 4:
+                        speed_profile_for_hw3 = 0;
+                        break;
+                    case 1:
+                        speed_profile_for_hw3 = 1;
+                        break;
+                    case 2:
+                    case 3:
+                        speed_profile_for_hw3 = 2;
+                        break;
+                    }
+
+                    frame.data[6] &= ~0x06;
+                    frame.data[6] |= (speed_profile_for_hw3 << 1);
+                }
+
                 framesSent++;
                 driver.send(frame);
                 if (onSend)
                     onSend(0, true);
             }
+
             if (index == 1)
             {
                 bool modified = false;
-#if defined(ENHANCED_AUTOPILOT) || defined(ESP32_DASHBOARD)
                 if (enhancedAutopilotRuntime)
                 {
                     setBit(frame, 19, false);
                     setBit(frame, 47, true);
                     modified = true;
                 }
-#else
-                // No dashboard: nag suppression always-on (RP2040, M4)
-                setBit(frame, 19, false);
-                setBit(frame, 47, true);
-                modified = true;
-#endif
 
                 if (!enableCamera)
+                {
                     setBit(frame, 43, false);
+                }
+
+                // start from park
+                setBit(frame, 49, true);
 
                 if (modified)
                 {
@@ -587,25 +599,28 @@ struct HW4Handler : public CarManagerBase
                         onSend(1, true);
                 }
             }
+
             if (index == 2 && ADEnabled && (!checkAD || checkAD()))
             {
                 frame.data[7] &= ~(0x07 << 4);
                 frame.data[7] |= (speedProfile & 0x07) << 4;
 
-                uint8_t off = 0;
                 if (h4oTab == 0)
-                    off = hw4OffsetRuntime;
+                    speedOffset = hw4OffsetRuntime;
                 else
-                    off = (uint8_t)GetSpeedOffset();
+                    speedOffset = (uint8_t)GetSpeedOffset();
 
-                if (off > 0)
-                    frame.data[1] = (frame.data[1] & 0xC0) | (off & 0x3F);
+                if (speedOffset > 0)
+                    frame.data[1] = (frame.data[1] & 0xC0) | (speedOffset & 0x3F);
 
                 framesSent++;
                 driver.send(frame);
                 if (onSend)
                     onSend(2, true);
+
+                speedLimitVisionOnly = frame.data[1];
             }
+
             if (index == 0 && enablePrint)
             {
                 char buf[LogRingBuffer::kMaxMsgLen];
@@ -626,7 +641,6 @@ struct HW4Handler : public CarManagerBase
     }
 
 private:
-
     uint8_t
     GetSpeedOffset() const
     {
@@ -690,7 +704,7 @@ private:
         {.id = 0x7FF, .dlc = 8, {0b00000110,0b01011000,0b10110101,0b01011011,0b00000111,0b10110000,0b11001100,0b11001000}}, // 6
         {.id = 0x7FF, .dlc = 8, {0b00000111,0b00100110,0b00000000,0b10000101,0b00100000,0b00000100,0b00100011,0b01110000}}, // 7
         {.id = 0x7FF, .dlc = 8, {0b00001000,0b00000000,0b01000010,0b00000010,0b10010000,0b01000010,0b00010100,0b00000000}}, // 8
-        {.id = 0x7FF, .dlc = 8,         {0b00001001,0b11101111,0b00000000,0b00100000,0b00000000,0b10000000,0b00000000,0b00000000}}  // 9
+        {.id = 0x7FF, .dlc = 8, {0b00001001,0b11101111,0b00000000,0b00100000,0b00000000,0b10000000,0b00000000,0b00000000}}  // 9
     };
 
     // can_frame m_gtw_protector[10] = {

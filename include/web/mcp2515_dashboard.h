@@ -65,7 +65,6 @@ struct Features
     bool ADEnabled = true;
     bool nagSuppress = kEnhancedAutopilotDefaultEnabled;
     bool summonUnlock = kEnhancedAutopilotDefaultEnabled;
-    bool isaSuppress = kIsaSpeedChimeSuppressDefaultEnabled;
     bool evDetection = kEmergencyVehicleDetectionDefaultEnabled;
     uint8_t hw4Offset = 0;
     bool cameraEnabled = true;
@@ -313,7 +312,6 @@ static bool dashCheckNagEnabled()
 static void dashApplyRuntimeState()
 {
     emergencyVehicleDetectionRuntime = canActive && feat.evDetection;
-    isaSpeedChimeSuppressRuntime = canActive && feat.isaSuppress;
     enhancedAutopilotRuntime = canActive && (feat.nagSuppress || feat.summonUnlock);
     nagKillerRuntime = canActive && kNagKillerDefaultEnabled;
     hw4OffsetRuntime = canActive ? feat.hw4Offset : 0;
@@ -344,7 +342,6 @@ static void dashSavePrefs()
     prefs.putBool("f_AD", feat.ADEnabled);
     prefs.putBool("f_nag", feat.nagSuppress);
     prefs.putBool("f_sum", feat.summonUnlock);
-    prefs.putBool("f_isa", feat.isaSuppress);
     prefs.putBool("f_camera", feat.cameraEnabled);
     prefs.putBool("f_banShield", feat.enableBanShield);
     prefs.putBool("f_evd", feat.evDetection);
@@ -384,7 +381,6 @@ static void dashLoadPrefs()
     feat.ADEnabled = prefs.getBool("f_AD", true);
     feat.nagSuppress = prefs.getBool("f_nag", kEnhancedAutopilotDefaultEnabled);
     feat.summonUnlock = prefs.getBool("f_sum", kEnhancedAutopilotDefaultEnabled);
-    feat.isaSuppress = prefs.getBool("f_isa", kIsaSpeedChimeSuppressDefaultEnabled);
     feat.evDetection = prefs.getBool("f_evd", kEmergencyVehicleDetectionDefaultEnabled);
     feat.hw4Offset = prefs.getUChar("f_h4o", 0);
     feat.cameraEnabled = prefs.getUChar("f_camera", true);
@@ -438,7 +434,6 @@ static void dashLoadPrefs()
     dashLog("[BOOT] feat: AD=" + String(feat.ADEnabled ? "ON" : "OFF") +
             " nag=" + String(feat.nagSuppress ? "ON" : "OFF") +
             " summon=" + String(feat.summonUnlock ? "ON" : "OFF") +
-            " isa=" + String(feat.isaSuppress ? "ON" : "OFF") +
             " evd=" + String(feat.evDetection ? "ON" : "OFF") +
             " camera=" + String(feat.cameraEnabled ? "ON" : "OFF") +
             " banShield=" + String(feat.enableBanShield ? "ON" : "OFF"));
@@ -637,14 +632,14 @@ static void handleStatus()
     j += dashHandler ? (uint32_t)dashHandler->banShieldCheckCnt : 0;
     j += ",\"spLim\":";
     j += dashHandler ? (int)dashHandler->speedLimit : 0;
+    j += ",\"spLimv\":";
+    j += dashHandler ? (int)dashHandler->speedLimitVisionOnly : 0;
     j += ",\"feat\":{\"AD\":";
     j += feat.ADEnabled ? "true" : "false";
     j += ",\"nag\":";
     j += feat.nagSuppress ? "true" : "false";
     j += ",\"summon\":";
     j += feat.summonUnlock ? "true" : "false";
-    j += ",\"isa\":";
-    j += feat.isaSuppress ? "true" : "false";
     j += ",\"camera\":";
     j += feat.cameraEnabled ? "true" : "false";
     j += ",\"banShield\":";
@@ -731,11 +726,6 @@ static void handleFeatures()
     {
         feat.summonUnlock = server.arg("summon") == "1";
         dashLog("[FEAT] Summon unlock " + String(feat.summonUnlock ? "ON" : "OFF"));
-    }
-    if (server.hasArg("isa"))
-    {
-        feat.isaSuppress = server.arg("isa") == "1";
-        dashLog("[FEAT] ISA suppress " + String(feat.isaSuppress ? "ON" : "OFF"));
     }
     if (server.hasArg("camera"))
     {

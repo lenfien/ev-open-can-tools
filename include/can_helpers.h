@@ -45,7 +45,6 @@ inline constexpr bool kNagKillerDefaultEnabled = false;
 inline constexpr bool kNagKillerBuildEnabled = false;
 #endif
 
-inline Shared<bool> isaSpeedChimeSuppressRuntime{kIsaSpeedChimeSuppressDefaultEnabled};
 inline Shared<bool> emergencyVehicleDetectionRuntime{kEmergencyVehicleDetectionDefaultEnabled};
 inline Shared<bool> enhancedAutopilotRuntime{kEnhancedAutopilotDefaultEnabled};
 inline Shared<bool> nagKillerRuntime{kNagKillerDefaultEnabled};
