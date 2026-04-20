@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <ArduinoJson.h>
 #include "can_frame_types.h"
 #include "drivers/can_driver.h"
 #include "can_helpers.h"
@@ -43,7 +44,7 @@ static std::unique_ptr<CarManagerBase> appHandler;
 static CarManagerBase *appActiveHandler = nullptr;
 
 // Debug injection hook — set by dashboard to apply dbg_rules after handler
-static void (*appDebugProcess)(const CanFrame &, CanDriver &) = nullptr;
+static bool (*appDebugProcess)(CanFrame &, CanDriver &) = nullptr;
 
 static volatile bool frameReady = true;
 static void canISR() { frameReady = true; }
@@ -183,14 +184,24 @@ static void appLoop()
     CarManagerBase *h = appActiveHandler ? appActiveHandler : appHandler.get();
     while (appDriver->read(frame))
     {
-#if !(defined(ESP32_DASHBOARD) && !defined(NATIVE_BUILD) && defined(DASH_RGB_STATUS_LED))
         digitalWrite(PIN_LED, LOW);
-#endif
         h->frameCount++;
-        CanFrame original = frame;
-        h->handleMessage(frame, *appDriver);
+
+        // CanFrame original = frame;
+        bool should_send = h->handleMessage(frame, *appDriver);
         if (appDebugProcess)
-            appDebugProcess(original, *appDriver);
+        {
+            if (appDebugProcess(frame, *appDriver))
+                should_send = true;
+        }
+
+        if (should_send)
+        {
+            h->framesSent++;
+            appDriver->send(frame);
+            if (h->onSend)
+                h->onSend(0, true);
+        }
     }
 #if !(defined(ESP32_DASHBOARD) && !defined(NATIVE_BUILD) && defined(DASH_RGB_STATUS_LED))
     digitalWrite(PIN_LED, HIGH);

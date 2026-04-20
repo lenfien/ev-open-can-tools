@@ -1807,14 +1807,11 @@ static CarManagerBase *handlerPool[3] = {};
 
 static void dashInitHandlers()
 {
-    handlerPool[0] = new LegacyHandler();
-    handlerPool[1] = new HW3Handler();
+    handlerPool[0] = nullptr;
+    handlerPool[1] = nullptr;
     handlerPool[2] = new HW4Handler();
-    for (int i = 0; i < 3; i++)
-    {
-        handlerPool[i]->onFrame = mcpDashOnFrame;
-        handlerPool[i]->onSend = mcpDashOnSend;
-    }
+    handlerPool[2]->onFrame = mcpDashOnFrame;
+    handlerPool[2]->onSend = mcpDashOnSend;
 }
 
 static void dashSwapHandler(uint8_t mode)

@@ -3,6 +3,8 @@
 #include "can_frame_types.h"
 #include "drivers/can_driver.h"
 
+#include <list>
+
 #ifndef NATIVE_BUILD
 #include <Arduino.h>
 #include <SPIFFS.h>
@@ -20,6 +22,8 @@ struct DbgRule
     uint8_t bitVal = 0; // 0 or 1
     bool enabled = true;
     char name[24] = {};  // 用户自定义名称
+
+    bool is_valid = false;
 };
 
 // Per-(canId, actualMux) record of the last frame we sent
@@ -31,8 +35,8 @@ struct DbgLogEntry
     bool valid = false;
 };
 
-static DbgRule dbgRules[DBG_RULES_MAX];
-static uint8_t dbgRuleCount = 0;
+static std::list<DbgRule> dbgRules[DBG_RULES_MAX];
+
 static bool dbgActive = false;
 
 static volatile DbgLogEntry dbgLog[DBG_LOG_MAX];
@@ -40,68 +44,129 @@ static volatile uint8_t dbgLogCount = 0;
 
 // ── Frame processing ──────────────────────────────────────────────
 
-static void dbgProcessFrame(const CanFrame &frame, CanDriver &driver)
+static bool dbgProcessFrame(CanFrame &frame, CanDriver &driver)
 {
-    if (!dbgActive || dbgRuleCount == 0)
-        return;
+    bool should_send = false;
+    if (!dbgActive || dbgRules->empty())
+        return should_send;
 
-    bool anyMatch = false;
-    for (uint8_t i = 0; i < dbgRuleCount; i++)
+    bool anyMatchForWrite = false;
+    bool anyMatchForLog = false;
+
+    for (uint8_t i = 0; i < DBG_RULES_MAX; i++)
     {
         const DbgRule &r = dbgRules[i];
-        if (!r.enabled) continue;
+        if (!r.is_valid)
+            continue;
+
         if (r.canId != frame.id) continue;
         if (r.mux >= 0 && (frame.data[0] & 0x07) != (uint8_t)r.mux) continue;
-        anyMatch = true;
+        anyMatchForLog = true;
+
+        if (!r.enabled) continue;
+        anyMatchForWrite = true;
         break;
     }
-    if (!anyMatch)
-        return;
 
-    CanFrame modified = frame;
-    for (uint8_t i = 0; i < dbgRuleCount; i++)
+    if (anyMatchForWrite)
     {
-        const DbgRule &r = dbgRules[i];
-        if (!r.enabled) continue;
-        if (r.canId != frame.id) continue;
-        if (r.mux >= 0 && (frame.data[0] & 0x07) != (uint8_t)r.mux) continue;
-
-        uint8_t byteIdx = (uint8_t)r.bit / 8;
-        uint8_t bitIdx = (uint8_t)r.bit % 8;
-        if (byteIdx >= 8) continue;
-
-        if (r.bitVal)
-            modified.data[byteIdx] |= (1u << bitIdx);
-        else
-            modified.data[byteIdx] &= ~(1u << bitIdx);
-    }
-    driver.send(modified);
-
-    // Record last sent frame per (canId, actualMux)
-    int8_t actualMux = (int8_t)(modified.data[0] & 0x07);
-    volatile DbgLogEntry *entry = nullptr;
-    uint8_t cnt = dbgLogCount;
-    for (uint8_t i = 0; i < cnt; i++)
-    {
-        if (dbgLog[i].canId == modified.id && dbgLog[i].mux == actualMux)
+        for (uint8_t i = 0; i < dbgRuleCount; i++)
         {
-            entry = &dbgLog[i];
-            break;
+            const DbgRule &r = dbgRules[i];
+            if (!r.enabled) continue;
+            if (r.canId != frame.id) continue;
+            if (r.mux >= 0 && (frame.data[0] & 0x07) != (uint8_t)r.mux) continue;
+
+            uint8_t byteIdx = (uint8_t)r.bit / 8;
+            uint8_t bitIdx = (uint8_t)r.bit % 8;
+            if (byteIdx >= 8) continue;
+
+            if (r.bitVal)
+                frame.data[byteIdx] |= (1u << bitIdx);
+            else
+                frame.data[byteIdx] &= ~(1u << bitIdx);
+
+            should_send = true;
         }
     }
-    if (!entry && cnt < DBG_LOG_MAX)
+
+    // 添加日志
+    if (anyMatchForLog)
     {
-        entry = &dbgLog[cnt];
-        entry->canId = modified.id;
-        entry->mux = actualMux;
-        dbgLogCount = cnt + 1;
+        // Record last sent frame per (canId, actualMux)
+        int8_t actualMux = (int8_t)(frame.data[0] & 0x07);
+        volatile DbgLogEntry *log_entry = nullptr;
+
+        for (uint8_t i = 0; i < dbgLogCount; i++)
+        {
+            if (dbgLog[i].canId == frame.id && dbgLog[i].mux == actualMux)
+            {
+                log_entry = &dbgLog[i];
+                break;
+            }
+        }
+
+        if (!log_entry && dbgLogCount < DBG_LOG_MAX)
+        {
+            // 删除不需要的日志
+            for (int i = 0; i < dbgRuleCount; i++)
+            {
+                if (dbgLog[i].valid == false)
+                {
+                    log_entry = &dbgLog[i];
+                    break;
+                }
+            }
+
+           if (log_entry)
+           {
+               log_entry->canId = frame.id;
+               log_entry->mux = actualMux;
+               log_entry->valid = true;
+               dbgLogCount = dbgLogCount + 1;
+           }
+        }
+
+        if (log_entry)
+        {
+            for (uint8_t b = 0; b < 8; b++)
+                log_entry->data[b] = frame.data[b];
+        }
     }
-    if (entry)
+
+    // // 删除不需要的日志
+    if (dbgLogCount > dbgRuleCount)
     {
-        for (uint8_t b = 0; b < 8; b++)
-            entry->data[b] = modified.data[b];
-        entry->valid = true;
+        for (int i = 0; i < DBG_LOG_MAX; i++)
+        {
+            if (dbgLog[i].valid == false)
+                continue;
+
+            auto& l = dbgLog[i];
+            bool is_need = false;
+            for (uint8_t i2 = 0; i2 < dbgRuleCount; i2++)
+            {
+                const DbgRule &r = dbgRules[i2];
+                if (l.canId != r.canId)
+                    continue;
+
+                is_need = true;
+                if (r.mux >= 0 && l.mux != r.mux)
+                    is_need = false;
+
+                break;
+            }
+
+            if (!is_need)
+            {
+                dbgLog->valid = false;
+                dbgLogCount -= 1;
+            }
+        }
     }
+
+
+    return should_send;
 }
 
 // ── SPIFFS persistence ────────────────────────────────────────────
