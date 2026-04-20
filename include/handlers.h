@@ -14,27 +14,34 @@
 
 inline LogRingBuffer logRing;
 
+#include "web/mcp2515_dashboard.h"
+
 struct CarManagerBase
 {
-    Shared<int> speedProfile{1};
     Shared<bool> ADEnabled{false};
-    Shared<int> gatewayAutopilot{-1};
     Shared<bool> enablePrint{true};
+    Shared<bool> enableBanShield{true};
+    Shared<bool> enableNagSuppress{true};
+    Shared<int> speedProfile{1};
+    Shared<int> speedOffset{0};
+    Shared<bool> enableCamera{true};
+
+    // ------------------------------------
+
+    // speed limit
+    Shared<int> speedLimit{0};
+    Shared<int> speedLimitVisionOnly{0};
+
     Shared<uint32_t> frameCount{0};
     Shared<uint32_t> framesSent{0};
     Shared<uint32_t> banShieldCnt{0};
     Shared<uint32_t> banShieldCheckCnt{0};
-    Shared<int> speedOffset{0};
-    Shared<int> speedLimit{0};
-    Shared<int> speedLimitVisionOnly{0};
+
+    // gateway autopilot
+    Shared<int> gatewayAutopilot{-1};
 
     void (*onFrame)(const CanFrame &) = nullptr;
     void (*onSend)(uint8_t mux, bool ok) = nullptr;
-    bool (*checkAD)() = nullptr;
-    bool (*checkNag)() = nullptr;
-    bool (*checkSummon)() = nullptr;
-    bool (*checkIsa)() = nullptr;
-    bool (*checkEvd)() = nullptr;
 
     virtual bool handleMessage(CanFrame &frame, CanDriver &driver) = 0;
     virtual const uint32_t *filterIds() const = 0;
@@ -125,18 +132,9 @@ struct HW4Handler : public CarManagerBase
                 if (enablePrint && prev != next)
                 {
                     char buf[LogRingBuffer::kMaxMsgLen];
-                    snprintf(buf, sizeof(buf), "HW4Handler: GTW_autopilot: %d -> %u (%s)",
-                             prev, (unsigned int)next, describeGTWAutopilot(next));
-                    logRing.push(buf,
-    #ifndef NATIVE_BUILD
-                                 millis()
-    #else
-                                 0
-    #endif
-                    );
-#ifndef NATIVE_BUILD
+                    snprintf(buf, sizeof(buf), "HW4Handler: GTW_autopilot: %d -> %u (%s)", prev, (unsigned int)next, describeGTWAutopilot(next));
+                    logRing.push(buf,millis());
                     Serial.println(buf);
-#endif
                 }
             }
 
@@ -168,9 +166,9 @@ struct HW4Handler : public CarManagerBase
 
             auto index = readMuxID(frame);
             if (index == 0)
-                ADEnabled = (!checkAD || checkAD());
+                ADEnabled = feat.ADEnabled;
 
-            if (index == 0 && ADEnabled && (!checkAD || checkAD()))
+            if (index == 0 && feat.ADEnabled)
             {
                 setBit(frame, 46, true);
                 setBit(frame, 60, true);
@@ -194,6 +192,9 @@ struct HW4Handler : public CarManagerBase
                     case 3:
                         speed_profile_for_hw3 = 2;
                         break;
+                    default:
+                        speed_profile_for_hw3 = 2;
+                        break;
                     }
 
                     frame.data[6] &= ~0x06;
@@ -206,9 +207,14 @@ struct HW4Handler : public CarManagerBase
             if (index == 1)
             {
                 bool modified = false;
-                if (enhancedAutopilotRuntime)
+
+                if (nagSuppress)
                 {
                     setBit(frame, 19, false);
+                }
+
+                if (enhancedAutopilotRuntime)
+                {
                     setBit(frame, 47, true);
                     modified = true;
                 }
@@ -236,25 +242,15 @@ struct HW4Handler : public CarManagerBase
                     frame.data[1] = (frame.data[1] & 0xC0) | (speedOffset & 0x3F);
 
                 should_send = true;
-
                 speedLimitVisionOnly = frame.data[1];
             }
 
             if (index == 0 && enablePrint)
             {
                 char buf[LogRingBuffer::kMaxMsgLen];
-                snprintf(buf, sizeof(buf), "HW4Handler: AD: %d, Profile: %d",
-                         (bool)ADEnabled, (int)speedProfile);
-                logRing.push(buf,
-#ifndef NATIVE_BUILD
-                             millis()
-#else
-                             0
-#endif
-                );
-#ifndef NATIVE_BUILD
+                snprintf(buf, sizeof(buf), "HW4Handler: AD: %d, Profile: %d", (bool)ADEnabled, (int)speedProfile);
+                logRing.push(buf, millis());
                 Serial.println(buf);
-#endif
             }
         }
 
@@ -276,43 +272,6 @@ private:
 
         return result;
     }
-
-    // std::string
-    // ToHexString(const CanFrame &frame) {
-    //     std::ostringstream result;
-    //     for (size_t i = 0; i < sizeof(frame.data); ++i) {
-    //         result << "0x"
-    //                 << std::hex
-    //                 << std::uppercase // 可选：大写 A-F
-    //                 << std::hex
-    //                 << std::setw(2) // 宽度 2
-    //                 << std::setfill('0')
-    //                 << (int) frame.data[i];
-    //
-    //         if (i < sizeof(frame.data) - 1)
-    //             result << ",";
-    //     }
-    //     return result.str();
-    // }
-    //
-    // __attribute__((optimize("O3"))) std::string
-    // ToBinaryString(uint8_t i) {
-    //     std::string b;
-    //     b.reserve(8);
-    //     for (int index = 0; index < sizeof(i) * 8; index += 1)
-    //         b += ((i << index) & 0b10000000) ? "1" : "0";
-    //
-    //     return b;
-    // }
-    //
-    // __attribute__((optimize("O3"))) std::string
-    // ToBinaryString(const CanFrame &frame) {
-    //     std::ostringstream result;
-    //     for (size_t i = 0; i < sizeof(frame.data); ++i)
-    //         result << i * 8 << ":" << ToBinaryString(frame.data[i]) << ";";
-    //
-    //     return result.str();
-    // }
 
 private:
     CanFrame m_gtw_protector[10] = {             //0          8          16         24         32         40         48         56

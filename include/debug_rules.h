@@ -22,8 +22,6 @@ struct DbgRule
     uint8_t bitVal = 0; // 0 or 1
     bool enabled = true;
     char name[24] = {};  // 用户自定义名称
-
-    bool is_valid = false;
 };
 
 // Per-(canId, actualMux) record of the last frame we sent
@@ -32,139 +30,104 @@ struct DbgLogEntry
     uint32_t canId = 0;
     int8_t mux = 0;
     uint8_t data[8] = {};
-    bool valid = false;
 };
-
-static std::list<DbgRule> dbgRules[DBG_RULES_MAX];
 
 static bool dbgActive = false;
 
-static volatile DbgLogEntry dbgLog[DBG_LOG_MAX];
-static volatile uint8_t dbgLogCount = 0;
+static std::list<DbgLogEntry> g_dbg_log_list;
+static std::list<DbgRule> g_dbg_rule_list;
 
 // ── Frame processing ──────────────────────────────────────────────
 
 static bool dbgProcessFrame(CanFrame &frame, CanDriver &driver)
 {
     bool should_send = false;
-    if (!dbgActive || dbgRules->empty())
+    if (!dbgActive || g_dbg_log_list.empty())
         return should_send;
 
-    bool anyMatchForWrite = false;
-    bool anyMatchForLog = false;
+    DbgRule *dbg_rule_ptr = nullptr;
+    DbgRule *dbg_rule_for_log_ptr = nullptr;
 
-    for (uint8_t i = 0; i < DBG_RULES_MAX; i++)
+    for (auto& r : g_dbg_rule_list)
     {
-        const DbgRule &r = dbgRules[i];
-        if (!r.is_valid)
+        if (r.canId != frame.id)
             continue;
 
-        if (r.canId != frame.id) continue;
-        if (r.mux >= 0 && (frame.data[0] & 0x07) != (uint8_t)r.mux) continue;
-        anyMatchForLog = true;
+        if (r.mux >= 0 && (frame.data[0] & 0x07) != (uint8_t)r.mux)
+            continue;
 
-        if (!r.enabled) continue;
-        anyMatchForWrite = true;
-        break;
+        dbg_rule_for_log_ptr = &r;
+
+        if (!r.enabled)
+            continue;
+
+        dbg_rule_ptr = &r;
     }
 
-    if (anyMatchForWrite)
+    if (dbg_rule_ptr != nullptr)
     {
-        for (uint8_t i = 0; i < dbgRuleCount; i++)
+        uint8_t byte_index = (uint8_t)dbg_rule_ptr->bit / 8;
+        uint8_t bit_index = (uint8_t)dbg_rule_ptr->bit % 8;
+        if (byte_index < 8)
         {
-            const DbgRule &r = dbgRules[i];
-            if (!r.enabled) continue;
-            if (r.canId != frame.id) continue;
-            if (r.mux >= 0 && (frame.data[0] & 0x07) != (uint8_t)r.mux) continue;
-
-            uint8_t byteIdx = (uint8_t)r.bit / 8;
-            uint8_t bitIdx = (uint8_t)r.bit % 8;
-            if (byteIdx >= 8) continue;
-
-            if (r.bitVal)
-                frame.data[byteIdx] |= (1u << bitIdx);
+            if (dbg_rule_ptr->bitVal)
+                frame.data[byte_index] |= (1u << bit_index);
             else
-                frame.data[byteIdx] &= ~(1u << bitIdx);
-
-            should_send = true;
+                frame.data[byte_index] &= ~(1u << bit_index);
         }
+
+        should_send = true;
     }
 
     // 添加日志
-    if (anyMatchForLog)
+    if (dbg_rule_for_log_ptr != nullptr)
     {
         // Record last sent frame per (canId, actualMux)
-        int8_t actualMux = (int8_t)(frame.data[0] & 0x07);
-        volatile DbgLogEntry *log_entry = nullptr;
+        int8_t mux_real = (int8_t)(frame.data[0] & 0x07);
+        DbgLogEntry *log_entry_ptr = nullptr;
 
-        for (uint8_t i = 0; i < dbgLogCount; i++)
+        for (auto& one : g_dbg_log_list)
         {
-            if (dbgLog[i].canId == frame.id && dbgLog[i].mux == actualMux)
+            if (one.canId == frame.id && one.mux == mux_real)
             {
-                log_entry = &dbgLog[i];
+                log_entry_ptr = &one;
                 break;
             }
         }
 
-        if (!log_entry && dbgLogCount < DBG_LOG_MAX)
+        if (log_entry_ptr == nullptr)
         {
-            // 删除不需要的日志
-            for (int i = 0; i < dbgRuleCount; i++)
-            {
-                if (dbgLog[i].valid == false)
-                {
-                    log_entry = &dbgLog[i];
-                    break;
-                }
-            }
-
-           if (log_entry)
-           {
-               log_entry->canId = frame.id;
-               log_entry->mux = actualMux;
-               log_entry->valid = true;
-               dbgLogCount = dbgLogCount + 1;
-           }
+            g_dbg_log_list.emplace_back();
+            log_entry_ptr = &g_dbg_log_list.back();
+            log_entry_ptr->canId = frame.id;
+            log_entry_ptr->mux = mux_real;
         }
 
-        if (log_entry)
-        {
-            for (uint8_t b = 0; b < 8; b++)
-                log_entry->data[b] = frame.data[b];
-        }
+        for (uint8_t b = 0; b < 8; b++)
+            log_entry_ptr->data[b] = frame.data[b];
     }
 
-    // // 删除不需要的日志
-    if (dbgLogCount > dbgRuleCount)
+    // 删除不需要的日志
+    for (auto it = g_dbg_log_list.begin(); it != g_dbg_log_list.end(); )
     {
-        for (int i = 0; i < DBG_LOG_MAX; i++)
+        bool should_care = false;
+        for (auto& r : g_dbg_rule_list)
         {
-            if (dbgLog[i].valid == false)
-                continue;
-
-            auto& l = dbgLog[i];
-            bool is_need = false;
-            for (uint8_t i2 = 0; i2 < dbgRuleCount; i2++)
+            if (r.canId == it->canId && (r.mux < 0 || r.mux == it->mux))
             {
-                const DbgRule &r = dbgRules[i2];
-                if (l.canId != r.canId)
-                    continue;
-
-                is_need = true;
-                if (r.mux >= 0 && l.mux != r.mux)
-                    is_need = false;
-
+                should_care = true;
                 break;
             }
-
-            if (!is_need)
-            {
-                dbgLog->valid = false;
-                dbgLogCount -= 1;
-            }
         }
-    }
 
+        if (should_care)
+        {
+            ++it;
+            continue;
+        }
+
+        it = g_dbg_log_list.erase(it);
+    }
 
     return should_send;
 }
@@ -176,9 +139,9 @@ static void dbgSaveRules()
     File f = SPIFFS.open(DBG_RULES_FILE, "w");
     if (!f)
         return;
-    for (uint8_t i = 0; i < dbgRuleCount; i++)
+
+    for (auto& r : g_dbg_rule_list)
     {
-        const DbgRule &r = dbgRules[i];
         // 格式：canId mux bit val en name（name 中空格替换为 \x01 以免分割出错）
         String safeName = String(r.name);
         safeName.replace(" ", "\x01");
@@ -189,18 +152,20 @@ static void dbgSaveRules()
                  r.enabled ? 1 : 0,
                  safeName.c_str());
     }
+
     f.close();
 }
 
 static void dbgLoadRules()
 {
-    dbgRuleCount = 0;
     if (!SPIFFS.exists(DBG_RULES_FILE))
         return;
+
     File f = SPIFFS.open(DBG_RULES_FILE, "r");
     if (!f)
         return;
-    while (f.available() && dbgRuleCount < DBG_RULES_MAX)
+
+    while (f.available())
     {
         String line = f.readStringUntil('\n');
         line.trim();
@@ -212,20 +177,27 @@ static void dbgLoadRules()
         int parsed = sscanf(line.c_str(), "%lx %d %d %d %d %31s", &id, &mux, &bit, &val, &en, nameBuf);
         if (parsed >= 5)
         {
-            DbgRule &r = dbgRules[dbgRuleCount++];
+            g_dbg_rule_list.emplace_back();
+            DbgRule &r = g_dbg_rule_list.back();
             r.canId = (uint32_t)id;
             r.mux = (int8_t)mux;
             r.bit = (int8_t)bit;
             r.bitVal = (uint8_t)(val & 1);
             r.enabled = (en != 0);
+
             if (parsed >= 6 && strcmp(nameBuf, "-") != 0)
             {
                 // 还原空格
-                for (char *p = nameBuf; *p; p++) if (*p == '\x01') *p = ' ';
-                strncpy(r.name, nameBuf, sizeof(r.name) - 1);
+                for (char *p = nameBuf; *p; p++)
+                {
+                    if (*p == '\x01')
+                        *p = ' ';
+                    strncpy(r.name, nameBuf, sizeof(r.name) - 1);
+                }
             }
         }
     }
+
     f.close();
 }
 
@@ -236,16 +208,20 @@ static String dbgRulesToJson()
     String j = "{\"active\":";
     j += dbgActive ? "true" : "false";
     j += ",\"rules\":[";
-    for (uint8_t i = 0; i < dbgRuleCount; i++)
+
+    bool should_comma = false;
+    for (auto& r: g_dbg_rule_list)
     {
-        if (i)
+        if (should_comma)
             j += ",";
-        const DbgRule &r = dbgRules[i];
+
+        should_comma = true;
         j += "{\"id\":" + String(r.canId);
         j += ",\"mux\":" + String((int)r.mux);
         j += ",\"bit\":" + String((int)r.bit);
         j += ",\"val\":" + String((unsigned)r.bitVal);
         j += ",\"en\":" + String(r.enabled ? 1 : 0);
+
         // name 字段：转义双引号和反斜杠
         j += ",\"name\":\"";
         for (const char *p = r.name; *p; p++)
@@ -265,19 +241,18 @@ static String dbgLogToJson()
 {
     String j = "[";
     bool first = true;
-    uint8_t cnt = dbgLogCount;
-    for (uint8_t i = 0; i < cnt; i++)
+
+    for (auto& l : g_dbg_log_list)
     {
-        if (!dbgLog[i].valid) continue;
         if (!first) j += ",";
         first = false;
-        j += "{\"id\":" + String(dbgLog[i].canId);
-        j += ",\"mux\":" + String((int)dbgLog[i].mux);
+        j += "{\"id\":" + String(l.canId);
+        j += ",\"mux\":" + String((int)l.mux);
         j += ",\"data\":[";
         for (uint8_t b = 0; b < 8; b++)
         {
             if (b) j += ",";
-            j += String((unsigned)dbgLog[i].data[b]);
+            j += String((unsigned)l.data[b]);
         }
         j += "]}";
     }
@@ -289,11 +264,11 @@ static String dbgLogToJson()
 static bool dbgParseRulesJson(const String &body)
 {
     uint8_t count = 0;
-    DbgRule temp[DBG_RULES_MAX];
+    std::list<DbgRule> temp_rules_list;
 
     int pos = 0;
     int len = body.length();
-    while (pos < len && count < DBG_RULES_MAX)
+    while (pos < len)
     {
         while (pos < len && body[pos] != '{')
             pos++;
@@ -320,19 +295,22 @@ static bool dbgParseRulesJson(const String &body)
         long val = getField("val");
         long en  = getField("en");
 
-        if (id == LONG_MIN || mux == LONG_MIN || bit == LONG_MIN ||
-            val == LONG_MIN || en == LONG_MIN)
+        if (id == LONG_MIN || mux == LONG_MIN || bit == LONG_MIN || val == LONG_MIN || en == LONG_MIN)
             continue;
+
         if (id < 1 || id > 0x7FF) continue;
         if (mux < -1 || mux > 15) continue;
         if (bit < -1 || bit > 63) continue;
         if (val < 0 || val > 1)   continue;
 
-        temp[count].canId   = (uint32_t)id;
-        temp[count].mux     = (int8_t)mux;
-        temp[count].bit     = (uint8_t)bit;
-        temp[count].bitVal  = (uint8_t)val;
-        temp[count].enabled = (en != 0);
+        temp_rules_list.emplace_back();
+        auto& temp = temp_rules_list.back();
+        temp.canId   = (uint32_t)id;
+        temp.mux     = (int8_t)mux;
+        temp.bit     = (uint8_t)bit;
+        temp.bitVal  = (uint8_t)val;
+        temp.enabled = (en != 0);
+
         // 解析 name 字段
         {
             String k = String("\"") + "name" + "\":";
@@ -351,15 +329,15 @@ static bool dbgParseRulesJson(const String &body)
                         else nm += obj[vp];
                         vp++;
                     }
+
                     nm = nm.substring(0, 23);
-                    strncpy(temp[count].name, nm.c_str(), sizeof(temp[count].name) - 1);
+                    strncpy(temp.name, nm.c_str(), sizeof(temp.name) - 1);
                 }
             }
         }
         count++;
     }
 
-    dbgRuleCount = count;
-    memcpy(dbgRules, temp, sizeof(DbgRule) * count);
+    g_dbg_rule_list = std::move(temp_rules_list);
     return true;
 }

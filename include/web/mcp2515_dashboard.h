@@ -2,6 +2,8 @@
 
 #if defined(ESP32_DASHBOARD) && !defined(NATIVE_BUILD)
 
+#include "app.h"
+
 #include <WiFi.h>
 #include <WiFiUdp.h>
 #include <WiFiClientSecure.h>
@@ -307,10 +309,20 @@ static void dashApplyRuntimeState()
 
     if (dashHandler)
     {
-        dashHandler->checkAD = dashCheckADEnabled;
-        dashHandler->checkNag = dashCheckNagEnabled;
-        if (!canActive || !feat.ADEnabled)
-            dashHandler->ADEnabled = false;
+        /**
+        *  Shared<bool> ADEnabled{false};
+    Shared<bool> enablePrint{true};
+    Shared<bool> enableBanShield{true};
+    Shared<bool> enableNagSuppress{true};
+    Shared<int> speedProfile{1};
+    Shared<int> speedOffset{0};
+
+         */
+        dashHandler->ADEnabled = canActive && feat.ADEnabled;
+        dashHandler->enableNagSuppress = canActive && feat.nagSuppress;
+        dashHandler->speedOffset = canActive && feat.hw4Offset;
+        dashHandler->enableCamera = canActive && feat.cameraEnabled;
+        dashHandler->speedProfile = canActive ? feat.pro : 1;
     }
 
 #if defined(DASH_RGB_STATUS_LED)
@@ -654,38 +666,45 @@ static void handleFeatures()
         feat.nagSuppress = server.arg("nag") == "1";
         dashLog("[FEAT] Nag suppress " + String(feat.nagSuppress ? "ON" : "OFF"));
     }
+
     if (server.hasArg("summon"))
     {
         feat.summonUnlock = server.arg("summon") == "1";
         dashLog("[FEAT] Summon unlock " + String(feat.summonUnlock ? "ON" : "OFF"));
     }
+
     if (server.hasArg("camera"))
     {
         feat.cameraEnabled = server.arg("camera") == "1";
         dashLog("[FEAT] Camera " + String(feat.cameraEnabled ? "ON" : "OFF"));
     }
+
     if (server.hasArg("banShield"))
     {
         feat.enableBanShield = server.arg("banShield") == "1";
         dashLog("[FEAT] BanShield " + String(feat.enableBanShield ? "ON" : "OFF"));
     }
+
     if (server.hasArg("evd"))
     {
         feat.evDetection = server.arg("evd") == "1";
         dashLog("[FEAT] EV detection " + String(feat.evDetection ? "ON" : "OFF"));
     }
+
     if (server.hasArg("h4o"))
     {
         uint8_t v = (uint8_t)constrain(server.arg("h4o").toInt(), 0, 63);
         feat.hw4Offset = v;
         dashLog("[FEAT] HW4 offset raw=" + String(v) + (v == 0 ? " (off)" : ""));
     }
+
     if (server.hasArg("eprn") && dashHandler)
     {
         bool ep = server.arg("eprn") == "1";
         dashHandler->enablePrint = ep;
         dashLog("[FEAT] Logging " + String(ep ? "ON" : "OFF"));
     }
+
     dashApplyRuntimeState();
     dashSavePrefs();
     server.send(200, "application/json", "{\"ok\":true}");
@@ -1867,6 +1886,7 @@ static void mcpDashboardSetup(CarManagerBase *handler, CanDriver *driver)
 
     // Load debug injection rules from SPIFFS and restore active state
     dbgLoadRules();
+
     {
         Preferences p;
         if (p.begin(PREFS_NS, true))
@@ -1875,8 +1895,9 @@ static void mcpDashboardSetup(CarManagerBase *handler, CanDriver *driver)
             p.end();
         }
     }
-    if (dbgRuleCount > 0)
-        dashLog("[DBG] Loaded " + String(dbgRuleCount) + " rule(s)" + (dbgActive ? ", active" : ""));
+
+    if (g_dbg_rule_list.empty())
+        dashLog("[DBG] Loaded " + String(g_dbg_rule_list.size()) + " rule(s)" + (dbgActive ? ", active" : ""));
     appDebugProcess = dbgProcessFrame;
 
     // WiFi setup: AP+STA if STA credentials configured, AP-only otherwise.
