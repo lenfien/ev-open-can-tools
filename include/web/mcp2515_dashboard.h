@@ -14,7 +14,7 @@
 #include <SPIFFS.h>
 #include "handlers.h"
 #include "can_helpers.h"
-#include "plugin_engine.h"
+#include "debug_rules.h"
 #if defined(DRIVER_ESP32_EXT_MCP2515)
 #include "drivers/esp32_mcp2515_driver.h"
 #endif
@@ -125,9 +125,7 @@ static IPAddress staDNS(0, 0, 0, 0);
 
 static void dashSwapHandler(uint8_t mode);
 static void dashApplyFilters();
-static void dashReapplyFiltersWithPlugins();
 static void dashApplyRuntimeState();
-static void dashRestorePluginStates();
 
 // CAN recorder
 #define REC_CAP 2000
@@ -155,17 +153,6 @@ struct SniffFrame
 static SniffFrame sniffBuf[SNIFFER_CAP];
 static int sniffHead = 0;
 static int sniffCount = 0;
-
-struct PluginTestState
-{
-    bool active = false;
-    CanFrame frame = {};
-    uint16_t total = 0;
-    uint16_t sent = 0;
-    uint16_t intervalMs = 100;
-    unsigned long nextSendAt = 0;
-};
-static PluginTestState pluginTestState;
 
 static const char *decodeCanId(uint32_t id)
 {
@@ -437,61 +424,6 @@ static void dashLoadPrefs()
             " evd=" + String(feat.evDetection ? "ON" : "OFF") +
             " camera=" + String(feat.cameraEnabled ? "ON" : "OFF") +
             " banShield=" + String(feat.enableBanShield ? "ON" : "OFF"));
-}
-
-static uint32_t dashPluginStateHash(const char *value)
-{
-    uint32_t hash = 2166136261u;
-    while (*value)
-    {
-        hash ^= (uint8_t)*value++;
-        hash *= 16777619u;
-    }
-    return hash;
-}
-
-static void dashPluginStateKey(const char *filename, char *key, size_t keySize)
-{
-    snprintf(key, keySize, "plg_%08lx", (unsigned long)dashPluginStateHash(filename));
-}
-
-static void dashSavePluginState(const PluginData &plugin)
-{
-    Preferences pluginPrefs;
-    if (!pluginPrefs.begin(PREFS_NS, false))
-        return;
-
-    char key[13];
-    dashPluginStateKey(plugin.filename, key, sizeof(key));
-    pluginPrefs.putBool(key, plugin.enabled);
-    pluginPrefs.end();
-}
-
-static void dashClearPluginState(const PluginData &plugin)
-{
-    Preferences pluginPrefs;
-    if (!pluginPrefs.begin(PREFS_NS, false))
-        return;
-
-    char key[13];
-    dashPluginStateKey(plugin.filename, key, sizeof(key));
-    pluginPrefs.remove(key);
-    pluginPrefs.end();
-}
-
-static void dashRestorePluginStates()
-{
-    Preferences pluginPrefs;
-    if (!pluginPrefs.begin(PREFS_NS, false))
-        return;
-
-    for (uint8_t i = 0; i < pluginCount; i++)
-    {
-        char key[13];
-        dashPluginStateKey(pluginStore[i].filename, key, sizeof(key));
-        pluginStore[i].enabled = pluginPrefs.getBool(key, pluginStore[i].enabled);
-    }
-    pluginPrefs.end();
 }
 
 // MCP2515-only: fine-grained filter register reload on HW mode switch.
@@ -987,84 +919,6 @@ static void handleOtaUpload()
     }
 }
 
-// ── PLUGIN MANAGEMENT ───────────────────────────────────────────
-
-static void dashReapplyFiltersWithPlugins()
-{
-    if (!dashHandler || !dashDriver)
-        return;
-    // Merge handler + plugin filter IDs
-    uint32_t mergedIds[32];
-    uint8_t count = 0;
-    const uint32_t *hIds = dashHandler->filterIds();
-    uint8_t hCount = dashHandler->filterIdCount();
-    for (uint8_t i = 0; i < hCount && count < 32; i++)
-        mergedIds[count++] = hIds[i];
-    count += pluginGetFilterIds(mergedIds + count, 32 - count);
-    dashDriver->setFilters(mergedIds, count);
-}
-
-static const char *pluginOpName(PluginOpType t)
-{
-    switch (t)
-    {
-    case OP_SET_BIT:
-        return "set_bit";
-    case OP_SET_BYTE:
-        return "set_byte";
-    case OP_OR_BYTE:
-        return "or_byte";
-    case OP_AND_BYTE:
-        return "and_byte";
-    case OP_CHECKSUM:
-        return "checksum";
-    default:
-        return "?";
-    }
-}
-
-static bool isHandlerCanId(uint32_t id)
-{
-    if (!appActiveHandler)
-        return false;
-    const uint32_t *hIds = appActiveHandler->filterIds();
-    uint8_t hCount = appActiveHandler->filterIdCount();
-    for (uint8_t i = 0; i < hCount; i++)
-    {
-        if (hIds[i] == id)
-            return true;
-    }
-    return false;
-}
-
-static String dashFrameDataJson(const CanFrame &frame)
-{
-    String j = "[";
-    for (uint8_t i = 0; i < 8; i++)
-    {
-        if (i)
-            j += ",";
-        j += String(frame.data[i]);
-    }
-    j += "]";
-    return j;
-}
-
-static String dashFrameDataHex(const CanFrame &frame)
-{
-    String out;
-    for (uint8_t i = 0; i < 8; i++)
-    {
-        if (i)
-            out += " ";
-        if (frame.data[i] < 16)
-            out += "0";
-        out += String(frame.data[i], HEX);
-    }
-    out.toUpperCase();
-    return out;
-}
-
 static void dashRecordManualSend(const CanFrame &frame)
 {
     txCount++;
@@ -1076,352 +930,43 @@ static void dashRecordManualSend(const CanFrame &frame)
     }
 }
 
-static String dashPluginTestStatusJson()
+// ── DEBUG INJECTION ─────────────────────────────────────────────
+
+static void handleDbgRulesGet()
 {
-    uint16_t remaining = pluginTestState.sent < pluginTestState.total
-                             ? (pluginTestState.total - pluginTestState.sent)
-                             : 0;
-    String j = "{\"ok\":true,\"active\":";
-    j += pluginTestState.active ? "true" : "false";
-    j += ",\"sent\":" + String(pluginTestState.sent);
-    j += ",\"total\":" + String(pluginTestState.total);
-    j += ",\"remaining\":" + String(remaining);
-    j += ",\"interval\":" + String(pluginTestState.intervalMs);
-    j += ",\"id\":" + String(pluginTestState.frame.id);
-    j += ",\"data\":" + dashFrameDataJson(pluginTestState.frame);
-    j += "}";
-    return j;
+    server.send(200, "application/json", dbgRulesToJson());
 }
 
-static bool dashBuildPluginTestFrame(const PluginRule &rule, JsonArrayConst data, CanFrame &frame, String &error)
+static void handleDbgLog()
 {
-    if (data.isNull())
-    {
-        error = "missing base data";
-        return false;
-    }
-    if (data.size() > 8)
-    {
-        error = "base data max 8 bytes";
-        return false;
-    }
-
-    frame.id = rule.canId;
-    frame.dlc = 8;
-    memset(frame.data, 0, sizeof(frame.data));
-
-    uint8_t idx = 0;
-    for (JsonVariantConst item : data)
-    {
-        if (!item.is<int>())
-        {
-            error = "base data must be numbers";
-            return false;
-        }
-        int value = item.as<int>();
-        if (value < 0 || value > 255)
-        {
-            error = "base data bytes must be 0-255";
-            return false;
-        }
-        frame.data[idx++] = (uint8_t)value;
-    }
-
-    if (rule.mux >= 0)
-        frame.data[0] = (frame.data[0] & 0xF8) | ((uint8_t)rule.mux & 0x07);
-
-    for (uint8_t o = 0; o < rule.opCount; o++)
-        pluginApplyOp(frame, rule.ops[o]);
-
-    return true;
+    server.send(200, "application/json", dbgLogToJson());
 }
 
-static void handlePluginList()
+static void handleDbgRulesSave()
 {
-    String j = "{\"maxPlugins\":" + String(PLUGIN_MAX) + ",\"plugins\":[";
-    for (uint8_t i = 0; i < pluginCount; i++)
-    {
-        if (i)
-            j += ",";
-        j += "{\"name\":\"" + jsonEscape(pluginStore[i].name) + "\"";
-        j += ",\"version\":\"" + jsonEscape(pluginStore[i].version) + "\"";
-        j += ",\"author\":\"" + jsonEscape(pluginStore[i].author) + "\"";
-        j += ",\"rules\":" + String(pluginStore[i].ruleCount);
-        j += ",\"enabled\":" + String(pluginStore[i].enabled ? "true" : "false");
-
-        // Rule details
-        j += ",\"details\":[";
-        for (uint8_t r = 0; r < pluginStore[i].ruleCount; r++)
-        {
-            const PluginRule &rule = pluginStore[i].rules[r];
-            if (r)
-                j += ",";
-            j += "{\"id\":" + String(rule.canId);
-            j += ",\"hex\":\"0x" + String(rule.canId, HEX) + "\"";
-            j += ",\"mux\":" + String(rule.mux);
-            j += ",\"send\":" + String(rule.sendAfter ? "true" : "false");
-            j += ",\"conflict\":" + String(isHandlerCanId(rule.canId) ? "true" : "false");
-            j += ",\"ops\":[";
-            for (uint8_t o = 0; o < rule.opCount; o++)
-            {
-                const PluginOp &op = rule.ops[o];
-                if (o)
-                    j += ",";
-                j += "{\"type\":\"" + String(pluginOpName(op.type)) + "\"";
-                if (op.type == OP_SET_BIT)
-                    j += ",\"bit\":" + String(op.index) + ",\"val\":" + String(op.value);
-                else if (op.type == OP_CHECKSUM)
-                    j += "";
-                else
-                {
-                    j += ",\"byte\":" + String(op.index) + ",\"val\":" + String(op.value);
-                    if (op.type == OP_SET_BYTE)
-                        j += ",\"mask\":" + String(op.mask);
-                }
-                j += "}";
-            }
-            j += "]}";
-        }
-        j += "]}";
-    }
-    j += "],\"wifi\":{\"connected\":";
-    j += staConnected ? "true" : "false";
-    j += ",\"ssid\":\"" + jsonEscape(staSSID) + "\"";
-    if (staConnected)
-        j += ",\"ip\":\"" + WiFi.localIP().toString() + "\"";
-    j += "}}";
-    server.send(200, "application/json", j);
-}
-
-static bool pluginInstallJson(const String &json, const String &url)
-{
-    PluginData temp;
-    if (!pluginParseJson(json, temp))
-        return false;
-
-    // Check for duplicate name
-    int existing = pluginFindByName(temp.name);
-    if (existing < 0 && pluginCount >= PLUGIN_MAX)
-        return false;
-
-    bool preserveEnabled = true;
-    if (existing >= 0)
-    {
-        preserveEnabled = pluginStore[existing].enabled;
-        pluginRemove(existing);
-    }
-
-    // Generate filename from name
-    String fname = String(temp.name);
-    fname.replace(" ", "_");
-    fname.toLowerCase();
-    fname += ".json";
-    strlcpy(temp.filename, fname.c_str(), sizeof(temp.filename));
-    strlcpy(temp.sourceUrl, url.c_str(), sizeof(temp.sourceUrl));
-    temp.enabled = preserveEnabled;
-
-    if (!pluginSaveToSpiffs(json, temp.filename))
-        return false;
-
-    pluginStore[pluginCount] = temp;
-    pluginCount++;
-    dashSavePluginState(pluginStore[pluginCount - 1]);
-
-    dashReapplyFiltersWithPlugins();
-    dashLog("[PLG] Installed: " + String(temp.name) + " (" + String(temp.ruleCount) + " rules)");
-    return true;
-}
-
-static void handlePluginUpload()
-{
-    String json = server.arg("plain");
-    if (json.length() == 0)
-    {
-        server.send(400, "application/json", "{\"ok\":false,\"error\":\"empty body\"}");
-        return;
-    }
-    if (pluginInstallJson(json, ""))
-        server.send(200, "application/json", "{\"ok\":true}");
-    else
-        server.send(400, "application/json", "{\"ok\":false,\"error\":\"invalid plugin JSON or max " + String(PLUGIN_MAX) + " plugins reached\"}");
-}
-
-static void handlePluginInstallFromUrl()
-{
-    String url = server.arg("url");
-    if (url.length() == 0)
-    {
-        server.send(400, "application/json", "{\"ok\":false,\"error\":\"no url\"}");
-        return;
-    }
-    if (!staConnected)
-    {
-        server.send(400, "application/json", "{\"ok\":false,\"error\":\"WiFi not connected. Configure WiFi first.\"}");
-        return;
-    }
-
-    HTTPClient http;
-    WiFiClientSecure client;
-    client.setInsecure(); // skip cert verification for simplicity
-    http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
-    http.setTimeout(15000);
-    http.begin(client, url);
-    int code = http.GET();
-    if (code != HTTP_CODE_OK)
-    {
-        String err = "HTTP " + String(code);
-        http.end();
-        dashLog("[PLG] Download failed: " + err);
-        server.send(400, "application/json", "{\"ok\":false,\"error\":\"" + err + "\"}");
-        return;
-    }
-    String json = http.getString();
-    http.end();
-
-    if (pluginInstallJson(json, url))
-        server.send(200, "application/json", "{\"ok\":true}");
-    else
-        server.send(400, "application/json", "{\"ok\":false,\"error\":\"invalid plugin JSON or max " + String(PLUGIN_MAX) + " plugins reached\"}");
-}
-
-static void handlePluginToggle()
-{
-    if (!server.hasArg("idx"))
-    {
-        server.send(400, "application/json", "{\"ok\":false}");
-        return;
-    }
-    uint8_t idx = server.arg("idx").toInt();
-    if (idx < pluginCount)
-    {
-        pluginStore[idx].enabled = !pluginStore[idx].enabled;
-        dashSavePluginState(pluginStore[idx]);
-        dashReapplyFiltersWithPlugins();
-        dashLog("[PLG] " + String(pluginStore[idx].name) + " " +
-                String(pluginStore[idx].enabled ? "enabled" : "disabled"));
-    }
-    server.send(200, "application/json", "{\"ok\":true}");
-}
-
-static void handlePluginRemove()
-{
-    if (!server.hasArg("idx"))
-    {
-        server.send(400, "application/json", "{\"ok\":false}");
-        return;
-    }
-    uint8_t idx = server.arg("idx").toInt();
-    if (idx < pluginCount)
-    {
-        String name = pluginStore[idx].name;
-        dashClearPluginState(pluginStore[idx]);
-        pluginRemove(idx);
-        dashReapplyFiltersWithPlugins();
-        dashLog("[PLG] Removed: " + name);
-    }
-    server.send(200, "application/json", "{\"ok\":true}");
-}
-
-static void handlePluginTest()
-{
-    if (!dashDriver)
-    {
-        server.send(500, "application/json", "{\"ok\":false,\"error\":\"CAN driver unavailable\"}");
-        return;
-    }
-    if (!canActive)
-    {
-        server.send(400, "application/json", "{\"ok\":false,\"error\":\"Injection disabled. Press Resume Injection first.\"}");
-        return;
-    }
-
-    String payload = server.arg("plain");
-    if (payload.length() == 0)
-    {
-        server.send(400, "application/json", "{\"ok\":false,\"error\":\"empty body\"}");
-        return;
-    }
-
-    JsonDocument doc;
-    DeserializationError err = deserializeJson(doc, payload);
-    if (err)
+    String body = server.arg("plain");
+    if (!dbgParseRulesJson(body))
     {
         server.send(400, "application/json", "{\"ok\":false,\"error\":\"invalid JSON\"}");
         return;
     }
-
-    JsonVariantConst pluginDoc = doc["plugin"];
-    if (pluginDoc.isNull())
-    {
-        server.send(400, "application/json", "{\"ok\":false,\"error\":\"missing plugin\"}");
-        return;
-    }
-
-    String pluginJson;
-    serializeJson(pluginDoc, pluginJson);
-
-    PluginData temp;
-    if (!pluginParseJson(pluginJson, temp))
-    {
-        server.send(400, "application/json", "{\"ok\":false,\"error\":\"invalid plugin JSON\"}");
-        return;
-    }
-
-    int ruleIndex = doc["rule"] | -1;
-    if (ruleIndex < 0 || ruleIndex >= temp.ruleCount)
-    {
-        server.send(400, "application/json", "{\"ok\":false,\"error\":\"invalid rule index\"}");
-        return;
-    }
-
-    int count = doc["count"] | 1;
-    int intervalMs = doc["interval"] | 100;
-    if (count < 1 || count > 200)
-    {
-        server.send(400, "application/json", "{\"ok\":false,\"error\":\"count must be 1-200\"}");
-        return;
-    }
-    if (intervalMs < 10 || intervalMs > 5000)
-    {
-        server.send(400, "application/json", "{\"ok\":false,\"error\":\"interval must be 10-5000 ms\"}");
-        return;
-    }
-
-    CanFrame frame;
-    String buildError;
-    if (!dashBuildPluginTestFrame(temp.rules[ruleIndex], doc["data"].as<JsonArrayConst>(), frame, buildError))
-    {
-        server.send(400, "application/json", "{\"ok\":false,\"error\":\"" + jsonEscape(buildError) + "\"}");
-        return;
-    }
-
-    if (pluginTestState.active)
-        dashLog("[PLGTEST] Replaced previous test");
-
-    pluginTestState.active = true;
-    pluginTestState.frame = frame;
-    pluginTestState.total = (uint16_t)count;
-    pluginTestState.sent = 0;
-    pluginTestState.intervalMs = (uint16_t)intervalMs;
-    pluginTestState.nextSendAt = millis();
-
-    dashLog("[PLGTEST] Queued CAN 0x" + String(frame.id, HEX) + " x" + String(count) +
-            " @ " + String(intervalMs) + "ms [" + dashFrameDataHex(frame) + "]");
-    server.send(200, "application/json", dashPluginTestStatusJson());
+    dbgSaveRules();
+    server.send(200, "application/json", "{\"ok\":true}");
 }
 
-static void handlePluginTestStatus()
+static void handleDbgActive()
 {
-    server.send(200, "application/json", dashPluginTestStatusJson());
-}
-
-static void handlePluginTestStop()
-{
-    bool wasActive = pluginTestState.active;
-    pluginTestState.active = false;
-    if (wasActive)
-        dashLog("[PLGTEST] Stopped after " + String(pluginTestState.sent) + "/" + String(pluginTestState.total) + " sends");
-    server.send(200, "application/json", dashPluginTestStatusJson());
+    String body = server.arg("plain");
+    body.trim();
+    dbgActive = (body == "1" || body == "true");
+    Preferences p;
+    if (p.begin(PREFS_NS, false))
+    {
+        p.putBool("dbg_on", dbgActive);
+        p.end();
+    }
+    dashLog(String("[DBG] Injection ") + (dbgActive ? "started" : "stopped"));
+    server.send(200, "application/json", dbgRulesToJson());
 }
 
 // ── WIFI STA ────────────────────────────────────────────────────
@@ -2247,49 +1792,6 @@ static void handleUpdateBeta()
     server.send(200, "application/json", j);
 }
 
-// ── Plugin frame callback wrapper ───────────────────────────────
-
-static void dashPluginProcess(const CanFrame &frame, CanDriver &driver)
-{
-    pluginProcessFrame(frame, driver);
-}
-
-static void dashPluginTestTick()
-{
-    if (!pluginTestState.active)
-        return;
-    if (!canActive)
-    {
-        pluginTestState.active = false;
-        dashLog("[PLGTEST] Stopped: injection disabled");
-        return;
-    }
-    if (!dashDriver)
-    {
-        pluginTestState.active = false;
-        dashLog("[PLGTEST] Stopped: CAN driver unavailable");
-        return;
-    }
-
-    unsigned long now = millis();
-    if ((long)(now - pluginTestState.nextSendAt) < 0)
-        return;
-
-    dashDriver->send(pluginTestState.frame);
-    dashRecordManualSend(pluginTestState.frame);
-    pluginTestState.sent++;
-
-    if (pluginTestState.sent >= pluginTestState.total)
-    {
-        pluginTestState.active = false;
-        dashLog("[PLGTEST] Done CAN 0x" + String(pluginTestState.frame.id, HEX) +
-                " x" + String(pluginTestState.total));
-        return;
-    }
-
-    pluginTestState.nextSendAt = now + pluginTestState.intervalMs;
-}
-
 static void webTask(void *)
 {
     for (;;)
@@ -2366,17 +1868,19 @@ static void mcpDashboardSetup(CarManagerBase *handler, CanDriver *driver)
     dashSwapHandler(hwMode);
     dashApplyFilters();
 
-    // Load plugins from SPIFFS
-    pluginLoadAll();
-    dashRestorePluginStates();
-    if (pluginCount > 0)
+    // Load debug injection rules from SPIFFS and restore active state
+    dbgLoadRules();
     {
-        dashLog("[PLG] Loaded " + String(pluginCount) + " plugin(s)");
-        dashReapplyFiltersWithPlugins();
+        Preferences p;
+        if (p.begin(PREFS_NS, true))
+        {
+            dbgActive = p.getBool("dbg_on", false);
+            p.end();
+        }
     }
-
-    // Set plugin processing hook
-    appPluginProcess = dashPluginProcess;
+    if (dbgRuleCount > 0)
+        dashLog("[DBG] Loaded " + String(dbgRuleCount) + " rule(s)" + (dbgActive ? ", active" : ""));
+    appDebugProcess = dbgProcessFrame;
 
     // WiFi setup: AP+STA if STA credentials configured, AP-only otherwise.
     // WiFi.softAP(ssid, pass, channel=1, hidden=0, max_connection=4)
@@ -2426,14 +1930,10 @@ static void mcpDashboardSetup(CarManagerBase *handler, CanDriver *driver)
     server.on("/disable", HTTP_POST, handleDisable);
     server.on("/reboot", HTTP_POST, handleReboot);
     server.on("/update", HTTP_POST, handleOtaResult, handleOtaUpload);
-    server.on("/plugins", HTTP_GET, handlePluginList);
-    server.on("/plugin_upload", HTTP_POST, handlePluginUpload);
-    server.on("/plugin_install", HTTP_POST, handlePluginInstallFromUrl);
-    server.on("/plugin_toggle", HTTP_POST, handlePluginToggle);
-    server.on("/plugin_remove", HTTP_POST, handlePluginRemove);
-    server.on("/plugin_test", HTTP_POST, handlePluginTest);
-    server.on("/plugin_test_status", HTTP_GET, handlePluginTestStatus);
-    server.on("/plugin_test_stop", HTTP_POST, handlePluginTestStop);
+    server.on("/dbg_rules", HTTP_GET, handleDbgRulesGet);
+    server.on("/dbg_rules", HTTP_POST, handleDbgRulesSave);
+    server.on("/dbg_active", HTTP_POST, handleDbgActive);
+    server.on("/dbg_log", HTTP_GET, handleDbgLog);
     server.on("/ap_config", HTTP_POST, handleApConfig);
     server.on("/ap_status", HTTP_GET, handleApStatus);
     server.on("/can_pins", HTTP_GET, handleCanPins);
@@ -2458,7 +1958,6 @@ static void mcpDashboardLoop()
 {
     if (Update.isRunning())
         return;
-    dashPluginTestTick();
     dashCheckBusHealth();
     if (canOnline && millis() - lastFrameMs > 10000)
     {

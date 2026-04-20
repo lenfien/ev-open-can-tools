@@ -42,8 +42,8 @@ static std::unique_ptr<CanDriver> appDriver;
 static std::unique_ptr<CarManagerBase> appHandler;
 static CarManagerBase *appActiveHandler = nullptr;
 
-// Plugin processing hook — set by dashboard to apply plugin rules after handler
-static void (*appPluginProcess)(const CanFrame &, CanDriver &) = nullptr;
+// Debug injection hook — set by dashboard to apply dbg_rules after handler
+static void (*appDebugProcess)(const CanFrame &, CanDriver &) = nullptr;
 
 static volatile bool frameReady = true;
 static void canISR() { frameReady = true; }
@@ -189,8 +189,8 @@ static void appLoop()
         h->frameCount++;
         CanFrame original = frame;
         h->handleMessage(frame, *appDriver);
-        if (appPluginProcess)
-            appPluginProcess(original, *appDriver);
+        if (appDebugProcess)
+            appDebugProcess(original, *appDriver);
     }
 #if !(defined(ESP32_DASHBOARD) && !defined(NATIVE_BUILD) && defined(DASH_RGB_STATUS_LED))
     digitalWrite(PIN_LED, HIGH);

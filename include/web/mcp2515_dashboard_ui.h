@@ -982,23 +982,56 @@
                 margin-bottom: 10px
             }
 
-            /* Warning */
-            .warn-bar {
-                margin: 0 16px 14px;
-                padding: 10px 14px;
-                border-radius: 9px;
-                background: var(--errBg);
-                border: 1px solid var(--errBd);
-                font-size: 11px;
-                color: var(--err);
-                line-height: 1.7
-            }
-
             .foot {
                 text-align: center;
                 padding: 8px 16px 20px;
                 font-size: 11px;
                 color: var(--tx3)
+            }
+
+            /* Tabs */
+            .tab-bar {
+                display: flex;
+                gap: 0;
+                padding: 0 16px;
+                border-bottom: 1px solid var(--bd);
+                background: var(--bg);
+                position: sticky;
+                top: 0;
+                z-index: 100;
+                margin-top: 10px;
+            }
+
+            .tab-btn {
+                padding: 10px 14px;
+                border: none;
+                border-bottom: 2px solid transparent;
+                background: transparent;
+                color: var(--tx2);
+                font-size: 12px;
+                font-weight: 600;
+                cursor: pointer;
+                font-family: inherit;
+                transition: color .18s, border-color .18s;
+                margin-bottom: -1px;
+                letter-spacing: .3px;
+            }
+
+            .tab-btn.active {
+                color: var(--acc);
+                border-bottom-color: var(--acc);
+            }
+
+            .tab-btn:hover:not(.active) {
+                color: var(--tx);
+            }
+
+            .tab-pane {
+                display: none;
+            }
+
+            .tab-pane.active {
+                display: block;
             }
         </style>
     </head>
@@ -1021,6 +1054,19 @@
     <div class="fps-bar">
         <div class="fps-fill" id="fps-fill"></div>
     </div>
+
+    <!-- Tab 导航栏 -->
+    <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchTab('status')">状态</button>
+        <button class="tab-btn" onclick="switchTab('control')">控制</button>
+        <button class="tab-btn" onclick="switchTab('debug')">调试</button>
+        <button class="tab-btn" onclick="switchTab('system')">系统</button>
+    </div>
+
+    <!-- Tab 1: 状态 -->
+    <div class="tab-pane active" id="tab-status">
+
+    <div style="height:12px"></div>
 
     <div class="stat-grid">
         <div class="stat">
@@ -1081,6 +1127,11 @@
             <div class="stat-val v-dim" id="s-splimv">—</div>
         </div>
     </div>
+
+    </div><!-- /tab-status -->
+
+    <!-- Tab 2: 控制 -->
+    <div class="tab-pane" id="tab-control">
 
     <div style="height:12px"></div>
 
@@ -1222,7 +1273,50 @@
                     style="display:none;background:var(--accBg);color:var(--acc);border:1px solid var(--accBd)"
                     onclick="resumeInj()">Resume Injection
             </button>
-            <button class="btn btn-reboot" onclick="reboot()">Reboot</button>
+        </div>
+    </div>
+
+    </div><!-- /tab-control -->
+
+    <!-- Tab 3: 调试 -->
+    <div class="tab-pane" id="tab-debug">
+
+    <div style="height:12px"></div>
+
+    <div class="card collapsible" id="card-dbg">
+        <div class="card-hdr" onclick="toggleCard('card-dbg')">
+            <div class="card-title">Debug Injection</div>
+            <div class="card-meta" id="dbg-meta">0 rules</div>
+        </div>
+        <div style="margin-bottom:10px;font-size:12px;color:var(--tx3);line-height:1.5">
+            Intercept CAN frames and send a modified copy with specific bits overridden.
+Format: <b>CAN&nbsp;ID</b> (hex) &bull; <b>MUX</b> (-1&nbsp;=&nbsp;any) &bull; <b>Bit</b> (0-63, default&nbsp;0) &bull; <b>Value</b> (0/1). New rows are off by default.
+        </div>
+
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+            <thead>
+                <tr style="color:var(--tx3);border-bottom:1px solid var(--bd)">
+                    <th style="text-align:left;padding:4px 6px;font-weight:normal">Name</th>
+                    <th style="text-align:left;padding:4px 6px;font-weight:normal">CAN ID</th>
+                    <th style="text-align:left;padding:4px 6px;font-weight:normal">MUX</th>
+                    <th style="text-align:left;padding:4px 6px;font-weight:normal">Bit</th>
+                    <th style="text-align:left;padding:4px 6px;font-weight:normal">Value</th>
+                    <th style="text-align:center;padding:4px 6px;font-weight:normal">On</th>
+                    <th style="padding:4px 2px"></th>
+                </tr>
+            </thead>
+            <tbody id="dbg-rows"></tbody>
+        </table>
+
+        <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;align-items:center">
+            <button class="sniff-btn" onclick="dbgAddRow()">+ Add Rule</button>
+            <button class="sniff-btn" id="dbg-active-btn" onclick="dbgToggleActive()">Inject</button>
+            <span id="dbg-status" style="font-size:11px;color:var(--tx3)"></span>
+        </div>
+
+        <div style="margin-top:14px;border-top:1px solid var(--bd);padding-top:10px">
+            <div style="font-size:11px;color:var(--tx3);margin-bottom:6px">Sent frames (last seen per CAN ID + MUX, click to expand)</div>
+            <div id="dbg-log-entries" style="font-size:11px;font-family:monospace"></div>
         </div>
     </div>
 
@@ -1301,6 +1395,13 @@
         </table>
     </div>
 
+    </div><!-- /tab-debug -->
+
+    <!-- Tab 4: 系统 -->
+    <div class="tab-pane" id="tab-system">
+
+    <div style="height:12px"></div>
+
     <div class="card collapsible" id="card-hotspot">
         <div class="card-hdr" onclick="toggleCard('card-hotspot')">
             <div class="card-title">WiFi Hotspot <span onclick="event.stopPropagation();toggleInfo('ap-info')"
@@ -1346,8 +1447,8 @@
             </div>
             <div class="card-meta" id="wifi-status">Not configured</div>
         </div>
-        <div class="feat-desc" style="margin-bottom:8px">Connect to your home WiFi. Required for firmware updates and plugin
-            downloads. Stored in NVS &mdash; survives firmware updates.
+        <div class="feat-desc" style="margin-bottom:8px">Connect to your home WiFi. Required for firmware updates.
+            Stored in NVS &mdash; survives firmware updates.
         </div>
         <div style="display:flex;gap:6px;margin-bottom:6px">
             <input class="sniff-input" id="wifi-ssid" placeholder="WiFi SSID" style="flex:1">
@@ -1375,103 +1476,6 @@
                 </div>
             </div>
         </details>
-    </div>
-
-    <div class="card collapsible" id="card-plugins">
-        <div class="card-hdr" onclick="toggleCard('card-plugins')">
-            <div class="card-title">Plugins <span onclick="event.stopPropagation();toggleInfo('plg-info')"
-                                                  style="color:var(--tx3);cursor:pointer;font-size:12px;margin-left:4px"
-                                                  title="What are plugins?">&#9432;</span></div>
-            <div class="card-meta" id="plg-count">0 installed</div>
-        </div>
-
-        <div id="plg-info"
-             style="display:none;margin-bottom:12px;padding:10px;background:var(--bg2);border:1px solid var(--bd);border-radius:6px;font-size:12px;color:var(--tx3);line-height:1.5">
-            Plugins are JSON rules that modify CAN messages in real time. Install via URL, file upload or paste. A &#9888;
-            marks conflicts with base firmware handlers &mdash; plugin rules then run <b>after</b> the original handler.
-            <div style="margin-top:6px"><a
-                    href="https://github.com/ev-open-can-tools/ev-open-can-tools/blob/main/docs/plugins.md" target="_blank"
-                    rel="noopener" style="color:var(--acc);text-decoration:none">Documentation &amp; examples &rarr;</a>
-            </div>
-        </div>
-
-        <div style="margin-bottom:14px">
-            <div class="feat-name" style="margin-bottom:8px">Install Plugin</div>
-            <div style="font-size:11px;color:var(--tx3);margin-bottom:8px" id="plg-limit">Maximum plugins: --</div>
-            <div style="display:flex;gap:6px;margin-bottom:8px">
-                <input class="sniff-input" id="plg-url" placeholder="Plugin JSON URL (https://...)" style="flex:1">
-                <button class="sniff-btn" onclick="installPlugin()">Install</button>
-            </div>
-            <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
-                <input type="file" id="plg-file" accept=".json" onchange="uploadPlugin(this.files[0])" style="display:none">
-                <button class="sniff-btn" onclick="$('plg-file').click()">Upload .json</button>
-                <span style="font-size:11px;color:var(--tx3)" id="plg-status"></span>
-            </div>
-            <div class="feat-name" style="margin-bottom:6px">Paste JSON (offline)</div>
-            <textarea id="plg-paste" placeholder='{"name":"...","version":"1.0","rules":[...]}'
-                      style="width:100%;height:80px;resize:vertical;background:var(--bg2);color:var(--tx);border:1px solid var(--bd);border-radius:6px;padding:8px;font-family:monospace;font-size:11px;box-sizing:border-box;margin-bottom:6px"></textarea>
-            <button class="sniff-btn" onclick="pastePlugin()">Install from JSON</button>
-        </div>
-
-        <div style="padding-top:12px;border-top:1px solid var(--bd)" id="plg-list">
-            <div style="font-size:12px;color:var(--tx3);text-align:center;padding:12px">No plugins installed</div>
-        </div>
-    </div>
-
-    <div class="card collapsible" id="card-pe">
-        <div class="card-hdr" onclick="toggleCard('card-pe')">
-            <div class="card-title">Plugin Editor <span onclick="event.stopPropagation();toggleInfo('pe-info')"
-                                                        style="color:var(--tx3);cursor:pointer;font-size:12px;margin-left:4px"
-                                                        title="About the editor">&#9432;</span></div>
-            <div class="card-meta" id="pe-count">0 rules</div>
-        </div>
-        <div id="pe-info"
-             style="display:none;margin-bottom:10px;padding:10px;background:var(--bg2);border:1px solid var(--bd);border-radius:6px;font-size:12px;color:var(--tx3);line-height:1.5">
-            Build or edit a plugin via form &mdash; no JSON writing needed. Load an installed plugin into the editor, change
-            rules, then reinstall it. You can also send a temporary test frame for one rule before installing.
-        </div>
-        <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 90px;gap:6px;margin-bottom:10px">
-            <input class="sniff-input" id="pe-name" placeholder="Plugin name" maxlength="31" oninput="peRenderPreview()">
-            <input class="sniff-input" id="pe-author" placeholder="Author (optional)" oninput="peRenderPreview()">
-            <input class="sniff-input" id="pe-version" placeholder="Version" value="1.0" oninput="peRenderPreview()">
-        </div>
-        <div id="pe-rules"></div>
-        <button class="sniff-btn" onclick="peAddRule()" style="margin-top:6px">+ Add Rule</button>
-        <details style="margin-top:10px">
-            <summary style="font-size:11px;color:var(--acc);cursor:pointer;user-select:none">JSON Preview</summary>
-            <pre id="pe-preview"
-                 style="max-height:200px;overflow:auto;background:var(--bg2);border:1px solid var(--bd);border-radius:6px;padding:8px;font-size:11px;color:var(--tx2);margin-top:6px;white-space:pre-wrap;word-break:break-all"></pre>
-        </details>
-        <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd)">
-            <div class="feat-name" style="margin-bottom:6px">Rule Test</div>
-            <div style="font-size:11px;color:var(--tx3);line-height:1.5;margin-bottom:8px">
-                Choose one rule from the editor, enter the base 8-byte frame, then send the resulting modified frame on CAN.
-                Count = how many times, interval = how fast.
-            </div>
-            <div style="display:grid;grid-template-columns:minmax(0,1fr) 90px 110px;gap:6px;margin-bottom:6px">
-                <select class="sniff-input" id="pe-test-rule" onchange="peUpdateTestPreview()"></select>
-                <input class="sniff-input" id="pe-test-count" type="number" min="1" max="200" value="1"
-                       onchange="peUpdateTestPreview()">
-                <input class="sniff-input" id="pe-test-interval" type="number" min="10" max="5000" value="100"
-                       onchange="peUpdateTestPreview()">
-            </div>
-            <input class="sniff-input" id="pe-test-data" value="00 00 00 00 00 00 00 00"
-                   placeholder="Base data bytes: 00 00 00 00 00 00 00 00" oninput="peUpdateTestPreview()"
-                   style="width:100%;margin-bottom:6px">
-            <pre id="pe-test-preview"
-                 style="min-height:54px;overflow:auto;background:var(--bg2);border:1px solid var(--bd);border-radius:6px;padding:8px;font-size:11px;color:var(--tx2);white-space:pre-wrap;word-break:break-word">Add a rule to preview a test frame.</pre>
-            <div style="display:flex;gap:6px;align-items:center;margin-top:8px;flex-wrap:wrap">
-                <button class="sniff-btn" onclick="peStartTest()">Start Test</button>
-                <button class="sniff-btn" onclick="peStopTest()">Stop Test</button>
-                <span id="pe-test-status" style="font-size:11px;color:var(--tx3)">Idle</span>
-            </div>
-        </div>
-        <div style="display:flex;gap:6px;margin-top:10px">
-            <button class="sniff-btn" onclick="peInstall()">Install</button>
-            <button class="sniff-btn" onclick="peDownload()">Download JSON</button>
-            <button class="sniff-btn" onclick="peReset()">Reset</button>
-        </div>
-        <div id="pe-status" style="font-size:11px;margin-top:6px;color:var(--tx3)"></div>
     </div>
 
     <div class="card collapsible" id="card-firmware">
@@ -1592,12 +1596,20 @@
         <div class="card-hdr" onclick="toggleCard('card-log')">
             <div class="card-title">Live Log</div>
         </div>
-        <div class="log-box" id="log">Waiting...</div>
+    <div class="log-box" id="log">Waiting...</div>
     </div>
 
-    <div class="warn-bar">CAN bus writes affect vehicle behavior. Remove device immediately if unexpected behavior occurs.
-        Not affiliated with any vehicle manufacturer.
+    <div class="card" id="card-reboot">
+        <div class="feat-row" style="padding:4px 0">
+            <div class="feat-info">
+                <div class="feat-name">Reboot Device</div>
+                <div class="feat-desc">Restart the ESP32. All active injections will stop until re-enabled.</div>
+            </div>
+            <button class="btn btn-reboot" onclick="reboot()">Reboot</button>
+        </div>
     </div>
+
+    </div><!-- /tab-system -->
 
     <div class="modal-backdrop" id="confirm-modal" onclick="dashConfirmBackdrop(event)">
         <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
@@ -1612,14 +1624,6 @@
     </div>
 
     <div class="foot" id="dash-foot">ev-open-can-tools &bull; loading...</div>
-    <div class="foot" style="margin-top:4px">
-        <a href="https://github.com/ev-open-can-tools/ev-open-can-tools" target="_blank" rel="noopener"
-           style="color:var(--acc);text-decoration:none">GitHub</a>
-        &bull;
-        <a href="https://discord.gg/ZTQKAUTd2F" target="_blank" rel="noopener"
-           style="color:var(--acc);text-decoration:none">Discord</a>
-    </div>
-
     <script>
         const HW = ['Legacy', 'HW3', 'HW4'];
         const SP3 = ['Chill', 'Normal', 'Hurry'];
@@ -1660,10 +1664,6 @@
         let otaFile = null;
         let otaUser = localStorage.getItem('otaU') || '', otaPass = localStorage.getItem('otaP') || '';
         let logSince = 0;
-        let installedPlugins = [];
-        let peLoadedPluginName = '';
-        let peTestPollTimer = null;
-        let pluginDetailOpen = {};
         let dashConfirmState = null;
         let dashboardPollTimers = [];
         let dashboardPollFailures = 0;
@@ -2507,259 +2507,9 @@
             }
         }
 
-        // ── Plugin management ──
-        async function installPlugin() {
-            const url = $('plg-url').value;
-            if (!url) {
-                $('plg-status').textContent = 'Enter URL';
-                return;
-            }
-            const beforeSig = pluginStateSignature(installedPlugins);
-            $('plg-status').textContent = 'Downloading...';
-            $('plg-status').style.color = 'var(--acc)';
-            try {
-                await fetchJsonWithTimeout('/plugin_install', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                    body: 'url=' + encodeURIComponent(url)
-                }, 20000);
-                $('plg-url').value = '';
-                try {
-                    await refreshPluginsNow();
-                } catch (e) {
-                    await refreshPluginsAfterAction(beforeSig);
-                }
-                $('plg-status').textContent = 'Installed!';
-                $('plg-status').style.color = 'var(--ok)';
-            } catch (e) {
-                if (await refreshPluginsAfterAction(beforeSig)) {
-                    $('plg-url').value = '';
-                    $('plg-status').textContent = 'Installed!';
-                    $('plg-status').style.color = 'var(--ok)';
-                } else {
-                    $('plg-status').textContent = actionErrorMessage(e, 'Connection error');
-                    $('plg-status').style.color = 'var(--err)';
-                }
-            }
-        }
-
-        async function uploadPlugin(file) {
-            if (!file) return;
-            const beforeSig = pluginStateSignature(installedPlugins);
-            $('plg-status').textContent = 'Uploading...';
-            $('plg-status').style.color = 'var(--acc)';
-            try {
-                const text = await file.text();
-                await fetchJsonWithTimeout('/plugin_upload', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: text
-                }, 5000);
-                try {
-                    await refreshPluginsNow();
-                } catch (e) {
-                    await refreshPluginsAfterAction(beforeSig);
-                }
-                $('plg-status').textContent = 'Installed!';
-                $('plg-status').style.color = 'var(--ok)';
-            } catch (e) {
-                if (await refreshPluginsAfterAction(beforeSig)) {
-                    $('plg-status').textContent = 'Installed!';
-                    $('plg-status').style.color = 'var(--ok)';
-                } else {
-                    $('plg-status').textContent = actionErrorMessage(e, 'Error');
-                    $('plg-status').style.color = 'var(--err)';
-                }
-            }
-        }
-
-        async function pastePlugin() {
-            const text = $('plg-paste').value.trim();
-            if (!text) {
-                $('plg-status').textContent = 'Paste JSON first';
-                $('plg-status').style.color = 'var(--err)';
-                return;
-            }
-            try {
-                JSON.parse(text);
-            } catch (e) {
-                $('plg-status').textContent = 'Invalid JSON: ' + e.message;
-                $('plg-status').style.color = 'var(--err)';
-                return;
-            }
-            const beforeSig = pluginStateSignature(installedPlugins);
-            $('plg-status').textContent = 'Installing...';
-            $('plg-status').style.color = 'var(--acc)';
-            try {
-                await fetchJsonWithTimeout('/plugin_upload', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: text
-                }, 5000);
-                $('plg-paste').value = '';
-                try {
-                    await refreshPluginsNow();
-                } catch (e) {
-                    await refreshPluginsAfterAction(beforeSig);
-                }
-                $('plg-status').textContent = 'Installed!';
-                $('plg-status').style.color = 'var(--ok)';
-            } catch (e) {
-                if (await refreshPluginsAfterAction(beforeSig)) {
-                    $('plg-paste').value = '';
-                    $('plg-status').textContent = 'Installed!';
-                    $('plg-status').style.color = 'var(--ok)';
-                } else {
-                    $('plg-status').textContent = actionErrorMessage(e, 'Connection error');
-                    $('plg-status').style.color = 'var(--err)';
-                }
-            }
-        }
-
-        async function togglePlugin(idx) {
-            const beforeSig = pluginStateSignature(installedPlugins);
-            try {
-                await fetchJsonWithTimeout('/plugin_toggle', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                    body: 'idx=' + idx
-                }, 4000);
-                try {
-                    await refreshPluginsNow();
-                } catch (e) {
-                    await refreshPluginsAfterAction(beforeSig);
-                }
-            } catch (e) {
-                await refreshPluginsAfterAction(beforeSig);
-            }
-        }
-
-        async function removePlugin(idx) {
-            if (!await dashConfirm('Remove this plugin?', 'Remove plugin', 'Remove')) return;
-            const beforeSig = pluginStateSignature(installedPlugins);
-            try {
-                await fetchJsonWithTimeout('/plugin_remove', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                    body: 'idx=' + idx
-                }, 4000);
-                try {
-                    await refreshPluginsNow();
-                } catch (e) {
-                    await refreshPluginsAfterAction(beforeSig);
-                }
-            } catch (e) {
-                await refreshPluginsAfterAction(beforeSig);
-            }
-        }
-
-        function fmtOp(o) {
-            if (o.type === 'set_bit') return 'set_bit(' + o.bit + ', ' + (o.val ? 'true' : 'false') + ')';
-            if (o.type === 'checksum') return 'checksum(byte 7)';
-            if (o.type === 'set_byte') return 'set_byte(' + o.byte + ', 0x' + o.val.toString(16) + ', mask=0x' + o.mask.toString(16) + ')';
-            if (o.type === 'or_byte') return 'or_byte(' + o.byte + ', 0x' + o.val.toString(16) + ')';
-            if (o.type === 'and_byte') return 'and_byte(' + o.byte + ', 0x' + o.val.toString(16) + ')';
-            return o.type;
-        }
-
-        function renderPluginDetails(details) {
-            return '<div style="margin-top:6px;padding:8px;background:var(--bg2);border-radius:6px;font-size:11px;font-family:monospace">'
-                + details.map(r => {
-                    let hdr = '<div style="margin-bottom:4px"><b>CAN ' + r.hex + ' (' + r.id + ')</b>';
-                    if (r.mux >= 0) hdr += ' <span style="color:var(--acc)">mux=' + r.mux + '</span>';
-                    if (r.conflict) hdr += ' <span style="color:var(--err);font-weight:bold" title="This CAN ID is also handled by the base firmware">&#9888; Firmware overlap</span>';
-                    hdr += '</div>';
-                    let ops = r.ops.map(o => '<div style="padding-left:12px;color:var(--tx2)">' + fmtOp(o) + '</div>').join('');
-                    return hdr + ops;
-                }).join('<div style="border-top:1px solid var(--bd);margin:4px 0"></div>')
-                + '</div>';
-        }
-
-        function toggleDetails(idx) {
-            var p = installedPlugins[idx];
-            if (!p || !p.name) return;
-            pluginDetailOpen[p.name] = !pluginDetailOpen[p.name];
-            var el = $('plg-det-' + idx);
-            if (el) el.style.display = pluginDetailOpen[p.name] ? 'block' : 'none';
-        }
-
         function toggleInfo(id) {
             var el = $(id);
             if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
-        }
-
-        function pluginStateSignature(list) {
-            return JSON.stringify((list || []).map(p => [p && p.name || '', p && p.version || '', !!(p && p.enabled), p && p.rules || 0, p && p.author || '']));
-        }
-
-        function renderPluginsState(d) {
-            installedPlugins = d.plugins || [];
-            const nextOpen = {};
-            installedPlugins.forEach(p => {
-                if (p && p.name && pluginDetailOpen[p.name]) nextOpen[p.name] = true;
-            });
-            pluginDetailOpen = nextOpen;
-            const max = d.maxPlugins || 0;
-            $('plg-count').textContent = max ? installedPlugins.length + ' / ' + max + ' installed' : installedPlugins.length + ' installed';
-            if ($('plg-limit')) {
-                const full = max && installedPlugins.length >= max;
-                $('plg-limit').textContent = max ? (full ? 'Maximum ' + max + ' plugins reached. Remove one before installing another.' : 'Maximum ' + max + ' plugins total. Remove one before installing another.') : 'Maximum plugins: --';
-                $('plg-limit').style.color = full ? 'var(--err)' : 'var(--tx3)';
-            }
-            const el = $('plg-list');
-            if (!installedPlugins.length) {
-                el.innerHTML = '<div style="font-size:12px;color:var(--tx3);text-align:center;padding:12px">No plugins installed</div>';
-                return;
-            }
-            el.innerHTML = installedPlugins.map((p, i) => {
-                let hasConflict = p.details && p.details.some(r => r.conflict);
-                let detailsOpen = !!pluginDetailOpen[p.name];
-                let row = '<div style="margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--bd)">';
-                row += '<div class="feat-row"><div class="feat-info" style="cursor:pointer" onclick="toggleDetails(' + i + ')">';
-                row += '<div class="feat-name">' + p.name + ' <span style="color:var(--tx3);font-size:11px">v' + p.version + '</span>';
-                if (hasConflict) row += ' <span style="color:var(--err);font-size:11px">&#9888;</span>';
-                row += '</div>';
-                row += '<div class="feat-desc">' + p.rules + ' rule' + (p.rules !== 1 ? 's' : '') + (p.author ? ' &bull; ' + p.author : '') + ' &bull; <span style="color:var(--acc);cursor:pointer">details</span></div>';
-                row += '</div>';
-                row += '<label class="tgl"><input type="checkbox" ' + (p.enabled ? 'checked' : '') + ' onchange="togglePlugin(' + i + ')"><div class="tgl-track"><div class="tgl-thumb"></div></div></label>';
-                row += '<button onclick="peLoadInstalledPlugin(' + i + ')" style="margin-left:8px;padding:4px 8px;border:1px solid var(--bd);border-radius:5px;background:transparent;color:var(--acc);cursor:pointer;font-size:10px;font-family:inherit">Edit</button>';
-                row += '<button onclick="removePlugin(' + i + ')" style="margin-left:8px;padding:4px 8px;border:1px solid var(--errBd);border-radius:5px;background:transparent;color:var(--err);cursor:pointer;font-size:10px;font-family:inherit">X</button></div>';
-                if (p.details) {
-                    row += '<div id="plg-det-' + i + '" style="display:' + (detailsOpen ? 'block' : 'none') + '">';
-                    if (hasConflict) row += '<div style="margin-top:6px;padding:6px 8px;background:var(--errBg,#3a1a1a);border:1px solid var(--errBd);border-radius:6px;font-size:11px;color:var(--err)">&#9888; Some CAN IDs overlap with base firmware. Plugin rules run <b>after</b> the original handler. Both will send modified frames.</div>';
-                    row += renderPluginDetails(p.details);
-                    row += '</div>';
-                }
-                row += '</div>';
-                return row;
-            }).join('');
-        }
-
-        async function refreshPluginsNow() {
-            const d = await fetchJsonWithTimeout('/plugins', null, 2500);
-            renderPluginsState(d);
-            return d;
-        }
-
-        async function refreshPluginsAfterAction(beforeSig) {
-            for (let i = 0; i < 4; i++) {
-                if (i) await waitMs(250);
-                try {
-                    await refreshPluginsNow();
-                    if (pluginStateSignature(installedPlugins) !== beforeSig) return true;
-                } catch (e) {
-                }
-            }
-            return false;
-        }
-
-        async function pollPlugins() {
-            return runPoll('plugins', async () => {
-                try {
-                    renderPluginsState(await fetchPollJson('/plugins', 2000));
-                } catch (e) {
-                }
-            });
         }
 
         // ── Firmware update ──
@@ -2982,543 +2732,352 @@
             ev.target.value = '';
         }
 
-        // ── Plugin Editor ────────────────────────────────────────────────
-        let peState = {rules: []};
+        // ── Debug Injection ──────────────────────────────────────────────
+        let dbgState = { active: false, rules: [] };
+        let dbgSaveTimer = null;
+        const dbgLogOpen = {};   // key "id:mux" → bool (expand state)
 
-        function peGetMeta() {
-            return {
-                name: ($('pe-name').value || '').trim(),
-                version: ($('pe-version').value || '1.0').trim(),
-                author: ($('pe-author').value || '').trim()
-            };
+        // ── helpers ──
+
+        function dbgMakeEl(tag, attrs, onChange) {
+            const el = document.createElement(tag);
+            if (attrs.cls) { el.className = attrs.cls; delete attrs.cls; }
+            Object.keys(attrs).forEach(k => { el[k] = attrs[k]; });
+            if (onChange) el.onchange = onChange;
+            return el;
         }
 
-        function peParseInt(s, def) {
-            if (typeof s === 'number') return s;
-            if (s === '' || s == null) return def;
-            s = String(s).trim();
-            let n = s.toLowerCase().startsWith('0x') ? parseInt(s, 16) : parseInt(s, 10);
-            return isNaN(n) ? def : n;
+        function dbgMakeTd(style, child) {
+            const td = document.createElement('td');
+            td.style.cssText = style;
+            td.appendChild(child);
+            return td;
         }
 
-        function peSetStatus(msg, kind) {
-            const el = $('pe-status');
-            el.textContent = msg;
-            el.style.color = kind === 'ok' ? 'var(--ok)' : kind === 'err' ? 'var(--err)' : kind === 'acc' ? 'var(--acc)' : 'var(--tx3)';
+        // ── row building ──
+
+        function dbgCreateRow(r, i) {
+            const tr = document.createElement('tr');
+            tr.style.borderBottom = '1px solid var(--bd)';
+
+            // Name
+            const inpName = dbgMakeEl('input',
+                { cls: 'sniff-input', style: 'width:80px', placeholder: 'func' + (i + 1),
+                  value: r.name || '' },
+                e => dbgFieldChange(i, 'name', e.target.value));
+            tr.appendChild(dbgMakeTd('padding:3px 4px', inpName));
+
+            // CAN ID
+            const inpId = dbgMakeEl('input',
+                { cls: 'sniff-input', style: 'width:72px', placeholder: '0x1FF',
+                  value: r.idStr || (r.id ? '0x' + (r.id | 0).toString(16).toUpperCase() : '') },
+                e => dbgFieldChange(i, 'id', e.target.value));
+            tr.appendChild(dbgMakeTd('padding:3px 4px', inpId));
+
+            // MUX (select: any / 0-15)
+            const selMux = dbgMakeEl('select',
+                { cls: 'sniff-input', style: 'width:54px' },
+                e => dbgFieldChange(i, 'mux', e.target.value));
+            [['any', '-1']].concat(Array.from({length:16},(_,k)=>[String(k),String(k)])).forEach(([label,val]) => {
+                const o = document.createElement('option');
+                o.value = val; o.textContent = label;
+                o.selected = (String(r.mux | 0) === val) || (r.mux < 0 && val === '-1');
+                selMux.appendChild(o);
+            });
+            tr.appendChild(dbgMakeTd('padding:3px 4px', selMux));
+
+            // Bit (select: 0-63)
+            const selBit = dbgMakeEl('select',
+                { cls: 'sniff-input', style: 'width:54px' },
+                e => dbgFieldChange(i, 'bit', e.target.value));
+            Array.from({length:64},(_,k)=>[String(k),String(k)]).forEach(([label,val]) => {
+                const o = document.createElement('option');
+                o.value = val; o.textContent = label;
+                o.selected = (String(r.bit < 0 ? 0 : r.bit) === val);
+                selBit.appendChild(o);
+            });
+            tr.appendChild(dbgMakeTd('padding:3px 4px', selBit));
+
+            // Value (select)
+            const selVal = dbgMakeEl('select',
+                { cls: 'sniff-input', style: 'width:50px' },
+                e => dbgFieldChange(i, 'val', e.target.value));
+            ['1','0'].forEach(v => {
+                const o = document.createElement('option');
+                o.value = v; o.textContent = v;
+                o.selected = (String(r.val | 0) === v);
+                selVal.appendChild(o);
+            });
+            tr.appendChild(dbgMakeTd('padding:3px 4px', selVal));
+
+            // Enabled checkbox
+            const chk = dbgMakeEl('input', { type: 'checkbox', checked: !!r.en },
+                e => dbgFieldChange(i, 'en', e.target.checked));
+            const tdEn = document.createElement('td');
+            tdEn.style.cssText = 'text-align:center;padding:3px 4px';
+            tdEn.appendChild(chk);
+            tr.appendChild(tdEn);
+
+            // Buttons: copy + delete
+            const tdBtns = document.createElement('td');
+            tdBtns.style.cssText = 'padding:3px 2px;white-space:nowrap';
+
+            const btnCopy = document.createElement('button');
+            btnCopy.className = 'sniff-btn';
+            btnCopy.style.cssText = 'padding:2px 7px;margin-right:2px';
+            btnCopy.title = 'Copy row';
+            btnCopy.textContent = '\u2398';   // ⎘
+            btnCopy.onclick = () => dbgCopyRow(i);
+            tdBtns.appendChild(btnCopy);
+
+            const btnDel = document.createElement('button');
+            btnDel.className = 'sniff-btn';
+            btnDel.style.cssText = 'padding:2px 7px';
+            btnDel.textContent = '\u00d7';    // ×
+            btnDel.onclick = () => dbgRemoveRow(i);
+            tdBtns.appendChild(btnDel);
+
+            tr.appendChild(tdBtns);
+            return tr;
         }
 
-        function peSetTestStatus(msg, kind) {
-            const el = $('pe-test-status');
-            el.textContent = msg;
-            el.style.color = kind === 'ok' ? 'var(--ok)' : kind === 'err' ? 'var(--err)' : kind === 'acc' ? 'var(--acc)' : 'var(--tx3)';
-        }
-
-        function peHasContent() {
-            const meta = peGetMeta();
-            return !!(meta.name || meta.author || meta.version !== '1.0' || peState.rules.length);
-        }
-
-        function peRuleLabel(r, i) {
-            return 'Rule ' + (i + 1) + ' · CAN 0x' + toHex((r.id || 0) & 0x7FF, 3) + (r.mux >= 0 ? ' · mux ' + r.mux : '');
-        }
-
-        function peUpdateRuleOptions() {
-            const sel = $('pe-test-rule');
-            if (!sel) return;
-            const prev = parseInt(sel.value, 10);
-            if (!peState.rules.length) {
-                sel.disabled = true;
-                sel.innerHTML = '<option value="">No rules</option>';
-                return;
+        function dbgRenderRows() {
+            const tbody = $('dbg-rows');
+            while (tbody.firstChild) tbody.removeChild(tbody.firstChild);
+            if (dbgState.rules.length) {
+                dbgState.rules.forEach((r, i) => tbody.appendChild(dbgCreateRow(r, i)));
+            } else {
+                const tr = document.createElement('tr');
+                const td = document.createElement('td');
+                td.colSpan = 6;
+                td.style.cssText = 'text-align:center;padding:10px;color:var(--tx3);font-size:12px';
+                td.textContent = 'No rules \u2014 click \u201c+ Add Rule\u201d';
+                tr.appendChild(td); tbody.appendChild(tr);
             }
-            sel.disabled = false;
-            sel.innerHTML = peState.rules.map((r, i) => '<option value="' + i + '">' + peRuleLabel(r, i) + '</option>').join('');
-            sel.value = String(!isNaN(prev) && prev >= 0 && prev < peState.rules.length ? prev : 0);
+            $('dbg-meta').textContent = dbgState.rules.length
+                + ' rule' + (dbgState.rules.length !== 1 ? 's' : '')
+                + (dbgState.active ? ' \u00b7 active' : '');
+            const btn = $('dbg-active-btn');
+            btn.style.color = dbgState.active ? 'var(--acc)' : '';
+            btn.style.borderColor = dbgState.active ? 'var(--acc)' : '';
         }
 
-        function peAddRule() {
-            if (peState.rules.length >= 16) {
-                peSetStatus('Max 16 rules per plugin', 'err');
-                return;
-            }
-            peState.rules.push({id: 0, mux: -1, send: true, ops: []});
-            peRender();
+        // ── CRUD ──
+
+        function dbgAddRow() {
+            const idx = dbgState.rules.length + 1;
+            dbgState.rules.push({ id: 0, idStr: '', mux: -1, bit: -1, val: 1, en: false, name: 'func' + idx });
+            dbgRenderRows();
+            dbgScheduleSave();
         }
 
-        function peRemoveRule(i) {
-            peState.rules.splice(i, 1);
-            peRender();
+        function dbgCopyRow(i) {
+            const src = dbgState.rules[i];
+            if (!src) return;
+            dbgState.rules.splice(i + 1, 0, Object.assign({}, src, { en: false }));
+            dbgRenderRows();
+            dbgScheduleSave();
         }
 
-        function peAddOp(i, type) {
-            const r = peState.rules[i];
+        function dbgRemoveRow(i) {
+            dbgState.rules.splice(i, 1);
+            dbgRenderRows();
+            dbgScheduleSave();
+        }
+
+        function dbgFieldChange(i, field, value) {
+            const r = dbgState.rules[i];
             if (!r) return;
-            if (r.ops.length >= 8) {
-                peSetStatus('Max 8 ops per rule', 'err');
-                return;
+            if (field === 'id') {
+                const s = String(value).trim();
+                const n = s.toLowerCase().startsWith('0x') ? parseInt(s, 16) : parseInt(s, 10);
+                r.id = isNaN(n) ? 0 : Math.max(1, Math.min(0x7FF, n));
+                r.idStr = s;
+            } else if (field === 'mux') {
+                const s = String(value).trim();
+                const n = parseInt(s, 10);
+                r.mux = (s === '' || isNaN(n)) ? -1 : Math.max(0, Math.min(15, n));
+            } else if (field === 'bit') {
+                const s = String(value).trim();
+                const n = parseInt(s, 10);
+                r.bit = (s === '' || isNaN(n)) ? -1 : Math.max(0, Math.min(63, n));
+            } else if (field === 'val') {
+                r.val = parseInt(value, 10) & 1;
+            } else if (field === 'en') {
+                r.en = !!value;
+            } else if (field === 'name') {
+                r.name = String(value).substring(0, 23);
             }
-            const op = {type: type};
-            if (type === 'set_bit') {
-                op.bit = 0;
-                op.val = 1;
-            } else if (type === 'set_byte') {
-                op.byte = 0;
-                op.val = 0;
-                op.mask = 255;
-            } else if (type === 'or_byte') {
-                op.byte = 0;
-                op.val = 0;
-            } else if (type === 'and_byte') {
-                op.byte = 0;
-                op.val = 255;
-            }
-            r.ops.push(op);
-            peRender();
+            dbgScheduleSave();
         }
 
-        function peRemoveOp(i, j) {
-            peState.rules[i].ops.splice(j, 1);
-            peRender();
+        // ── persistence ──
+
+        function dbgScheduleSave() {
+            if (dbgSaveTimer) clearTimeout(dbgSaveTimer);
+            dbgSaveTimer = setTimeout(dbgSave, 600);
         }
 
-        function peUpdateField(i, j, field, value) {
-            if (j < 0) {
-                const r = peState.rules[i];
-                if (!r) return;
-                if (field === 'id') r.id = peParseInt(value, 0);
-                else if (field === 'mux') {
-                    r.mux = value === '' ? -1 : peParseInt(value, -1);
-                } else if (field === 'send') r.send = !!value;
-                peRender();
-                return;
-            }
-            const op = peState.rules[i].ops[j];
-            if (!op) return;
-            if (field === 'type') {
-                const nt = value;
-                Object.keys(op).forEach(k => {
-                    if (k !== 'type') delete op[k];
-                });
-                op.type = nt;
-                if (nt === 'set_bit') {
-                    op.bit = 0;
-                    op.val = 1;
-                } else if (nt === 'set_byte') {
-                    op.byte = 0;
-                    op.val = 0;
-                    op.mask = 255;
-                } else if (nt === 'or_byte') {
-                    op.byte = 0;
-                    op.val = 0;
-                } else if (nt === 'and_byte') {
-                    op.byte = 0;
-                    op.val = 255;
-                }
-                peRender();
-                return;
-            }
-            if (field === 'bit') op.bit = Math.max(0, Math.min(63, peParseInt(value, 0)));
-            else if (field === 'byte') op.byte = Math.max(0, Math.min(7, peParseInt(value, 0)));
-            else if (field === 'val') op.val = Math.max(0, Math.min(op.type === 'set_bit' ? 1 : 255, peParseInt(value, 0)));
-            else if (field === 'mask') op.mask = Math.max(0, Math.min(255, peParseInt(value, 255)));
-            peRenderPreview();
-            peUpdateTestPreview();
-        }
-
-        function peOpRow(i, j, op) {
-            const sel = '<select class="sniff-input" style="width:90px" onchange="peUpdateField(' + i + ',' + j + ',\'type\',this.value)">' +
-                ['set_bit', 'set_byte', 'or_byte', 'and_byte', 'checksum'].map(t => '<option value="' + t + '"' + (op.type === t ? ' selected' : '') + '>' + t + '</option>').join('') + '</select>';
-            let fields = '';
-            if (op.type === 'set_bit') {
-                fields = '<input class="sniff-input" style="width:55px" type="number" min="0" max="63" value="' + op.bit + '" title="bit (0-63)" onchange="peUpdateField(' + i + ',' + j + ',\'bit\',this.value)">' +
-                    '<select class="sniff-input" style="width:80px" onchange="peUpdateField(' + i + ',' + j + ',\'val\',this.value)"><option value="1"' + (op.val ? ' selected' : '') + '>set (1)</option><option value="0"' + (!op.val ? ' selected' : '') + '>clear (0)</option></select>';
-            } else if (op.type === 'set_byte') {
-                fields = '<input class="sniff-input" style="width:48px" type="number" min="0" max="7" value="' + op.byte + '" title="byte (0-7)" onchange="peUpdateField(' + i + ',' + j + ',\'byte\',this.value)">' +
-                    '<input class="sniff-input" style="width:70px" value="0x' + ((op.val || 0) & 255).toString(16) + '" title="val (0-255, hex or dec)" onchange="peUpdateField(' + i + ',' + j + ',\'val\',this.value)">' +
-                    '<input class="sniff-input" style="width:70px" value="0x' + (op.mask === undefined ? 255 : op.mask).toString(16) + '" title="mask (0-255)" onchange="peUpdateField(' + i + ',' + j + ',\'mask\',this.value)">';
-            } else if (op.type === 'or_byte' || op.type === 'and_byte') {
-                fields = '<input class="sniff-input" style="width:48px" type="number" min="0" max="7" value="' + op.byte + '" title="byte (0-7)" onchange="peUpdateField(' + i + ',' + j + ',\'byte\',this.value)">' +
-                    '<input class="sniff-input" style="width:70px" value="0x' + ((op.val || 0) & 255).toString(16) + '" title="val (0-255)" onchange="peUpdateField(' + i + ',' + j + ',\'val\',this.value)">';
-            } else {
-                fields = '<span style="font-size:11px;color:var(--tx3);align-self:center;padding:0 4px">recalc byte 7 checksum</span>';
-            }
-            return '<div style="display:flex;gap:4px;align-items:center;margin-bottom:4px;flex-wrap:wrap">' + sel + fields + '<button class="sniff-btn" style="margin-left:auto;padding:2px 8px" onclick="peRemoveOp(' + i + ',' + j + ')" title="Remove op">&times;</button></div>';
-        }
-
-        function peRuleBlock(i, r) {
-            const ops = r.ops.length ? r.ops.map((op, j) => peOpRow(i, j, op)).join('') : '<div style="font-size:11px;color:var(--tx3);padding:4px 0">No ops &mdash; add one below</div>';
-            const hex = r.id ? '0x' + r.id.toString(16).toUpperCase() : '?';
-            return '<details open style="margin-bottom:10px;border:1px solid var(--bd);border-radius:6px;padding:8px;background:var(--bg2)">' +
-                '<summary style="cursor:pointer;font-size:12px;color:var(--tx);user-select:none">Rule ' + (i + 1) + ' &mdash; CAN ' + hex + (r.id ? ' (' + r.id + ')' : '') + (r.mux >= 0 ? ' mux=' + r.mux : '') + ' &middot; ' + r.ops.length + ' op' + (r.ops.length === 1 ? '' : 's') + '</summary>' +
-                '<div style="display:flex;gap:6px;margin:8px 0;flex-wrap:wrap">' +
-                '<input class="sniff-input" style="width:100px" type="number" min="0" max="2047" value="' + (r.id || '') + '" placeholder="CAN ID" onchange="peUpdateField(' + i + ',-1,\'id\',this.value)">' +
-                '<input class="sniff-input" style="width:100px" type="number" min="-1" max="7" value="' + r.mux + '" placeholder="mux (-1=any)" onchange="peUpdateField(' + i + ',-1,\'mux\',this.value)">' +
-                '<label style="font-size:11px;color:var(--tx3);display:flex;align-items:center;gap:4px"><input type="checkbox"' + (r.send ? ' checked' : '') + ' onchange="peUpdateField(' + i + ',-1,\'send\',this.checked)"> send</label>' +
-                '<button class="sniff-btn" style="margin-left:auto" onclick="peRemoveRule(' + i + ')">Remove Rule</button>' +
-                '</div>' +
-                ops +
-                '<div style="margin-top:6px;display:flex;gap:4px;flex-wrap:wrap">' +
-                '<button class="sniff-btn" onclick="peAddOp(' + i + ',\'set_bit\')">+ set_bit</button>' +
-                '<button class="sniff-btn" onclick="peAddOp(' + i + ',\'set_byte\')">+ set_byte</button>' +
-                '<button class="sniff-btn" onclick="peAddOp(' + i + ',\'or_byte\')">+ or_byte</button>' +
-                '<button class="sniff-btn" onclick="peAddOp(' + i + ',\'and_byte\')">+ and_byte</button>' +
-                '<button class="sniff-btn" onclick="peAddOp(' + i + ',\'checksum\')">+ checksum</button>' +
-                '</div>' +
-                '</details>';
-        }
-
-        function peRender() {
-            const el = $('pe-rules');
-            if (!peState.rules.length) {
-                el.innerHTML = '<div style="font-size:12px;color:var(--tx3);text-align:center;padding:12px;border:1px dashed var(--bd);border-radius:6px">No rules yet. Click &ldquo;+ Add Rule&rdquo; below.</div>';
-            } else {
-                el.innerHTML = peState.rules.map((r, i) => peRuleBlock(i, r)).join('');
-            }
-            $('pe-count').textContent = peState.rules.length + ' rule' + (peState.rules.length === 1 ? '' : 's');
-            peUpdateRuleOptions();
-            peRenderPreview();
-            peUpdateTestPreview();
-        }
-
-        function peBuildObj() {
-            const meta = peGetMeta();
-            const obj = {name: meta.name || 'Untitled', version: meta.version || '1.0'};
-            if (meta.author) obj.author = meta.author;
-            obj.rules = peState.rules.map(r => {
-                const out = {id: r.id | 0};
-                if (r.mux >= 0) out.mux = r.mux | 0;
-                if (r.send === false) out.send = false;
-                out.ops = r.ops.map(op => {
-                    const o = {type: op.type};
-                    if (op.type === 'set_bit') {
-                        o.bit = op.bit | 0;
-                        o.val = op.val ? 1 : 0;
-                    } else if (op.type === 'set_byte') {
-                        o.byte = op.byte | 0;
-                        o.val = (op.val | 0) & 255;
-                        if (op.mask !== undefined && op.mask !== 255) o.mask = op.mask | 0;
-                    } else if (op.type === 'or_byte' || op.type === 'and_byte') {
-                        o.byte = op.byte | 0;
-                        o.val = (op.val | 0) & 255;
-                    }
-                    return o;
-                });
-                return out;
-            });
-            return obj;
-        }
-
-        function peRenderPreview() {
-            $('pe-preview').textContent = JSON.stringify(peBuildObj(), null, 2);
-        }
-
-        function peParseTestBytes() {
-            const raw = ($('pe-test-data').value || '').trim();
-            const parts = raw ? raw.split(/[\s,]+/).filter(Boolean) : [];
-            if (parts.length > 8) return {error: 'Base data supports max 8 bytes'};
-            const bytes = [];
-            for (const part of parts) {
-                const value = peParseInt(part, NaN);
-                if (isNaN(value) || value < 0 || value > 255) return {error: 'Base data must contain bytes 0-255'};
-                bytes.push(value & 255);
-            }
-            while (bytes.length < 8) bytes.push(0);
-            return {bytes};
-        }
-
-        function peComputeChecksum(id, data) {
-            let sum = (id & 0xFF) + ((id >> 8) & 0xFF);
-            for (let i = 0; i < 8; i++) {
-                if (i !== 7) sum += data[i] & 255;
-            }
-            return sum & 255;
-        }
-
-        function peApplyRuleToBytes(rule, baseBytes) {
-            const data = (baseBytes || []).slice(0, 8);
-            while (data.length < 8) data.push(0);
-            if (rule.mux >= 0) data[0] = (data[0] & 0xF8) | (rule.mux & 0x07);
-            (rule.ops || []).forEach(op => {
-                if (op.type === 'set_bit') {
-                    const byte = Math.floor((op.bit || 0) / 8), bit = (op.bit || 0) % 8, mask = 1 << bit;
-                    if (byte >= 0 && byte < 8) data[byte] = op.val ? (data[byte] | mask) : ((data[byte] & (~mask)) & 255);
-                } else if (op.type === 'set_byte') {
-                    const byte = op.byte | 0, mask = ((typeof op.mask === 'number' ? op.mask : 255) & 255),
-                        val = (op.val || 0) & 255;
-                    if (byte >= 0 && byte < 8) data[byte] = ((data[byte] & ((~mask) & 255)) | (val & mask)) & 255;
-                } else if (op.type === 'or_byte') {
-                    const byte = op.byte | 0;
-                    if (byte >= 0 && byte < 8) data[byte] = (data[byte] | ((op.val || 0) & 255)) & 255;
-                } else if (op.type === 'and_byte') {
-                    const byte = op.byte | 0;
-                    if (byte >= 0 && byte < 8) data[byte] = (data[byte] & ((op.val || 0) & 255)) & 255;
-                } else if (op.type === 'checksum') {
-                    data[7] = peComputeChecksum(rule.id | 0, data);
-                }
-            });
-            return data;
-        }
-
-        function peFormatBytes(bytes) {
-            return (bytes || []).slice(0, 8).map(b => toHex((b || 0) & 255, 2)).join(' ');
-        }
-
-        function peUpdateTestPreview() {
-            const el = $('pe-test-preview');
-            if (!el) return;
-            if (!peState.rules.length) {
-                el.textContent = 'Add a rule to preview a test frame.';
-                peSetTestStatus('Idle', '');
-                return;
-            }
-            const idx = parseInt($('pe-test-rule').value, 10);
-            if (isNaN(idx) || idx < 0 || idx >= peState.rules.length) {
-                el.textContent = 'Select a rule to test.';
-                return;
-            }
-            const parsed = peParseTestBytes();
-            if (parsed.error) {
-                el.textContent = parsed.error;
-                return;
-            }
-            const count = parseInt($('pe-test-count').value, 10), interval = parseInt($('pe-test-interval').value, 10);
-            if (isNaN(count) || count < 1 || count > 200) {
-                el.textContent = 'Count must be 1-200.';
-                return;
-            }
-            if (isNaN(interval) || interval < 10 || interval > 5000) {
-                el.textContent = 'Interval must be 10-5000 ms.';
-                return;
-            }
-            const rule = peState.rules[idx], out = peApplyRuleToBytes(rule, parsed.bytes);
-            el.textContent = 'Preview ' + peRuleLabel(rule, idx) + '\nFrame: ' + peFormatBytes(out) + '\nSend ' + count + 'x every ' + interval + ' ms';
-        }
-
-        function peStopTestPoll() {
-            if (peTestPollTimer) {
-                clearInterval(peTestPollTimer);
-                peTestPollTimer = null;
-            }
-        }
-
-        async function pePollTestStatus() {
+        async function dbgSave() {
+            dbgSaveTimer = null;
+            const payload = JSON.stringify(dbgState.rules.map(r => ({
+                id: r.id | 0, mux: (r.mux >= 0) ? (r.mux | 0) : -1,
+                bit: (r.bit >= 0) ? (r.bit | 0) : -1,
+                val: r.val | 0, en: r.en ? 1 : 0,
+                name: r.name || ''
+            })));
+            const statusEl = $('dbg-status');
             try {
-                const r = await fetch('/plugin_test_status');
-                const d = await r.json();
-                if (d.id || d.data) {
-                    $('pe-test-preview').textContent = 'Test CAN 0x' + toHex((d.id || 0) & 0x7FF, 3) + '\nFrame: ' + peFormatBytes(d.data || []) + (d.total ? '\nProgress: ' + d.sent + '/' + d.total : '');
-                }
-                if (d.active) {
-                    peSetTestStatus('Running ' + d.sent + '/' + d.total + ' · every ' + d.interval + ' ms', 'acc');
-                } else {
-                    peSetTestStatus(d.total ? (d.sent < d.total ? 'Stopped ' + d.sent + '/' + d.total : 'Done ' + d.sent + '/' + d.total) : 'Idle', d.total && d.sent >= d.total ? 'ok' : '');
-                    peStopTestPoll();
-                }
+                await fetchJsonWithTimeout('/dbg_rules', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: payload
+                }, 4000);
+                statusEl.textContent = 'Saved';
+                statusEl.style.color = 'var(--ok)';
+                setTimeout(() => { if (statusEl.textContent === 'Saved') statusEl.textContent = ''; }, 2000);
             } catch (e) {
+                statusEl.textContent = actionErrorMessage(e, 'Save failed');
+                statusEl.style.color = 'var(--err)';
             }
         }
 
-        async function peLoadInstalledPlugin(idx) {
-            const p = installedPlugins[idx];
-            if (!p) return;
-            if (peHasContent() && !await dashConfirm('Load installed plugin into the editor? Current editor contents will be replaced.', 'Load plugin', 'Load')) return;
-            $('pe-name').value = p.name || '';
-            $('pe-author').value = p.author || '';
-            $('pe-version').value = p.version || '1.0';
-            peState = {
-                rules: (p.details || []).map(r => ({
+        async function dbgToggleActive() {
+            const next = dbgState.active ? '0' : '1';
+            try {
+                const d = await fetchJsonWithTimeout('/dbg_active', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: next
+                }, 4000);
+                dbgState.active = !!(d && d.active);
+                dbgRenderRows();
+            } catch (e) {
+                const statusEl = $('dbg-status');
+                statusEl.textContent = actionErrorMessage(e, 'Error');
+                statusEl.style.color = 'var(--err)';
+            }
+        }
+
+        async function dbgLoad() {
+            try {
+                const d = await fetchJsonWithTimeout('/dbg_rules', null, 3000);
+                dbgState.active = !!(d && d.active);
+                dbgState.rules = (d && d.rules || []).map((r, i) => ({
                     id: r.id | 0,
-                    mux: typeof r.mux === 'number' ? r.mux : -1,
-                    send: r.send !== false,
-                    ops: (r.ops || []).map(op => {
-                        const out = {type: op.type};
-                        if (op.type === 'set_bit') {
-                            out.bit = op.bit | 0;
-                            out.val = op.val ? 1 : 0;
-                        } else if (op.type === 'set_byte') {
-                            out.byte = op.byte | 0;
-                            out.val = (op.val | 0) & 255;
-                            out.mask = ((typeof op.mask === 'number' ? op.mask : 255) | 0) & 255;
-                        } else if (op.type === 'or_byte' || op.type === 'and_byte') {
-                            out.byte = op.byte | 0;
-                            out.val = (op.val | 0) & 255;
-                        }
-                        return out;
-                    })
-                }))
-            };
-            peLoadedPluginName = p.name || '';
-            peStopTestPoll();
-            peSetTestStatus('Idle', '');
-            peRender();
-            peSetStatus('Loaded "' + p.name + '" into editor', 'ok');
-            $('pe-name').scrollIntoView({behavior: 'smooth', block: 'center'});
+                    idStr: r.idStr || (r.id ? '0x' + (r.id | 0).toString(16).toUpperCase() : ''),
+                    mux: (r.mux !== undefined && r.mux >= 0) ? (r.mux | 0) : -1,
+                    bit: (r.bit !== undefined && r.bit >= 0) ? (r.bit | 0) : -1,
+                    val: r.val | 0, en: !!r.en,
+                    name: r.name || ('func' + (i + 1))
+                }));
+                dbgRenderRows();
+            } catch (e) { }
         }
 
-        function peValidate() {
-            const meta = peGetMeta();
-            if (!meta.name) return 'Plugin name required';
-            if (meta.name.length > 31) return 'Name too long (max 31)';
-            if (!peState.rules.length) return 'Add at least one rule';
-            for (let i = 0; i < peState.rules.length; i++) {
-                const r = peState.rules[i];
-                if (!r.id || r.id < 1 || r.id > 2047) return 'Rule ' + (i + 1) + ': CAN ID must be 1-2047';
-                if (r.mux < -1 || r.mux > 7) return 'Rule ' + (i + 1) + ': mux must be -1..7';
-                if (!r.ops.length) return 'Rule ' + (i + 1) + ': add at least one op';
-                for (let j = 0; j < r.ops.length; j++) {
-                    const op = r.ops[j];
-                    if (op.type === 'set_bit') {
-                        if (op.bit < 0 || op.bit > 63) return 'Rule ' + (i + 1) + ' op ' + (j + 1) + ': bit must be 0-63';
-                    } else if (op.type === 'set_byte' || op.type === 'or_byte' || op.type === 'and_byte') {
-                        if (op.byte < 0 || op.byte > 7) return 'Rule ' + (i + 1) + ' op ' + (j + 1) + ': byte must be 0-7';
-                        if (op.val < 0 || op.val > 255) return 'Rule ' + (i + 1) + ' op ' + (j + 1) + ': val must be 0-255';
-                    }
-                }
-            }
-            return null;
+        // ── log display ──
+
+        function dbgToBin8(byte) {
+            return ((byte | 0) & 255).toString(2).padStart(8, '0');
         }
 
-        async function peInstall() {
-            const err = peValidate();
-            if (err) {
-                peSetStatus(err, 'err');
-                return;
-            }
-            const obj = peBuildObj();
-            try {
-                const r = await fetch('/plugins');
-                const d = await r.json();
-                if (d.plugins && d.plugins.some(p => p.name === obj.name) && obj.name !== peLoadedPluginName) {
-                    if (!await dashConfirm('A plugin named "' + obj.name + '" already exists. Overwrite?', 'Overwrite plugin', 'Overwrite')) return;
-                }
-            } catch (e) {
-            }
-            const beforeSig = pluginStateSignature(installedPlugins);
-            peSetStatus('Installing...', 'acc');
-            try {
-                await fetchJsonWithTimeout('/plugin_upload', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(obj)
-                }, 5000);
-                peLoadedPluginName = obj.name;
-                try {
-                    await refreshPluginsNow();
-                } catch (e) {
-                    await refreshPluginsAfterAction(beforeSig);
-                }
-                peSetStatus('Installed!', 'ok');
-            } catch (e) {
-                if (await refreshPluginsAfterAction(beforeSig)) {
-                    peLoadedPluginName = obj.name;
-                    peSetStatus('Installed!', 'ok');
-                } else {
-                    peSetStatus(actionErrorMessage(e, 'Connection error'), 'err');
-                }
-            }
+        function dbgToHex2(byte) {
+            return ((byte | 0) & 255).toString(16).padStart(2, '0').toUpperCase();
         }
 
-        async function peStartTest() {
-            if (!peState.rules.length) {
-                peSetTestStatus('Add a rule first', 'err');
+        function dbgRenderLog(entries) {
+            const container = $('dbg-log-entries');
+            if (!entries || !entries.length) {
+                container.textContent = 'No frames sent yet.';
                 return;
             }
-            const idx = parseInt($('pe-test-rule').value, 10);
-            if (isNaN(idx) || idx < 0 || idx >= peState.rules.length) {
-                peSetTestStatus('Select a valid rule', 'err');
-                return;
-            }
-            const parsed = peParseTestBytes();
-            if (parsed.error) {
-                peSetTestStatus(parsed.error, 'err');
-                return;
-            }
-            const count = parseInt($('pe-test-count').value, 10), interval = parseInt($('pe-test-interval').value, 10);
-            if (isNaN(count) || count < 1 || count > 200) {
-                peSetTestStatus('Count must be 1-200', 'err');
-                return;
-            }
-            if (isNaN(interval) || interval < 10 || interval > 5000) {
-                peSetTestStatus('Interval must be 10-5000 ms', 'err');
-                return;
-            }
-            peSetTestStatus('Starting...', 'acc');
-            try {
-                const r = await fetch('/plugin_test', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        plugin: peBuildObj(),
-                        rule: idx,
-                        data: parsed.bytes,
-                        count: count,
-                        interval: interval
-                    })
+            entries.forEach(entry => {
+                const key = entry.id + ':' + entry.mux;
+                const hex = '0x' + (entry.id | 0).toString(16).toUpperCase();
+                const hexBytes = entry.data.map(dbgToHex2).join(' ');
+                const label = hex + ' mux=' + entry.mux + '  ' + hexBytes;
+
+                let det = document.getElementById('dbg-log-' + key);
+                if (!det) {
+                    det = document.createElement('details');
+                    det.id = 'dbg-log-' + key;
+                    det.style.cssText = 'margin-bottom:4px;border:1px solid var(--bd);border-radius:4px;padding:3px 6px';
+                    if (dbgLogOpen[key]) det.open = true;
+                    det.addEventListener('toggle', () => { dbgLogOpen[key] = det.open; });
+                    container.appendChild(det);
+                }
+
+                // Update summary (hex line)
+                let sum = det.querySelector('summary');
+                if (!sum) {
+                    sum = document.createElement('summary');
+                    sum.style.cssText = 'cursor:pointer;user-select:none;list-style:none;outline:none';
+                    det.insertBefore(sum, det.firstChild);
+                }
+                sum.textContent = label;
+
+                // Update binary expand body
+                let body = det.querySelector('.dbg-log-body');
+                if (!body) {
+                    body = document.createElement('div');
+                    body.className = 'dbg-log-body';
+                    body.style.cssText = 'padding:4px 2px 2px 2px;line-height:1.7';
+                    det.appendChild(body);
+                }
+                while (body.firstChild) body.removeChild(body.firstChild);
+                entry.data.forEach((byte, bi) => {
+                    const row = document.createElement('div');
+                    const startBit = bi * 8;
+                    const lbl = document.createElement('span');
+                    lbl.style.cssText = 'color:var(--tx3);display:inline-block;width:28px;text-align:right;margin-right:6px';
+                    lbl.textContent = String(startBit) + ':';
+                    const bits = document.createElement('span');
+                    bits.textContent = dbgToBin8(byte);
+                    row.appendChild(lbl);
+                    row.appendChild(bits);
+                    body.appendChild(row);
                 });
-                const d = await r.json();
-                if (d.ok) {
-                    $('pe-test-preview').textContent = 'Test CAN 0x' + toHex((d.id || 0) & 0x7FF, 3) + '\nFrame: ' + peFormatBytes(d.data || []) + '\nProgress: ' + (d.sent || 0) + '/' + (d.total || 0);
-                    peSetTestStatus(d.active ? ('Running ' + (d.sent || 0) + '/' + (d.total || 0) + ' · every ' + (d.interval || interval) + ' ms') : 'Done', 'acc');
-                    peStopTestPoll();
-                    peTestPollTimer = setInterval(pePollTestStatus, 500);
-                    pePollTestStatus();
-                } else {
-                    peSetTestStatus(d.error || 'Test failed', 'err');
-                }
-            } catch (e) {
-                peSetTestStatus('Connection error', 'err');
-            }
+            });
+
+            // Remove stale entries
+            Array.from(container.children).forEach(el => {
+                const key = el.id.replace('dbg-log-', '');
+                if (!entries.some(e => (e.id + ':' + e.mux) === key))
+                    container.removeChild(el);
+            });
         }
 
-        async function peStopTest() {
+        async function dbgPollLog() {
             try {
-                const r = await fetch('/plugin_test_stop', {method: 'POST'});
-                const d = await r.json();
-                peStopTestPoll();
-                peSetTestStatus(d.total ? (d.sent < d.total ? 'Stopped ' + d.sent + '/' + d.total : 'Done ' + d.sent + '/' + d.total) : 'Idle', d.total && d.sent >= d.total ? 'ok' : '');
-            } catch (e) {
-                peSetTestStatus('Connection error', 'err');
-            }
-        }
-
-        function peDownload() {
-            const err = peValidate();
-            if (err) {
-                peSetStatus(err, 'err');
-                return;
-            }
-            const obj = peBuildObj();
-            const blob = new Blob([JSON.stringify(obj, null, 2)], {type: 'application/json'});
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = (obj.name || 'plugin').replace(/[^A-Za-z0-9_-]/g, '_').toLowerCase() + '.json';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            peSetStatus('Downloaded', 'ok');
-        }
-
-        async function peReset() {
-            if (peState.rules.length && !await dashConfirm('Discard current editor contents?', 'Discard changes', 'Discard')) return;
-            peState = {rules: []};
-            peLoadedPluginName = '';
-            peStopTestPoll();
-            $('pe-name').value = '';
-            $('pe-author').value = '';
-            $('pe-version').value = '1.0';
-            peRender();
-            peSetStatus('', '');
-            peSetTestStatus('Idle', '');
+                const d = await fetchPollJson('/dbg_log', 2000);
+                if (Array.isArray(d)) dbgRenderLog(d);
+            } catch (e) { }
         }
 
         dashboardPollTimers.push(setInterval(poll, 2000));
         dashboardPollTimers.push(setInterval(pollLog, 3000));
         dashboardPollTimers.push(setInterval(pollSniffer, 1000));
-        dashboardPollTimers.push(setInterval(pollPlugins, 10000));
         dashboardPollTimers.push(setInterval(loadWifiStatus, 10000));
         dashboardPollTimers.push(setInterval(loadApStatus, 10000));
+        dashboardPollTimers.push(setInterval(dbgPollLog, 2000));
+
+        // Tab 切换
+        function switchTab(name) {
+            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            const pane = document.getElementById('tab-' + name);
+            if (pane) pane.classList.add('active');
+            const btns = document.querySelectorAll('.tab-btn');
+            const labels = { status: '状态', control: '控制', debug: '调试', system: '系统' };
+            btns.forEach(b => { if (b.textContent.trim() === labels[name]) b.classList.add('active'); });
+            localStorage.setItem('activeTab', name);
+        }
+        // 恢复上次 tab
+        (function() {
+            const t = localStorage.getItem('activeTab');
+            if (t) switchTab(t);
+        })();
+
         // Collapsible cards
         function toggleCard(id) {
             const card = document.getElementById(id);
@@ -3541,12 +3100,11 @@
         pollLog();
         pollSniffer();
         pollRec();
-        pollPlugins();
         loadWifiStatus();
         loadApStatus();
         loadUpdateInfo();
         loadCanPins();
-        peRender();
+        dbgLoad();
     </script>
     </body>
     </html>
