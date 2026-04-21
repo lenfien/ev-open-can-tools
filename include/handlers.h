@@ -14,31 +14,40 @@
 
 inline LogRingBuffer logRing;
 
-#include "web/mcp2515_dashboard.h"
-
 struct CarManagerBase
 {
-    Shared<bool> ADEnabled{false};
-    Shared<bool> enablePrint{true};
-    Shared<bool> enableBanShield{true};
-    Shared<bool> enableNagSuppress{true};
-    Shared<int> speedProfile{1};
-    Shared<int> speedOffset{0};
-    Shared<bool> enableCamera{true};
+    bool useHW3Code{true};
+    bool InjectActive{false};
+    bool ADEnabled{false};
+    bool enablePrint{true};
+    bool enableBanShield{true};
+    bool enableNagSuppress{true};
+    bool summonUnlock{true};
+    bool enableEnhancedAutopilotRuntime{true};
+    bool speedProfileLocked{true};
+    int  speedProfile{1};
+    int  speedOffset{0};
+    uint32_t  speedOffsetRaw{0};
+    bool enableCamera{true};
+    bool emergencyVehicleDetectionRuntime{true};
+
+    uint8_t offsetType = 0; // 0=preset, 1=custom
+    uint8_t h4oCustomSl[H4O_CUSTOM_COUNT] = {20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120};
+    uint8_t h4oCustomV [H4O_CUSTOM_COUNT] = {60, 60, 50, 40, 33, 12, 11, 10,  10,   9,   8};
 
     // ------------------------------------
 
     // speed limit
-    Shared<int> speedLimit{0};
-    Shared<int> speedLimitVisionOnly{0};
+    int speedLimit{0};
+    int speedLimitVisionOnly{0};
 
-    Shared<uint32_t> frameCount{0};
-    Shared<uint32_t> framesSent{0};
-    Shared<uint32_t> banShieldCnt{0};
-    Shared<uint32_t> banShieldCheckCnt{0};
+    uint32_t frameCount{0};
+    uint32_t framesSent{0};
+    uint32_t banShieldCnt{0};
+    uint32_t banShieldCheckCnt{0};
 
     // gateway autopilot
-    Shared<int> gatewayAutopilot{-1};
+    int gatewayAutopilot{-1};
 
     void (*onFrame)(const CanFrame &) = nullptr;
     void (*onSend)(uint8_t mux, bool ok) = nullptr;
@@ -165,15 +174,14 @@ struct HW4Handler : public CarManagerBase
                 return false;
 
             auto index = readMuxID(frame);
-            if (index == 0)
-                ADEnabled = feat.ADEnabled;
-
-            if (index == 0 && feat.ADEnabled)
+            if (index == 0 && ADEnabled)
             {
                 setBit(frame, 46, true);
-                setBit(frame, 60, true);
 
-                if (emergencyVehicleDetectionRuntime)
+                if (!useHW3Code)
+                    setBit(frame, 60, true);
+
+                if (!useHW3Code && emergencyVehicleDetectionRuntime)
                     setBit(frame, 59, true);
 
                 // china only logic
@@ -208,12 +216,12 @@ struct HW4Handler : public CarManagerBase
             {
                 bool modified = false;
 
-                if (nagSuppress)
+                if (enableNagSuppress)
                 {
                     setBit(frame, 19, false);
                 }
 
-                if (enhancedAutopilotRuntime)
+                if (!useHW3Code && emergencyVehicleDetectionRuntime)
                 {
                     setBit(frame, 47, true);
                     modified = true;
@@ -228,18 +236,29 @@ struct HW4Handler : public CarManagerBase
                 should_send = modified;
             }
 
-            if (index == 2 && ADEnabled && (!checkAD || checkAD()))
+            if (index == 2 && ADEnabled)
             {
                 frame.data[7] &= ~(0x07 << 4);
                 frame.data[7] |= (speedProfile & 0x07) << 4;
 
-                if (h4oTab == 0)
-                    speedOffset = hw4OffsetRuntime;
-                else
-                    speedOffset = (uint8_t)GetSpeedOffset();
+                speedOffsetRaw = speedOffset;
+                if (offsetType == 1)
+                    speedOffsetRaw = (uint8_t)CalcSpeedOffset();
 
-                if (speedOffset > 0)
-                    frame.data[1] = (frame.data[1] & 0xC0) | (speedOffset & 0x3F);
+                if (speedOffsetRaw > 0)
+                {
+                    if (!useHW3Code)
+                        frame.data[1] = (frame.data[1] & 0xC0) | (speedOffsetRaw & 0x3F);
+                    else
+                    {
+                        speedOffsetRaw = Rerange(Clamp(speedOffsetRaw, 0, 60), 0, 60, 0, 240);
+
+                        frame.data[0] &= ~(0b11000000);
+                        frame.data[1] &= ~(0b00111111);
+                        // frame.data[0] |= (speedOffsetRaw & 0x03) << 6;
+                        frame.data[1] |= (speedOffsetRaw >> 2);
+                    }
+                }
 
                 should_send = true;
                 speedLimitVisionOnly = frame.data[1];
@@ -247,10 +266,10 @@ struct HW4Handler : public CarManagerBase
 
             if (index == 0 && enablePrint)
             {
-                char buf[LogRingBuffer::kMaxMsgLen];
-                snprintf(buf, sizeof(buf), "HW4Handler: AD: %d, Profile: %d", (bool)ADEnabled, (int)speedProfile);
-                logRing.push(buf, millis());
-                Serial.println(buf);
+                // char buf[LogRingBuffer::kMaxMsgLen];
+                // snprintf(buf, sizeof(buf), "HW4Handler: AD: %d, Profile: %d, Injection: %d ", (bool)ADEnabled, (int)speedProfile, InjectActive);
+                // logRing.push(buf, millis());
+                Serial.printf("HW4Handler: AD: %d, Profile: %d, Injection: %d\n", (bool)ADEnabled, (int)speedProfile, InjectActive);
             }
         }
 
@@ -258,8 +277,25 @@ struct HW4Handler : public CarManagerBase
     }
 
 private:
+    inline int
+    Clamp(int value, int min, int max) {
+        if (value < min)
+            return min;
+        if (value > max)
+            return max;
+        return value;
+    }
+
+    int
+    Rerange(int value, int min, int max, int t_min, int t_max) {
+        int t_len = t_max - t_min;
+        int len = max - min;
+        int p = (value - min) * 100 / len;
+        return t_min + p * t_len / 100;
+    }
+
     uint8_t
-    GetSpeedOffset() const
+    CalcSpeedOffset() const
     {
         uint8_t result = 0;
         for (int i = 0; i < H4O_CUSTOM_COUNT; i++)

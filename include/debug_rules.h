@@ -42,7 +42,7 @@ static std::list<DbgRule> g_dbg_rule_list;
 static bool dbgProcessFrame(CanFrame &frame, CanDriver &driver)
 {
     bool should_send = false;
-    if (!dbgActive || g_dbg_log_list.empty())
+    if (!dbgActive || g_dbg_rule_list.empty())
         return should_send;
 
     DbgRule *dbg_rule_ptr = nullptr;

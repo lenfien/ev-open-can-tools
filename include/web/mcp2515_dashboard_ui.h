@@ -1196,6 +1196,18 @@
 
         <div class="feat-row">
             <div class="feat-info">
+                <div class="feat-name">Use HW3 Compatible</div>
+                <div class="feat-desc">Use HW3 Enable/Disable</div>
+            </div>
+            <label class="tgl"><input type="checkbox" id="tgl-use-hw3" checked onchange="pushFeat()">
+                <div class="tgl-track">
+                    <div class="tgl-thumb"></div>
+                </div>
+            </label>
+        </div>
+
+        <div class="feat-row">
+            <div class="feat-info">
                 <div class="feat-name">Nag Suppression</div>
                 <div class="feat-desc">Remove hands-on-wheel warning (ECE R79)</div>
             </div>
@@ -1994,6 +2006,7 @@ Format: <b>CAN&nbsp;ID</b> (hex) &bull; <b>MUX</b> (-1&nbsp;=&nbsp;any) &bull; <
         async function pushFeat() {
             const body = 'AD=' + ($('tgl-AD').checked ? '1' : '0')
                 + '&nag=' + ($('tgl-nag').checked ? '1' : '0')
+                + '&usehw3=' + ($('tgl-use-hw3').checked ? '1' : '0')
                 + '&summon=' + ($('tgl-summon').checked ? '1' : '0')
                 + '&camera=' + ($('tgl-camera').checked ? '1' : '0')
                 + '&banShield=' + ($('tgl-banShield').checked ? '1' : '0')
@@ -2001,12 +2014,13 @@ Format: <b>CAN&nbsp;ID</b> (hex) &bull; <b>MUX</b> (-1&nbsp;=&nbsp;any) &bull; <
                 + '&eprn=' + ($('tgl-eprn').checked ? '1' : '0')
                 + '&h4o=' + state.h4o;
             try {
-                await fetch('/features', {
+                await fetch('/config', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/x-www-form-urlencoded'},
                     body
                 });
-            } catch (e) {
+            }
+            catch (e) {
             }
             poll();
         }
@@ -2243,6 +2257,9 @@ Format: <b>CAN&nbsp;ID</b> (hex) &bull; <b>MUX</b> (-1&nbsp;=&nbsp;any) &bull; <
                         }
                     }
                     if (typeof d.eprn !== 'undefined') $('tgl-eprn').checked = d.eprn;
+
+                    $('tgl-use-hw3').checked = d.usehw3;
+
                     if (!h4oCustomLoaded && d.h4oCust) {
                         h4oCustomLoaded = true;
                         H4O_Custom = d.h4oCust.map(o => ({sl: o.sl, v: o.v}));

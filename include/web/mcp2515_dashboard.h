@@ -61,21 +61,6 @@ static constexpr bool kDashInjectionDefaultEnabled = false;
 #define PREFS_NS "ADunlock"
 
 static Preferences prefs;
-
-struct Features
-{
-    bool ADEnabled = true;
-    bool nagSuppress = kEnhancedAutopilotDefaultEnabled;
-    bool summonUnlock = kEnhancedAutopilotDefaultEnabled;
-    bool evDetection = kEmergencyVehicleDetectionDefaultEnabled;
-    uint8_t hw4Offset = 0;
-    bool cameraEnabled = true;
-    bool enableBanShield = true;
-};
-
-static Features feat;
-
-static CarManagerBase *dashHandler = nullptr;
 static CanDriver *dashDriver = nullptr;
 #if defined(DRIVER_ESP32_EXT_MCP2515)
 static MCP2515 *dashMcp = nullptr;
@@ -104,7 +89,6 @@ static const uint8_t mcpEflg = 0;
 #endif
 
 static uint8_t hwMode = DASH_DEFAULT_HW;
-static bool canActive = kDashInjectionDefaultEnabled;
 
 // WiFi AP (hotspot) — overridable at runtime
 static char apSSID[33] = "";
@@ -124,10 +108,6 @@ static IPAddress staIP(0, 0, 0, 0);
 static IPAddress staGW(0, 0, 0, 0);
 static IPAddress staMask(255, 255, 255, 0);
 static IPAddress staDNS(0, 0, 0, 0);
-
-static void dashSwapHandler(uint8_t mode);
-static void dashApplyFilters();
-static void dashApplyRuntimeState();
 
 // CAN recorder
 #define REC_CAP 2000
@@ -288,115 +268,64 @@ static String jsonEscape(const String &s)
     return out;
 }
 
-static bool dashCheckADEnabled()
-{
-    return canActive && feat.ADEnabled;
-}
-
-static bool dashCheckNagEnabled()
-{
-    return canActive && feat.nagSuppress;
-}
-
-static void dashApplyRuntimeState()
-{
-    emergencyVehicleDetectionRuntime = canActive && feat.evDetection;
-    enhancedAutopilotRuntime = canActive && (feat.nagSuppress || feat.summonUnlock);
-    nagKillerRuntime = canActive && kNagKillerDefaultEnabled;
-    hw4OffsetRuntime = canActive ? feat.hw4Offset : 0;
-    enableCamera = canActive ? feat.cameraEnabled : true;
-    enableBanShield = canActive ? feat.enableBanShield : true;
-
-    if (dashHandler)
-    {
-        /**
-        *  Shared<bool> ADEnabled{false};
-    Shared<bool> enablePrint{true};
-    Shared<bool> enableBanShield{true};
-    Shared<bool> enableNagSuppress{true};
-    Shared<int> speedProfile{1};
-    Shared<int> speedOffset{0};
-
-         */
-        dashHandler->ADEnabled = canActive && feat.ADEnabled;
-        dashHandler->enableNagSuppress = canActive && feat.nagSuppress;
-        dashHandler->speedOffset = canActive && feat.hw4Offset;
-        dashHandler->enableCamera = canActive && feat.cameraEnabled;
-        dashHandler->speedProfile = canActive ? feat.pro : 1;
-    }
-
-#if defined(DASH_RGB_STATUS_LED)
-    appRefreshStatusLed();
-#endif
-}
-
 // Store config
 static void dashSavePrefs()
 {
     prefs.begin(PREFS_NS, false);
     prefs.putUChar("hw", hwMode);
     prefs.putUChar("sp", dashHandler ? (int)dashHandler->speedProfile : 1);
-    prefs.putBool("can", canActive);
+    prefs.putBool("can", dashHandler->InjectActive);
     prefs.putBool("eprn", dashHandler ? (bool)dashHandler->enablePrint : true);
-    prefs.putBool("f_AD", feat.ADEnabled);
-    prefs.putBool("f_nag", feat.nagSuppress);
-    prefs.putBool("f_sum", feat.summonUnlock);
-    prefs.putBool("f_camera", feat.cameraEnabled);
-    prefs.putBool("f_banShield", feat.enableBanShield);
-    prefs.putBool("f_evd", feat.evDetection);
-    prefs.putUChar("f_h4o", feat.hw4Offset);
-    prefs.putBool("sp_lock", (bool)speedProfileLocked);
-    prefs.putUChar("h4o_tab", h4oTab);
-    prefs.putBytes("h4o_csl", h4oCustomSl, H4O_CUSTOM_COUNT);
-    prefs.putBytes("h4o_cv",  h4oCustomV,  H4O_CUSTOM_COUNT);
+    prefs.putBool("f_AD", dashHandler->ADEnabled);
+    prefs.putBool("f_use_hw3", dashHandler->useHW3Code);
+    prefs.putBool("f_nag", dashHandler->enableNagSuppress);
+    prefs.putBool("f_sum", dashHandler->summonUnlock);
+    prefs.putBool("f_camera", dashHandler->enableCamera);
+    prefs.putBool("f_banShield", dashHandler->enableBanShield);
+    prefs.putBool("f_evd", dashHandler->emergencyVehicleDetectionRuntime);
+    prefs.putUChar("f_h4o", dashHandler->speedOffset);
+    prefs.putBool("sp_lock", dashHandler->speedProfileLocked);
+    prefs.putUChar("h4o_tab", dashHandler->offsetType);
+    prefs.putBytes("h4o_csl", dashHandler->h4oCustomSl, H4O_CUSTOM_COUNT);
+    prefs.putBytes("h4o_cv",  dashHandler->h4oCustomV,  H4O_CUSTOM_COUNT);
     prefs.end();
 }
 
 static void dashSetCanActive(bool active, const char *reason = nullptr)
 {
-    bool changed = canActive != active;
-    canActive = active;
-    dashApplyRuntimeState();
+    dashHandler->InjectActive = active;
     dashSavePrefs();
-    if (changed)
-    {
-        String msg = String("[CFG] Injection ") + (active ? "ON" : "OFF");
-        if (reason && *reason)
-            msg += String(" via ") + reason;
-        dashLog(msg);
-    }
+
+    Serial.printf("InjectActive is %d\n", active);
 }
 
 static void dashToggleCanActive(const char *reason = nullptr)
 {
-    dashSetCanActive(!canActive, reason);
+    dashSetCanActive(!dashHandler->InjectActive, reason);
 }
 
 static void dashLoadPrefs()
 {
     prefs.begin(PREFS_NS, false);
     hwMode = prefs.getUChar("hw", DASH_DEFAULT_HW);
-    canActive = prefs.getBool("can", kDashInjectionDefaultEnabled);
-    feat.ADEnabled = prefs.getBool("f_AD", true);
-    feat.nagSuppress = prefs.getBool("f_nag", kEnhancedAutopilotDefaultEnabled);
-    feat.summonUnlock = prefs.getBool("f_sum", kEnhancedAutopilotDefaultEnabled);
-    feat.evDetection = prefs.getBool("f_evd", kEmergencyVehicleDetectionDefaultEnabled);
-    feat.hw4Offset = prefs.getUChar("f_h4o", 0);
-    feat.cameraEnabled = prefs.getUChar("f_camera", true);
-    feat.enableBanShield = prefs.getUChar("f_banShield", true);
-    speedProfileLocked = prefs.getBool("sp_lock", false);
-    h4oTab = prefs.getUChar("h4o_tab", 0);
-    prefs.getBytes("h4o_csl", h4oCustomSl, H4O_CUSTOM_COUNT);
-    prefs.getBytes("h4o_cv",  h4oCustomV,  H4O_CUSTOM_COUNT);
-    uint8_t sp = prefs.getUChar("sp", 1);
-    bool ep = prefs.getBool("eprn", true);
 
-    dashApplyRuntimeState();
-    if (dashHandler)
-    {
-        dashHandler->speedProfile = sp;
-        dashHandler->enablePrint = ep;
-    }
+    dashHandler->InjectActive = prefs.getBool("can", kDashInjectionDefaultEnabled);
+    dashHandler->ADEnabled = prefs.getBool("f_AD", true);
+    dashHandler->useHW3Code = prefs.getBool("f_use_hw3", true);
+    dashHandler->speedProfile = prefs.getUChar("sp", 3);
+    dashHandler->enablePrint = prefs.getBool("eprn", true);
+    dashHandler->enableNagSuppress = prefs.getBool("f_nag", kEnhancedAutopilotDefaultEnabled);
+    dashHandler->summonUnlock = prefs.getBool("f_sum", kEnhancedAutopilotDefaultEnabled);
+    dashHandler->emergencyVehicleDetectionRuntime = prefs.getBool("f_evd", kEmergencyVehicleDetectionDefaultEnabled);
+    dashHandler->speedOffset = prefs.getUChar("f_h4o", 0);
+    dashHandler->enableCamera = prefs.getUChar("f_camera", true);
+    dashHandler->enableBanShield = prefs.getUChar("f_banShield", true);
+    dashHandler->speedProfileLocked = prefs.getBool("sp_lock", false);
+    dashHandler->offsetType = prefs.getUChar("h4o_tab", 0);
+
+    prefs.getBytes("h4o_csl", dashHandler->h4oCustomSl, H4O_CUSTOM_COUNT);
+    prefs.getBytes("h4o_cv",  dashHandler->h4oCustomV,  H4O_CUSTOM_COUNT);
+
     // Load WiFi AP overrides (hotspot name/password)
     String apSsidPref = prefs.isKey("ap_ssid") ? prefs.getString("ap_ssid", "") : "";
     String apPassPref = prefs.isKey("ap_pass") ? prefs.getString("ap_pass", "") : "";
@@ -428,90 +357,18 @@ static void dashLoadPrefs()
     autoUpdateEnabled = prefs.getBool("auto_upd", false);
     prefs.end();
 
-    dashLog("[BOOT] Prefs loaded HW=" + String(hwMode) + " SP=" + String(sp));
-    dashLog("[BOOT] canActive=" + String(canActive ? "YES" : "NO"));
-    dashLog("[BOOT] feat: AD=" + String(feat.ADEnabled ? "ON" : "OFF") +
-            " nag=" + String(feat.nagSuppress ? "ON" : "OFF") +
-            " summon=" + String(feat.summonUnlock ? "ON" : "OFF") +
-            " evd=" + String(feat.evDetection ? "ON" : "OFF") +
-            " camera=" + String(feat.cameraEnabled ? "ON" : "OFF") +
-            " banShield=" + String(feat.enableBanShield ? "ON" : "OFF"));
+    dashLog("[BOOT] Prefs loaded HW=" + String(hwMode) + " SP=" + String(dashHandler->speedProfile));
+    dashLog("[BOOT] canActive=" + String(dashHandler->InjectActive ? "YES" : "NO"));
+    dashLog("[BOOT] feat: AD=" + String(dashHandler->ADEnabled ? "ON" : "OFF") +
+            " nag=" + String(dashHandler->enableNagSuppress ? "ON" : "OFF") +
+            " summon=" + String(dashHandler->summonUnlock ? "ON" : "OFF") +
+            " evd=" + String(dashHandler->emergencyVehicleDetectionRuntime ? "ON" : "OFF") +
+            " camera=" + String(dashHandler->enableCamera ? "ON" : "OFF") +
+            " banShield=" + String(dashHandler->enableBanShield ? "ON" : "OFF"));
+
+    Serial.printf("-----: AD: %d, Profile: %d, Injection: %d\n", (bool)dashHandler->ADEnabled, (int)dashHandler->speedProfile, dashHandler->InjectActive);
 }
 
-// MCP2515-only: fine-grained filter register reload on HW mode switch.
-// Other builds use dashDriver->setFilters() in dashSwapHandler instead.
-static void dashApplyFilters()
-{
-#if defined(DRIVER_ESP32_EXT_MCP2515)
-    if (!dashMcp)
-        return;
-    dashMcp->setConfigMode();
-    if (hwMode == 0)
-    {
-        dashMcp->setFilterMask(MCP2515::MASK0, false, 0x7FF);
-        dashMcp->setFilter(MCP2515::RXF0, false, 69);
-        dashMcp->setFilter(MCP2515::RXF1, false, 1006);
-        dashMcp->setFilterMask(MCP2515::MASK1, false, 0x7FF);
-        dashMcp->setFilter(MCP2515::RXF2, false, 69);
-        dashMcp->setFilter(MCP2515::RXF3, false, 1006);
-        dashMcp->setFilter(MCP2515::RXF4, false, 69);
-        dashMcp->setFilter(MCP2515::RXF5, false, 1006);
-    }
-    else if (hwMode == 2)
-    {
-        dashMcp->setFilterMask(MCP2515::MASK0, false, 0x7FF);
-        dashMcp->setFilter(MCP2515::RXF0, false, 921);
-        dashMcp->setFilter(MCP2515::RXF1, false, 1021);
-        dashMcp->setFilterMask(MCP2515::MASK1, false, 0x7FF);
-        dashMcp->setFilter(MCP2515::RXF2, false, 1016);
-        dashMcp->setFilter(MCP2515::RXF3, false, 1021);
-        dashMcp->setFilter(MCP2515::RXF4, false, 1016);
-        dashMcp->setFilter(MCP2515::RXF5, false, 921);
-    }
-    else
-    {
-        dashMcp->setFilterMask(MCP2515::MASK0, false, 0x7FF);
-        dashMcp->setFilter(MCP2515::RXF0, false, 1016);
-        dashMcp->setFilter(MCP2515::RXF1, false, 1021);
-        dashMcp->setFilterMask(MCP2515::MASK1, false, 0x7FF);
-        dashMcp->setFilter(MCP2515::RXF2, false, 1016);
-        dashMcp->setFilter(MCP2515::RXF3, false, 1021);
-        dashMcp->setFilter(MCP2515::RXF4, false, 1016);
-        dashMcp->setFilter(MCP2515::RXF5, false, 1021);
-    }
-    dashMcp->setNormalMode();
-    dashLog("[CFG] Filters set for " + String(hwMode == 0 ? "LEGACY" : hwMode == 1 ? "HW3"
-                                                                                   : "HW4"));
-#endif
-}
-
-// Bus-off recovery (MCP2515 only — TWAI driver handles its own bus-off internally)
-#if defined(DRIVER_ESP32_EXT_MCP2515)
-static unsigned long lastEflgCheckMs = 0;
-static void dashCheckBusHealth()
-{
-    if (!dashMcp)
-        return;
-    if (millis() - lastEflgCheckMs < 5000)
-        return;
-    lastEflgCheckMs = millis();
-    uint8_t eflg = dashMcp->getErrorFlags();
-    mcpEflg = eflg;
-    if (eflg & 0x20)
-    {
-        dashLog("[ERR] MCP2515 BUS-OFF -- recovering");
-        dashMcp->reset();
-        delay(10);
-        dashMcp->setBitrate(CAN_500KBPS, MCP_CRYSTAL_FREQ);
-        dashApplyFilters();
-        dashLog("[OK] MCP2515 recovered");
-    }
-}
-#else
-static void dashCheckBusHealth()
-{
-}
-#endif
 static WebServer server(80);
 
 static void handleRoot()
@@ -534,9 +391,8 @@ static void handleStatus()
         fpsLastMs = now;
     }
 
-    bool ADActive = dashHandler ? (bool)dashHandler->ADEnabled : false;
     int sp = dashHandler ? (int)dashHandler->speedProfile : 0;
-    int soff = dashHandler ? (int)dashHandler->speedOffset : 0;
+    int soff = dashHandler ? (int)(dashHandler->speedOffsetRaw >> 2) : 0;
     int gtwAp = dashHandler ? (int)dashHandler->gatewayAutopilot : -1;
     bool ep = dashHandler ? (bool)dashHandler->enablePrint : true;
 
@@ -549,13 +405,15 @@ static void handleStatus()
     j += ",\"gtwap\":";
     j += gtwAp;
     j += ",\"AD\":";
-    j += ADActive ? "true" : "false";
+    j += dashHandler->ADEnabled ? "true" : "false";
+    j += ",\"usehw3\":";
+    j += dashHandler->useHW3Code ? "true" : "false";
     j += ",\"eprn\":";
     j += ep ? "true" : "false";
     j += ",\"can\":";
     j += canOnline ? "true" : "false";
     j += ",\"ci\":";
-    j += canActive ? "true" : "false";
+    j += dashHandler->InjectActive ? "true" : "false";
     j += ",\"rx\":";
     j += rxCount;
     j += ",\"tx\":";
@@ -579,21 +437,21 @@ static void handleStatus()
     j += ",\"spLimv\":";
     j += dashHandler ? (int)dashHandler->speedLimitVisionOnly : 0;
     j += ",\"feat\":{\"AD\":";
-    j += feat.ADEnabled ? "true" : "false";
+    j += dashHandler->ADEnabled ? "true" : "false";
     j += ",\"nag\":";
-    j += feat.nagSuppress ? "true" : "false";
+    j += dashHandler->enableNagSuppress ? "true" : "false";
     j += ",\"summon\":";
-    j += feat.summonUnlock ? "true" : "false";
+    j += dashHandler->summonUnlock ? "true" : "false";
     j += ",\"camera\":";
-    j += feat.cameraEnabled ? "true" : "false";
+    j += dashHandler->enableCamera ? "true" : "false";
     j += ",\"banShield\":";
-    j += feat.enableBanShield ? "true" : "false";
+    j += dashHandler->enableBanShield ? "true" : "false";
     j += ",\"evd\":";
-    j += feat.evDetection ? "true" : "false";
+    j += dashHandler->emergencyVehicleDetectionRuntime ? "true" : "false";
     j += ",\"h4o\":";
-    j += feat.hw4Offset;
+    j += dashHandler->speedOffset;
     j += ",\"spl\":";
-    j += (bool)speedProfileLocked ? "true" : "false";
+    j += (bool)dashHandler->speedProfileLocked ? "true" : "false";
     j += "},\"mux\":[";
     for (int i = 0; i < 3; i++)
     {
@@ -604,12 +462,12 @@ static void handleStatus()
              ",\"err\":" + String(muxErr[i]) + "}";
     }
     j += "],\"h4oTab\":";
-    j += h4oTab;
+    j += dashHandler->offsetType;
     j += ",\"h4oCust\":[";
     for (int i = 0; i < H4O_CUSTOM_COUNT; i++)
     {
         if (i) j += ",";
-        j += "{\"sl\":" + String(h4oCustomSl[i]) + ",\"v\":" + String(h4oCustomV[i]) + "}";
+        j += "{\"sl\":" + String(dashHandler->h4oCustomSl[i]) + ",\"v\":" + String(dashHandler->h4oCustomV[i]) + "}";
     }
     j += "]}";
     server.send(200, "application/json", j);
@@ -617,17 +475,6 @@ static void handleStatus()
 
 static void handleConfig()
 {
-    bool hwChanged = false;
-    if (server.hasArg("hw"))
-    {
-        uint8_t v = server.arg("hw").toInt();
-        if (v <= 2 && v != hwMode)
-        {
-            hwMode = v;
-            hwChanged = true;
-            dashLog("[CFG] HW=" + String(v == 0 ? "LEGACY" : v == 1 ? "HW3" : "HW4"));
-        }
-    }
     if (server.hasArg("sp") && dashHandler)
     {
         uint8_t v = server.arg("sp").toInt();
@@ -637,64 +484,66 @@ static void handleConfig()
             dashLog("[CFG] Profile=" + String(v));
         }
     }
+
     if (server.hasArg("spl"))
     {
-        speedProfileLocked = server.arg("spl") == "1";
-        dashLog("[CFG] Profile lock " + String((bool)speedProfileLocked ? "ON" : "OFF"));
+        dashHandler->speedProfileLocked = server.arg("spl") == "1";
+        dashLog("[CFG] Profile lock " + String((bool)dashHandler->speedProfileLocked ? "ON" : "OFF"));
     }
-    if (server.hasArg("can"))
-        canActive = server.arg("can") == "1";
-    if (hwChanged)
-    {
-        dashSwapHandler(hwMode);
-        dashApplyFilters();
-    }
-    dashApplyRuntimeState();
-    dashSavePrefs();
-    server.send(200, "application/json", "{\"ok\":true}");
-}
 
-static void handleFeatures()
-{
+    if (server.hasArg("can"))
+    {
+        dashHandler->InjectActive = server.arg("can") == "1";
+    }
+
+    if (server.hasArg("usehw3") && dashHandler)
+    {
+        bool ep = server.arg("usehw3") == "1";
+        dashHandler->useHW3Code = ep;
+        dashLog("[FEAT] useHW3Code " + String(ep ? "ON" : "OFF"));
+    }
+
+
     if (server.hasArg("AD"))
     {
-        feat.ADEnabled = server.arg("AD") == "1";
-        dashLog("[FEAT] AD " + String(feat.ADEnabled ? "ON" : "OFF"));
+        dashHandler->ADEnabled = server.arg("AD") == "1";
+        dashLog("[FEAT] AD " + String(dashHandler->ADEnabled ? "ON" : "OFF"));
     }
+
     if (server.hasArg("nag"))
     {
-        feat.nagSuppress = server.arg("nag") == "1";
-        dashLog("[FEAT] Nag suppress " + String(feat.nagSuppress ? "ON" : "OFF"));
+        dashHandler->enableNagSuppress = server.arg("nag") == "1";
+        dashLog("[FEAT] Nag suppress " + String(dashHandler->enableNagSuppress ? "ON" : "OFF"));
     }
 
     if (server.hasArg("summon"))
     {
-        feat.summonUnlock = server.arg("summon") == "1";
-        dashLog("[FEAT] Summon unlock " + String(feat.summonUnlock ? "ON" : "OFF"));
+        dashHandler->summonUnlock = server.arg("summon") == "1";
+        dashLog("[FEAT] Summon unlock " + String(dashHandler->summonUnlock ? "ON" : "OFF"));
     }
 
     if (server.hasArg("camera"))
     {
-        feat.cameraEnabled = server.arg("camera") == "1";
-        dashLog("[FEAT] Camera " + String(feat.cameraEnabled ? "ON" : "OFF"));
+        dashHandler->enableCamera = server.arg("camera") == "1";
+        dashLog("[FEAT] Camera " + String(dashHandler->enableCamera ? "ON" : "OFF"));
     }
 
     if (server.hasArg("banShield"))
     {
-        feat.enableBanShield = server.arg("banShield") == "1";
-        dashLog("[FEAT] BanShield " + String(feat.enableBanShield ? "ON" : "OFF"));
+        dashHandler->enableBanShield = server.arg("banShield") == "1";
+        dashLog("[FEAT] BanShield " + String(dashHandler->enableBanShield ? "ON" : "OFF"));
     }
 
     if (server.hasArg("evd"))
     {
-        feat.evDetection = server.arg("evd") == "1";
-        dashLog("[FEAT] EV detection " + String(feat.evDetection ? "ON" : "OFF"));
+        dashHandler->emergencyVehicleDetectionRuntime = server.arg("evd") == "1";
+        dashLog("[FEAT] EV detection " + String(dashHandler->emergencyVehicleDetectionRuntime ? "ON" : "OFF"));
     }
 
     if (server.hasArg("h4o"))
     {
         uint8_t v = (uint8_t)constrain(server.arg("h4o").toInt(), 0, 63);
-        feat.hw4Offset = v;
+        dashHandler->speedOffset = v;
         dashLog("[FEAT] HW4 offset raw=" + String(v) + (v == 0 ? " (off)" : ""));
     }
 
@@ -705,9 +554,12 @@ static void handleFeatures()
         dashLog("[FEAT] Logging " + String(ep ? "ON" : "OFF"));
     }
 
-    dashApplyRuntimeState();
     dashSavePrefs();
     server.send(200, "application/json", "{\"ok\":true}");
+}
+
+static void handleFeatures()
+{
 }
 
 static void handleH4OCustom()
@@ -715,7 +567,8 @@ static void handleH4OCustom()
     if (server.hasArg("tab"))
     {
         uint8_t t = (uint8_t)server.arg("tab").toInt();
-        if (t <= 1) h4oTab = t;
+        if (t <= 1)
+            dashHandler->offsetType = t;
     }
 
     String sl_str, v_str;
@@ -726,22 +579,21 @@ static void handleH4OCustom()
 
         if (server.hasArg(ksl))
         {
-            h4oCustomSl[i] = (uint8_t)constrain(server.arg(ksl).toInt(), 0, 255);
-            sl_str += String(h4oCustomSl[i]) + " ";
+            dashHandler->h4oCustomSl[i] = (uint8_t)constrain(server.arg(ksl).toInt(), 0, 255);
+            sl_str += String(dashHandler->h4oCustomSl[i]) + " ";
         }
 
         if (server.hasArg(kv))
         {
-            h4oCustomV[i]  = (uint8_t)constrain(server.arg(kv).toInt(),  0, 100);
-            v_str += String(h4oCustomV[i]) + " ";
+            dashHandler->h4oCustomV[i]  = (uint8_t)constrain(server.arg(kv).toInt(),  0, 100);
+            v_str += String(dashHandler->h4oCustomV[i]) + " ";
         }
     }
 
     dashSavePrefs();
     server.send(200, "application/json", "{\"ok\":true}");
 
-    Serial.printf("H4OCustomHanlderReceived: tab : %d, h4oCustomSl: %s, h4oCustomV:%s",
-        h4oTab, sl_str.c_str(), v_str.c_str());
+    Serial.printf("H4OCustomHanlderReceived: tab : %d, h4oCustomSl: %s, h4oCustomV:%s", dashHandler->offsetType, sl_str.c_str(), v_str.c_str());
 }
 
 static void handleFrames()
@@ -1833,45 +1685,12 @@ static void dashInitHandlers()
     handlerPool[2]->onSend = mcpDashOnSend;
 }
 
-static void dashSwapHandler(uint8_t mode)
-{
-    if (mode > 2 || !handlerPool[mode])
-        return;
 
-    CarManagerBase *next = handlerPool[mode];
-    if (dashHandler)
-    {
-        next->speedProfile = (int)dashHandler->speedProfile;
-        next->enablePrint = (bool)dashHandler->enablePrint;
-    }
-
-    appActiveHandler = next;
-    dashHandler = next;
-    dashApplyRuntimeState();
-    // Update driver acceptance filters for the new handler.
-    // For MCP2515 (ext) dashApplyFilters() will also fine-tune the hardware
-    // filter registers. For TWAI and old MCP2515 this abstract call is enough.
-    if (dashDriver)
-        dashDriver->setFilters(next->filterIds(), next->filterIdCount());
-    const char *hwName = "LEGACY";
-    if (mode == 1)
-        hwName = "HW3";
-    else if (mode == 2)
-        hwName = "HW4";
-    dashLog("[CFG] Handler switched to " + String(hwName));
-}
-
-#if defined(DRIVER_ESP32_EXT_MCP2515)
-static void mcpDashboardSetup(CarManagerBase *handler, CanDriver *driver, MCP2515 *mcp)
-{
-    dashHandler = handler;
-    dashDriver = driver;
-    dashMcp = mcp;
-#else
 static void mcpDashboardSetup(CarManagerBase *handler, CanDriver *driver)
 {
     dashHandler = handler;
     dashDriver = driver;
+
 #endif
     startMs = millis();
     fpsLastMs = millis();
@@ -1881,8 +1700,6 @@ static void mcpDashboardSetup(CarManagerBase *handler, CanDriver *driver)
 
     dashLoadPrefs();
     dashInitHandlers();
-    dashSwapHandler(hwMode);
-    dashApplyFilters();
 
     // Load debug injection rules from SPIFFS and restore active state
     dbgLoadRules();
@@ -1936,7 +1753,7 @@ static void mcpDashboardSetup(CarManagerBase *handler, CanDriver *driver)
     server.on("/", HTTP_GET, handleRoot);
     server.on("/status", HTTP_GET, handleStatus);
     server.on("/config", HTTP_POST, handleConfig);
-    server.on("/features", HTTP_POST, handleFeatures);
+    server.on("/features", HTTP_POST, handleConfig);
     server.on("/h4o_custom", HTTP_POST, handleH4OCustom);
     server.on("/frames", HTTP_GET, handleFrames);
     server.on("/log", HTTP_GET, handleLog);
@@ -1976,12 +1793,10 @@ static void mcpDashboardLoop()
 {
     if (Update.isRunning())
         return;
-    dashCheckBusHealth();
+
     if (canOnline && millis() - lastFrameMs > 10000)
     {
         canOnline = false;
         dashLog("[CAN] Bus OFFLINE (timeout)");
     }
 }
-
-#endif

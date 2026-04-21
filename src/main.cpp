@@ -30,28 +30,8 @@
 
 void setup()
 {
-#ifdef DRIVER_MCP2515
-    appSetup<MCP2515Driver>(std::make_unique<MCP2515Driver>(PIN_CAN_CS), "MCP25625 ready @ 500k");
-#ifdef ESP32_DASHBOARD
-    delay(2000);
-    mcpDashboardSetup(appHandler.get(), appDriver.get());
-    appHandler->onFrame = mcpDashOnFrame;
-    appHandler->onSend = mcpDashOnSend;
-#endif
-#elif defined(DRIVER_ESP32_EXT_MCP2515)
-    SPI.begin(SPI_SCK, SPI_MISO, SPI_MOSI, PIN_CAN_CS);
-    SPI.setFrequency(8000000);
-    auto drv = std::make_unique<ESP32_MCP2515Driver>(PIN_CAN_CS);
-    MCP2515 *mcpPtr = &drv->mcp();
-    appSetup<ESP32_MCP2515Driver>(std::move(drv), "ESP32 + MCP2515 ready @ 500k");
-#ifdef ESP32_DASHBOARD
-    appHandler->onFrame = mcpDashOnFrame;
-    appHandler->onSend = mcpDashOnSend;
-    mcpDashboardSetup(appHandler.get(), appDriver.get(), mcpPtr);
-#endif
-#elif defined(DRIVER_SAME51)
-    appSetup<SAME51Driver>(std::make_unique<SAME51Driver>(), "SAME51 CAN ready @ 500k");
-#elif defined(DRIVER_TWAI)
+    dashHandler = new HW4Handler();
+
     // Load TWAI pins from NVS (survives OTA); fall back to compile-time defaults
     gpio_num_t twaiTx = TWAI_TX_PIN;
     gpio_num_t twaiRx = TWAI_RX_PIN;
@@ -68,14 +48,13 @@ void setup()
                 twaiRx = (gpio_num_t)rx;
         }
     }
+
     appSetup<TWAIDriver>(std::make_unique<TWAIDriver>(twaiTx, twaiRx), "ESP32 TWAI ready @ 500k");
-#ifdef ESP32_DASHBOARD
+
     delay(2000);
-    mcpDashboardSetup(appHandler.get(), appDriver.get());
-    appHandler->onFrame = mcpDashOnFrame;
-    appHandler->onSend = mcpDashOnSend;
-#endif
-#endif
+    mcpDashboardSetup(dashHandler, appDriver.get());
+    dashHandler->onFrame = mcpDashOnFrame;
+    dashHandler->onSend = mcpDashOnSend;
 }
 
 void loop()

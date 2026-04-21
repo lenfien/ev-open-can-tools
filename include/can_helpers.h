@@ -45,17 +45,7 @@ inline constexpr bool kNagKillerDefaultEnabled = false;
 inline constexpr bool kNagKillerBuildEnabled = false;
 #endif
 
-inline Shared<bool> emergencyVehicleDetectionRuntime{kEmergencyVehicleDetectionDefaultEnabled};
-inline Shared<bool> enhancedAutopilotRuntime{kEnhancedAutopilotDefaultEnabled};
-inline Shared<bool> speedProfileLocked{false};
-inline Shared<uint8_t> hw4OffsetRuntime{0};
-inline Shared<bool> enableCamera{true};
-inline Shared<bool> enableBanShield{true};
-
 #define H4O_CUSTOM_COUNT 11
-static uint8_t h4oTab = 0; // 0=preset, 1=custom
-static uint8_t h4oCustomSl[H4O_CUSTOM_COUNT] = {20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120};
-static uint8_t h4oCustomV [H4O_CUSTOM_COUNT] = {60, 60, 50, 40, 33, 12, 11, 10,  10,   9,   8};
 
 inline uint8_t readMuxID(const CanFrame &frame)
 {

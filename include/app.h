@@ -39,9 +39,8 @@
     #error "Define HW4, HW3, LEGACY, or NAG_KILLER in build_flags"
 #endif
 
+static CarManagerBase *dashHandler = nullptr;
 static std::unique_ptr<CanDriver> appDriver;
-static std::unique_ptr<CarManagerBase> appHandler;
-static CarManagerBase *appActiveHandler = nullptr;
 
 // Debug injection hook — set by dashboard to apply dbg_rules after handler
 static bool (*appDebugProcess)(CanFrame &, CanDriver &) = nullptr;
@@ -49,78 +48,13 @@ static bool (*appDebugProcess)(CanFrame &, CanDriver &) = nullptr;
 static volatile bool frameReady = true;
 static void canISR() { frameReady = true; }
 
-#if defined(ESP32_DASHBOARD) && !defined(NATIVE_BUILD) && defined(DASH_RGB_STATUS_LED)
-static void appRefreshStatusLed(bool force = false);
-static void appWriteStatusLed(uint8_t red, uint8_t green, uint8_t blue);
-#endif
-#if defined(ESP32_DASHBOARD) && !defined(NATIVE_BUILD) && defined(DASH_INJECTION_TOGGLE_PIN)
-static void appPollInjectionToggleButton();
-#endif
-
 #if defined(ESP32_DASHBOARD) && !defined(NATIVE_BUILD)
 #include "web/mcp2515_dashboard.h"
-#endif
-
-#if defined(ESP32_DASHBOARD) && !defined(NATIVE_BUILD) && defined(DASH_RGB_STATUS_LED)
-static void appWriteStatusLed(uint8_t red, uint8_t green, uint8_t blue)
-{
-#if defined(ESP_ARDUINO_VERSION_MAJOR) && (ESP_ARDUINO_VERSION_MAJOR >= 3)
-    rgbLedWrite(PIN_LED, red, green, blue);
-#else
-    neopixelWrite(PIN_LED, red, green, blue);
-#endif
-}
-
-static void appRefreshStatusLed(bool force)
-{
-    static bool known = false;
-    static bool lastInjecting = false;
-#ifdef RGB_BRIGHTNESS
-    constexpr uint8_t kStatusLedLevel = RGB_BRIGHTNESS;
-#else
-    constexpr uint8_t kStatusLedLevel = 32;
-#endif
-
-    bool injecting = canActive;
-    if (!force && known && lastInjecting == injecting)
-        return;
-
-    appWriteStatusLed(injecting ? 0 : kStatusLedLevel, injecting ? kStatusLedLevel : 0, 0);
-    lastInjecting = injecting;
-    known = true;
-}
-#endif
-
-#if defined(ESP32_DASHBOARD) && !defined(NATIVE_BUILD) && defined(DASH_INJECTION_TOGGLE_PIN)
-static void appPollInjectionToggleButton()
-{
-    static bool rawState = HIGH;
-    static bool stableState = HIGH;
-    static unsigned long lastChangeMs = 0;
-
-    bool sample = digitalRead(DASH_INJECTION_TOGGLE_PIN);
-    unsigned long now = millis();
-
-    if (sample != rawState)
-    {
-        rawState = sample;
-        lastChangeMs = now;
-    }
-
-    if ((now - lastChangeMs) < 35 || sample == stableState)
-        return;
-
-    stableState = sample;
-    if (stableState == LOW)
-        dashToggleCanActive("GPIO41");
-}
 #endif
 
 template <typename Driver>
 static void appSetup(std::unique_ptr<Driver> drv, const char *readyMsg)
 {
-    appHandler = std::make_unique<SelectedHandler>();
-    appActiveHandler = appHandler.get();
     delay(1500);
     Serial.begin(115200);
     unsigned long t0 = millis();
@@ -145,7 +79,7 @@ static void appSetup(std::unique_ptr<Driver> drv, const char *readyMsg)
         Serial.println("CAN init failed");
     }
 
-    appDriver->setFilters(appHandler->filterIds(), appHandler->filterIdCount());
+    appDriver->setFilters(dashHandler->filterIds(), dashHandler->filterIdCount());
     if constexpr (Driver::kSupportsISR)
     {
         appDriver->enableInterrupt(canISR);
@@ -181,7 +115,7 @@ static void appLoop()
     }
 
     CanFrame frame;
-    CarManagerBase *h = appActiveHandler ? appActiveHandler : appHandler.get();
+    CarManagerBase *h = dashHandler;
     while (appDriver->read(frame))
     {
         digitalWrite(PIN_LED, LOW);
@@ -195,7 +129,7 @@ static void appLoop()
                 should_send = true;
         }
 
-        if (should_send)
+        if (should_send && h->InjectActive)
         {
             h->framesSent++;
             appDriver->send(frame);
