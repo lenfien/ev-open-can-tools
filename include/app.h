@@ -132,6 +132,11 @@ static void appLoop()
         if (should_send && h->InjectActive)
         {
             h->framesSent++;
+
+            // 永远不要把这个位设置为1，否则直接停用1周。
+            if (frame.id == 1021 && readMuxID(frame) == 0)
+                setBit(frame, 52, 0);
+
             appDriver->send(frame);
             if (h->onSend)
                 h->onSend(0, true);

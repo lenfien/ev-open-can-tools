@@ -1082,6 +1082,10 @@
             <div class="stat-val" id="s-AD">Inactive</div>
         </div>
         <div class="stat">
+            <div class="stat-lbl">GTW</div>
+            <div class="stat-val" id="s-gtwap">Inactive</div>
+        </div>
+        <div class="stat">
             <div class="stat-lbl">Frame rate</div>
             <div class="stat-val v-dim" id="s-fps">0.0 Hz</div>
         </div>
@@ -2206,6 +2210,23 @@ Format: <b>CAN&nbsp;ID</b> (hex) &bull; <b>MUX</b> (-1&nbsp;=&nbsp;any) &bull; <
                     $('s-inj').className = 'stat-val ' + (d.ci ? 'v-ok' : 'v-err');
                     $('s-AD').textContent = d.AD ? 'Active' : 'Inactive';
                     $('s-AD').className = 'stat-val ' + (d.AD ? 'v-ok' : 'v-dim');
+
+                    switch (d.gtwap)
+                    {
+                    case 0:
+                        $('s-gtwap').textContent = 'NONE'; break;
+                    case 1:
+                        $('s-gtwap').textContent = 'HIGHWAY'; break;
+                    case 2:
+                        $('s-gtwap').textContent = 'ENHANCED'; break;
+                    case 3:
+                        $('s-gtwap').textContent = 'SELF_DRIVING'; break;
+                    case 4:
+                        $('s-gtwap').textContent = 'BASIC'; break;
+                    default:
+                        $('s-gtwap').textContent = d.gtwap; break;
+                    }
+
                     $('s-fps').textContent = d.fps.toFixed(1) + ' Hz';
                     $('s-fps').className = 'stat-val ' + (d.fps > 5 ? 'v-acc' : 'v-dim');
                     $('s-rx').textContent = d.rx;

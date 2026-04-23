@@ -13,6 +13,59 @@
 #endif
 
 inline LogRingBuffer logRing;
+//
+// // ── HW3 policy constants (shared with mod_fsd.h, defaults below, and UI labels) ──
+// // Auto targets (field-calibrated — metric cluster under-delivers vs request):
+// static constexpr int kHw3AutoTargetBelow60Kph      = 64;   // fusedLimit <60 kph  → request 64 (visible ~50)
+// static constexpr int kHw3AutoTargetAt60Kph         = 100;  // fusedLimit =60 kph  → request 100 (visible ~80)
+// static constexpr int kHw3AutoTargetForVisible80Kph = 85;   // 60<fusedLimit<80    → request 85 (visible ~70)
+// static constexpr int kHw3StockOffsetCutoverKph     = 80;   // ≥80 kph → passthrough stock EAP offset
+// // Custom mode: user-defined target-speed lookup bucketed by 10 kph starting at 30.
+// static constexpr int kHw3CustomBucketBaseKph = 30;
+// static constexpr int kHw3CustomBucketStepKph = 10;
+// static constexpr int kHw3CustomTargetCount   = 5;  // 30/40/50/60/70 kph limit buckets
+// static_assert((kHw3StockOffsetCutoverKph - kHw3CustomBucketBaseKph) / kHw3CustomBucketStepKph == kHw3CustomTargetCount, "Custom target table must cover [base, cutover) in step-sized buckets");
+//
+// // ── HW3 auto speed policy (mirrors tesla-open-can-mod hw3_speed_policy.h) ──
+// // Field-calibrated request floors for metric clusters. Auto targets / bucket
+// // shape / cutover live in fsd_config.h so defaults + policy share one source.
+// //
+// // Wire encoding (0x3FD mux-2 data[0][6:7] + data[1][0:5], 8-bit raw):
+// //   Tesla decodes raw as percentage of posted limit: pct = raw / 4.
+// //   Firmware caps at 50%, so raw range [0, 200]. Source: tesla-open-can-mod
+// //   include/app.h:211 (manualSpeedOffset = pct * 4) and include/can_helpers.h:113
+// //   (offsetPct 0-50).
+// static constexpr int kHw3SpeedOffsetMaxPct = 50;  // wire raw cap = 200
+//
+// static inline int computeHW3MinimumTargetSpeedKph(int fusedLimitKph) {
+//     if (fusedLimitKph == 60)                       return kHw3AutoTargetAt60Kph;
+//     if (fusedLimitKph <  kHw3AutoTargetBelow60Kph) return kHw3AutoTargetBelow60Kph;
+//     if (fusedLimitKph <  kHw3StockOffsetCutoverKph) return kHw3AutoTargetForVisible80Kph;
+//     return fusedLimitKph;
+// }
+//
+// // Custom mode: user-defined target-speed lookup bucketed by
+// // kHw3CustomBucketStepKph starting at kHw3CustomBucketBaseKph.
+// // Returns 0 when input is outside the table range — caller falls back to passthrough.
+// static inline int computeHW3CustomTargetSpeedKph(int fusedLimitKph) {
+//     if (fusedLimitKph <  kHw3CustomBucketBaseKph || fusedLimitKph >= kHw3StockOffsetCutoverKph) return 0;
+//     int idx = (fusedLimitKph - kHw3CustomBucketBaseKph) / kHw3CustomBucketStepKph;
+//     return (int)cfg.hw3CustomTarget[idx];
+// }
+//
+// static inline uint8_t encodeHW3OffsetRawFromPct(int pct) {
+//     int clamped = std::max(0, std::min(pct, kHw3SpeedOffsetMaxPct));
+//     return (uint8_t)(clamped * 4);
+// }
+//
+// // Convert a desired km/h offset at a given posted limit into the raw byte
+// // written to the 0x3FD active-offset field. Rounds to nearest pct.
+// static inline uint8_t encodeHW3OffsetRawFromKph(int offsetKph, int fusedLimitKph) {
+//     if (fusedLimitKph <= 0 || offsetKph <= 0) return 0;
+//     int pct = (offsetKph * 100 + fusedLimitKph / 2) / fusedLimitKph;
+//     return encodeHW3OffsetRawFromPct(pct);
+// }
+//
 
 struct CarManagerBase
 {
@@ -63,7 +116,7 @@ struct HW4Handler : public CarManagerBase
     const uint32_t *filterIds() const override
     {
 #if defined(ESP32_DASHBOARD)
-        static constexpr uint32_t ids[] = {880, 921, 1016, 1021, 2047};
+        static constexpr uint32_t ids[] = {880, 921, 1016, 1021, 2047, 0x259};
         return ids;
     }
     uint8_t filterIdCount() const override { return 5; }
@@ -266,10 +319,7 @@ struct HW4Handler : public CarManagerBase
 
             if (index == 0 && enablePrint)
             {
-                // char buf[LogRingBuffer::kMaxMsgLen];
-                // snprintf(buf, sizeof(buf), "HW4Handler: AD: %d, Profile: %d, Injection: %d ", (bool)ADEnabled, (int)speedProfile, InjectActive);
-                // logRing.push(buf, millis());
-                Serial.printf("HW4Handler: AD: %d, Profile: %d, Injection: %d\n", (bool)ADEnabled, (int)speedProfile, InjectActive);
+                Serial.printf("HW4Handler: AD: %d, GTWAP: %s, Profile: %d, Injection: %d\n", (bool)ADEnabled, describeGTWAutopilot (gatewayAutopilot), speedProfile, InjectActive);
             }
         }
 
