@@ -1,0 +1,41 @@
+
+
+BO_ 838 GTW_autopilotOverride: 8 Vector__XXX
+  SG_ GTW_autopilotOverrideState : 0|4@1+ (1,0) [0|0] "" Vector__XXX
+  SG_ GTW_autopilotConfig : 4|3@1+ (1,0) [0|0] "" Vector__XXX
+  SG_ GTW_autopilotOverrideConfig : 8|3@1+ (1,0) [0|0] "" Vector__XXX
+  SG_ GTW_autopilotConfigSource : 11|2@1+ (1,0) [0|0] "" Vector__XXX
+  SG_ GTW_autopilotOverrideExpireTime : 32|32@1+ (1,0) [0|0] "" Vector__XXX
+  
+BO_ 601 APP_status: 8 Vector__XXX
+ SG_ APP_watchdogState : 0|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APP_fusedState : 3|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APP_cameraHeaterRequest : 5|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APP_factorySummonStatus : 6|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APP_clipRecordingStatus : 10|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APP_allowApActivationWithBrake : 13|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APP_summonUnavailableReason : 14|5@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APP_fsdSuspendState : 19|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APP_fsdRevokeStrikeoutCount : 21|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APP_teslaVisionSupported : 24|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APP_teslaVisionUnsupportedReason : 26|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APP_fsdRevokeCount : 29|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APP_excessiveAccelPedalWarning : 32|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APP_unifiedObjectStackSupported : 33|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APP_unifiedObjsUnsupportedReason : 35|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APP_DDAWSystemStatus : 38|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APP_socOperatingMode : 41|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APP_summonVersionIdentifier : 43|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APP_sentryState : 44|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APP_autoparkVersionIdentifier : 47|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APP_setSpeedMode : 49|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APP_suspendResumeAvailable : 51|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APP_statusCounter : 52|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APP_statusChecksum : 56|8@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 817 DAS_autopilotConfig: 8 Vector__XXX
+ SG_ DAS_autopilot : 0|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_autopilotBase : 3|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_autopilotOverrideState : 8|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_autopilotOverride : 12|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_autopilotOverrideExpireTime : 16|32@1+ (1,0) [0|0] "" Vector__XXX
