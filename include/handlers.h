@@ -113,24 +113,13 @@ struct CarManagerBase
 
 struct HW4Handler : public CarManagerBase
 {
+    std::vector<uint32_t> ids = {880, 921, 1016, 1021, 2047, 838, 601};
+
     const uint32_t *filterIds() const override
     {
-#if defined(ESP32_DASHBOARD)
-        static constexpr uint32_t ids[] = {880, 921, 1016, 1021, 2047, 0x259};
-        return ids;
+        return ids.data();
     }
-    uint8_t filterIdCount() const override { return 5; }
-#elif defined(ISA_SPEED_CHIME_SUPPRESS)
-        static constexpr uint32_t ids[] = {921, 1016, 1021, 2047};
-        return ids;
-    }
-    uint8_t filterIdCount() const override { return 4; }
-#else
-            static constexpr uint32_t ids[] = {1016, 1021, 2047};
-            return ids;
-        }
-        uint8_t filterIdCount() const override { return 3; }
-#endif
+    uint8_t filterIdCount() const override { return ids.size(); }
 
     bool handleMessage(CanFrame &frame, CanDriver &driver) override
     {
@@ -148,6 +137,21 @@ struct HW4Handler : public CarManagerBase
             // speedLimitVisionOnly = (frame.data[2] & 0x1F) * 5;
 
             return false;
+        }
+
+        if (frame.id == 601)
+        {
+            // setBit(frame, 51, true);
+            // setBit(frame, 19, false);
+            // setBit(frame, 20, false);
+            //
+            // uint32_t counter = (frame.data[6] >> 4) + 1;
+            // counter += 1;
+            //
+            // frame.data[6] = (frame.data[6] & 0x0F) | (counter << 4);
+            // frame.data[7] = computeVehicleChecksum(frame);
+
+            should_send = false;
         }
 
         if (frame.id == 1016)

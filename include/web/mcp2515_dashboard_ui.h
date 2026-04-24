@@ -2244,7 +2244,7 @@ Format: <b>CAN&nbsp;ID</b> (hex) &bull; <b>MUX</b> (-1&nbsp;=&nbsp;any) &bull; <
                     $('fps-fill').style.width = Math.min(d.fps / 20 * 100, 100) + '%';
                     $('hw-badge').textContent = HW[d.hw] || '?';
                     $('dot').className = 'sdot ' + (d.txerr > 5 ? 'dot-warn' : on ? 'dot-on' : 'dot-off');
-                    $('hdr-desc').textContent = on ? (d.AD ? 'AD active — injecting' : 'CAN active — monitoring') : 'Waiting for CAN frames';
+
                     renderEflg(d.eflg);
                     if (d.mux) {
                         for (let i = 0; i < 3; i++) {
@@ -2258,6 +2258,9 @@ Format: <b>CAN&nbsp;ID</b> (hex) &bull; <b>MUX</b> (-1&nbsp;=&nbsp;any) &bull; <
                     state.hw = d.hw;
                     state.sp = d.sp;
                     state.can = d.ci;
+
+                    $('hdr-desc').textContent = on ? (d.ci ? 'AD active — injecting' : 'CAN active — monitoring') : 'Waiting for CAN frames';
+
                     updateInjectButtons(d.ci);
                     updateSniffIdToggle();
                     updSeg($('hw-seg'), d.hw, 'hw-btn');
