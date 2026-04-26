@@ -1,0 +1,293 @@
+#pragma once
+#include <Arduino.h>
+
+static const char DASH_HTML[] PROGMEM = R"HTML(<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EV CAN Tools</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#111;color:#eee;font:14px/1.5 -apple-system,BlinkMacSystemFont,sans-serif;max-width:480px;margin:0 auto;padding:16px 12px 48px}
+h2{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#555;margin:22px 0 6px}
+.card{background:#1a1a1a;border:1px solid #252525;border-radius:10px;overflow:hidden;margin-bottom:6px}
+.row{display:flex;justify-content:space-between;align-items:center;padding:9px 14px;border-bottom:1px solid #222}
+.row:last-child{border-bottom:none}
+.lbl{color:#888;font-size:13px}
+.val{font-weight:600;font-size:13px}
+.ok{color:#3dba72}.err{color:#ff4f4f}.warn{color:#f5a623}
+.tog{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid #222}
+.tog:last-child{border-bottom:none}
+.tlbl{font-size:13px;color:#ccc;flex:1;padding-right:12px}
+.sw{position:relative;width:40px;height:22px;flex-shrink:0}
+.sw input{opacity:0;width:0;height:0;position:absolute}
+.sl{position:absolute;inset:0;background:#2e2e2e;border-radius:11px;cursor:pointer;transition:background .15s}
+.sl::before{content:'';position:absolute;width:16px;height:16px;left:3px;top:3px;background:#888;border-radius:50%;transition:transform .15s,background .15s}
+input:checked+.sl{background:#3a5fa8}
+input:checked+.sl::before{transform:translateX(18px);background:#5b8fff}
+.inp{background:#1e1e1e;border:1px solid #2e2e2e;border-radius:7px;color:#eee;padding:8px 10px;font-size:13px;width:100%;margin-top:6px;outline:none}
+.inp:focus{border-color:#444}
+.btn{display:block;width:100%;background:#2a3f6e;color:#8ab4f8;border:1px solid #3a5fa8;border-radius:8px;padding:10px;cursor:pointer;font-size:13px;margin-top:8px;font-weight:600;transition:background .15s}
+.btn:hover{background:#334d85}
+.btn.danger{background:#3b1616;color:#ff7070;border-color:#7a2424}
+.btn.danger:hover{background:#4a1e1e}
+.srow{display:flex;gap:8px;align-items:flex-end;margin-top:6px}
+.srow input{flex:1;margin-top:0}
+.srow button{flex-shrink:0;width:auto;margin-top:0;padding:8px 14px}
+.net{padding:8px 10px;background:#1e1e1e;border-radius:6px;margin-top:4px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-size:13px;border:1px solid #2a2a2a}
+.net:hover{background:#242424}
+.rssi{color:#555;font-size:12px}
+.pgrp{display:flex;gap:4px;margin-top:8px}
+.pbtn{flex:1;background:#1e1e1e;border:1px solid #2e2e2e;border-radius:7px;color:#666;padding:8px 2px;cursor:pointer;font-size:12px;font-weight:600;transition:all .15s}
+.pbtn:hover{border-color:#555;color:#ccc}
+.pbtn.act{background:#2a3f6e;border-color:#3a5fa8;color:#8ab4f8}
+.hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.htitle{font-size:18px;font-weight:700;letter-spacing:-.02em}
+#dot{width:8px;height:8px;border-radius:50%;background:#333;flex-shrink:0}
+#rfbtn{background:none;border:1px solid #2e2e2e;border-radius:6px;color:#555;cursor:pointer;padding:3px 8px;font-size:16px;line-height:1;transition:color .15s,border-color .15s;margin-left:8px}
+#rfbtn:hover{color:#aaa;border-color:#555}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinning{animation:spin .4s linear}
+.pad{padding:12px 14px}
+</style>
+</head>
+<body>
+<div class="hdr">
+  <span class="htitle">EV CAN Tools</span>
+  <div style="display:flex;align-items:center">
+    <span id="dot"></span>
+    <button id="rfbtn" onclick="manualRefresh()" title="Refresh">&#8635;</button>
+  </div>
+</div>
+
+<h2>State</h2>
+<div class="card">
+  <div class="row"><span class="lbl">CAN Bus</span><span id="s_can" class="val">--</span></div>
+  <div class="row"><span class="lbl">Uptime</span><span id="s_up" class="val">--</span></div>
+  <div class="row"><span class="lbl">Frames RX / TX</span><span id="s_frm" class="val">--</span></div>
+  <div class="row"><span class="lbl">Follow distance</span><span id="s_fd" class="val">--</span></div>
+  <div class="row"><span class="lbl">Speed profile HW3 / HW4</span><span id="s_sp" class="val">--</span></div>
+  <div class="row"><span class="lbl">Speed limit fused / vision</span><span id="s_sl" class="val">--</span></div>
+  <div class="row"><span class="lbl">Speed offset</span><span id="s_so" class="val">--</span></div>
+  <div class="row"><span class="lbl">Gateway autopilot</span><span id="s_gw" class="val">--</span></div>
+  <div class="row"><span class="lbl">Ban shield hit / check</span><span id="s_bs" class="val">--</span></div>
+</div>
+
+<h2>Features</h2>
+<div class="card" id="feat"></div>
+
+<h2>Speed Profile</h2>
+<div class="card" id="spd_tog"></div>
+<div class="card pad">
+  <span class="lbl">Profile (web source)</span>
+  <div class="pgrp">
+    <button class="pbtn" data-pv="1" onclick="setProfile(1)">Sloth</button>
+    <button class="pbtn" data-pv="2" onclick="setProfile(2)">Chill</button>
+    <button class="pbtn" data-pv="3" onclick="setProfile(3)">Normal</button>
+    <button class="pbtn" data-pv="4" onclick="setProfile(4)">Hurry</button>
+    <button class="pbtn" data-pv="5" onclick="setProfile(5)">Max</button>
+  </div>
+</div>
+
+<h2>Speed Offset</h2>
+<div class="card" id="off_tog"></div>
+<div class="card pad">
+  <span class="lbl">Fixed offset value (0 – 50)</span>
+  <div class="srow">
+    <input type="number" id="speed_offset_fix_from_web" class="inp" min="0" max="50" placeholder="0">
+    <button class="btn" onclick="saveNum('speed_offset_fix_from_web')">Save</button>
+  </div>
+</div>
+
+<h2>WiFi — Hotspot (AP)</h2>
+<div class="card">
+  <div class="row"><span class="lbl">SSID</span><span id="ap_ssid" class="val">--</span></div>
+  <div class="row"><span class="lbl">IP</span><span id="ap_ip" class="val">--</span></div>
+  <div class="row"><span class="lbl">Clients</span><span id="ap_cli" class="val">--</span></div>
+</div>
+<div class="card pad">
+  <span class="lbl">Change hotspot name / password</span>
+  <input type="text"     id="ap_ssid_in" class="inp" placeholder="New SSID">
+  <input type="password" id="ap_pass_in" class="inp" placeholder="New password (min 8 chars)">
+  <button class="btn" onclick="saveAp()">Save AP config</button>
+</div>
+
+<h2>WiFi — Client (STA)</h2>
+<div class="card">
+  <div class="row"><span class="lbl">Status</span><span id="sta_st" class="val">--</span></div>
+  <div class="row"><span class="lbl">SSID</span><span id="sta_ssid" class="val">--</span></div>
+  <div class="row"><span class="lbl">IP</span><span id="sta_ip" class="val">--</span></div>
+</div>
+<div class="card pad">
+  <button class="btn" onclick="scanWifi()">Scan networks</button>
+  <div id="nets"></div>
+  <input type="text"     id="sta_ssid_in" class="inp" placeholder="SSID">
+  <input type="password" id="sta_pass_in" class="inp" placeholder="Password">
+  <button class="btn" onclick="connectWifi()">Connect</button>
+</div>
+
+<h2>System</h2>
+<button class="btn danger" onclick="reboot()">Reboot</button>
+
+<script>
+const GW=['NONE','HIGHWAY','ENHANCED','SELF_DRIVING','BASIC'];
+
+const FEATS=[
+  ['enable_inject','Injection active'],
+  ['enable_fsd','FSD enable'],
+  ['use_hw3_code','Use HW3 code'],
+  ['enable_ban_shield','Ban shield'],
+  ['enable_nag_suppress','Nag suppress'],
+  ['enable_summon_unlock','Summon unlock'],
+  ['disable_camera','Disable camera'],
+  ['enable_emergency_vehicle_detection_runtime','Emergency vehicle detection'],
+  ['enable_isa_speed_chime_suppress_runtime','ISA chime suppress'],
+  ['enable_enhanced_autopilot_runtime','Enhanced autopilot'],
+  ['enable_print','Serial print'],
+];
+const SPD_TOGS=[
+  ['speed_profile_set_by_distance_or_web','Profile source: web (off = follow distance)'],
+  ['enable_set_hw3_profile','Write HW3 speed profile to frame'],
+];
+const OFF_TOGS=[
+  ['speed_offset_enable_override','Enable speed offset override'],
+  ['speed_offset_use_fix_or_dynamic','Use auto table (off = fixed value)'],
+];
+
+function buildToggles(containerId, list) {
+  const el = document.getElementById(containerId);
+  list.forEach(([key, lbl]) => {
+    el.insertAdjacentHTML('beforeend',
+      '<div class="tog"><span class="tlbl">'+lbl+'</span>' +
+      '<label class="sw"><input type="checkbox" id="'+key+'" onchange="setConf(\''+key+'\',this.checked)">' +
+      '<span class="sl"></span></label></div>');
+  });
+}
+buildToggles('feat', FEATS);
+buildToggles('spd_tog', SPD_TOGS);
+buildToggles('off_tog', OFF_TOGS);
+
+async function setConf(key, val) {
+  const p = new URLSearchParams();
+  p.set(key, (typeof val === 'boolean') ? (val ? '1' : '0') : String(val));
+  try { await fetch('/config', {method:'POST', body:p}); } catch(e) {}
+}
+async function saveNum(key) {
+  const v = document.getElementById(key).value;
+  if (v === '') return;
+  await setConf(key, v);
+}
+
+function g(id) { return document.getElementById(id); }
+function txt(id, t, cls) {
+  const e = g(id);
+  e.textContent = t;
+  e.className = 'val' + (cls ? ' '+cls : '');
+}
+function fmtUp(s) {
+  const h=Math.floor(s/3600), m=Math.floor((s%3600)/60), ss=s%60;
+  return h+':'+String(m).padStart(2,'0')+':'+String(ss).padStart(2,'0');
+}
+
+function updateState(s) {
+  txt('s_can', s.can_online ? 'Online' : 'Offline', s.can_online ? 'ok' : 'err');
+  txt('s_up',  fmtUp(s.uptime));
+  txt('s_frm', s.frame_cnt+' / '+s.frame_sent);
+  txt('s_fd',  s.follow_distance);
+  txt('s_sp',  s.profile_hw3+' / '+s.profile_hw4);
+  txt('s_sl',  s.speed_limit_fused+' / '+s.speed_limit_vision_only+' km/h');
+  txt('s_so',  s.speed_offset);
+  txt('s_gw',  GW[s.gateway_autopilot] || s.gateway_autopilot);
+  txt('s_bs',  s.ban_shield_cnt+' / '+s.ban_shield_check_cnt);
+}
+
+function updateCnf(c) {
+  [...FEATS, ...SPD_TOGS, ...OFF_TOGS].forEach(([key]) => {
+    const e = g(key);
+    if (e && e.type === 'checkbox') e.checked = !!c[key];
+  });
+  document.querySelectorAll('.pbtn').forEach(b => b.classList.toggle('act', +b.dataset.pv === c.speed_profile_from_web));
+  const so = g('speed_offset_fix_from_web');
+  if (so && document.activeElement !== so) so.value = c.speed_offset_fix_from_web;
+}
+
+async function poll() {
+  try {
+    const r = await fetch('/status');
+    if (!r.ok) throw 0;
+    const d = await r.json();
+    updateState(d.state);
+    updateCnf(d.cnf);
+    g('dot').style.background = '#3dba72';
+  } catch(e) {
+    g('dot').style.background = '#ff4f4f';
+  }
+}
+
+async function loadAp() {
+  try {
+    const d = await (await fetch('/ap_status')).json();
+    txt('ap_ssid', d.ssid); txt('ap_ip', d.ip); txt('ap_cli', d.clients);
+  } catch(e) {}
+}
+async function loadSta() {
+  try {
+    const d = await (await fetch('/wifi_status')).json();
+    txt('sta_st',   d.connected ? 'Connected' : 'Disconnected', d.connected ? 'ok' : 'warn');
+    txt('sta_ssid', d.ssid || '--');
+    txt('sta_ip',   d.connected ? (d.ip||'--') : '--');
+  } catch(e) {}
+}
+
+async function scanWifi() {
+  g('nets').innerHTML = '<div style="color:#555;padding:6px 0">Scanning...</div>';
+  try {
+    const d = await (await fetch('/wifi_scan')).json();
+    g('nets').innerHTML = d.networks.map(n => {
+      const esc = n.ssid.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+      return '<div class="net" onclick="g(\'sta_ssid_in\').value=\''+esc+'\'">'+
+             '<span>'+esc+(n.enc?' &#128274;':'')+'</span>'+
+             '<span class="rssi">'+n.rssi+' dBm</span></div>';
+    }).join('');
+  } catch(e) {
+    g('nets').innerHTML = '<div style="color:#ff4f4f;padding:6px 0">Scan failed</div>';
+  }
+}
+
+async function connectWifi() {
+  const p = new URLSearchParams({ssid: g('sta_ssid_in').value, pass: g('sta_pass_in').value});
+  try { await fetch('/wifi_config', {method:'POST', body:p}); } catch(e) {}
+  setTimeout(loadSta, 6000);
+}
+
+async function saveAp() {
+  const ssid = g('ap_ssid_in').value, pass = g('ap_pass_in').value;
+  if (!ssid) return alert('SSID required');
+  if (pass && pass.length < 8) return alert('Password must be at least 8 chars');
+  const p = new URLSearchParams({ssid, pass});
+  try {
+    await fetch('/ap_config', {method:'POST', body:p});
+    alert('Saved. Reboot to apply new hotspot settings.');
+  } catch(e) {}
+}
+
+async function reboot() {
+  if (!confirm('Reboot device?')) return;
+  try { await fetch('/reboot', {method:'POST'}); } catch(e) {}
+}
+
+function manualRefresh() {
+  const b = g('rfbtn');
+  b.classList.add('spinning');
+  b.addEventListener('animationend', () => b.classList.remove('spinning'), {once:true});
+  poll(); loadAp(); loadSta();
+}
+
+poll(); loadAp(); loadSta();
+setInterval(poll, 2000);
+setInterval(loadAp, 15000);
+setInterval(loadSta, 6000);
+</script>
+</body>
+</html>)HTML";
