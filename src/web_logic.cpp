@@ -135,7 +135,13 @@ handleStatus() {
     JU(speed_offset_fix_from_web);
 #undef JB
 #undef JU
-    j += "}}";
+    j += ",\"auto_cfg\":[";
+    for (int i = 0; i < 12; i++) {
+        if (i > 0) j += ",";
+        j += "{\"spd\":" + String(c.speed_limit_auto_cfg[i].speed_limit);
+        j += ",\"pct\":" + String(c.speed_limit_auto_cfg[i].offset_percent) + "}";
+    }
+    j += "]}}";
     server.send(200, "application/json", j);
 }
 
@@ -171,6 +177,11 @@ handleConfig() {
     if (server.hasArg("speed_offset_fix_from_web")) {
         int v = server.arg("speed_offset_fix_from_web").toInt();
         c.speed_offset_fix_from_web = (uint32_t)constrain(v, 0, 50);
+    }
+    for (int i = 0; i < 12; i++) {
+        String key = "auto_cfg_" + String(i);
+        if (server.hasArg(key))
+            c.speed_limit_auto_cfg[i].offset_percent = (uint8_t)constrain(server.arg(key).toInt(), 0, 100);
     }
 
     dashSavePrefs();

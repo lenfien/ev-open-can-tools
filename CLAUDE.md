@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Memory System
+
+**IMPORTANT — OVERRIDE DEFAULT MEMORY PATH**: All persistent memory files for this project are stored in `.claude/memory/` inside this repository (tracked by git), NOT in the system default path (`~/.claude/projects/.../memory/`). Always read from and write to `.claude/memory/` in the repo root. The index file is `.claude/memory/MEMORY.md`.
+
 ## Build System
 
 This project uses **PlatformIO**. The user-editable `platformio_profile.h` must be configured before building.
