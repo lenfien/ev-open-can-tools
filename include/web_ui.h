@@ -119,8 +119,13 @@ body.light .thknob{transform:translateX(26px)}
 <body>
 <div class="hdr">
   <span class="htitle">Tesla CAN 助手</span>
-  <div style="display:flex;align-items:center">
+  <div style="display:flex;align-items:center;gap:10px">
     <span id="dot"></span>
+    <div class="segsw" id="seg_inject" onclick="toggleInject()">
+      <span class="segopt">关闭注入</span>
+      <span class="segopt">开启注入</span>
+      <span class="segknob"></span>
+    </div>
     <div class="thsw" onclick="toggleTheme()" title="切换主题">
       <span class="thopt">&#9790;</span>
       <span class="thopt">&#9728;</span>
@@ -131,6 +136,7 @@ body.light .thknob{transform:translateX(26px)}
 </div>
 
 <div id="pg_main" class="pg act">
+
 <h2>状态</h2>
 <div class="grid">
   <div class="tile"><span class="tlb">CAN 总线</span><span id="s_can" class="tval">--</span></div>
@@ -142,14 +148,6 @@ body.light .thknob{transform:translateX(26px)}
   <div class="tile"><span class="tlb">速度偏移</span><span id="s_so" class="tval">--</span></div>
   <div class="tile"><span class="tlb">网关自动驾驶</span><span id="s_gw" class="tval">--</span></div>
   <div class="tile"><span class="tlb">Ban 盾 命中/检查</span><span id="s_bs" class="tval">--</span></div>
-</div>
-
-<div class="master-card" id="master-card">
-  <div>
-    <div class="master-lbl">注入激活</div>
-    <div class="master-sub">总开关 · 控制以下所有功能</div>
-  </div>
-  <label class="sw"><input type="checkbox" id="enable_inject" onchange="setConf('enable_inject',this.checked);syncMaster(this.checked)"><span class="sl"></span></label>
 </div>
 
 <div id="controlled" class="locked">
@@ -326,6 +324,13 @@ function refreshCards() {
   g('seg_off_mode').classList.toggle('right', _useDynamic);
 }
 
+function toggleInject() {
+  const seg = g('seg_inject');
+  const on = !seg.classList.contains('right');
+  seg.classList.toggle('right', on);
+  setConf('enable_inject', on);
+  syncMaster(on);
+}
 function toggleSpdSrc() {
   _useStalk = !_useStalk;
   setConf('speed_profile_use_follow_distance', _useStalk);
@@ -421,7 +426,7 @@ function ttxt(id, t, cls) {
 }
 
 function updateCnf(c) {
-  const inj = g('enable_inject'); if (inj) inj.checked = !!c.enable_inject;
+  const segInj = g('seg_inject'); if (segInj) segInj.classList.toggle('right', !!c.enable_inject);
   FEATS.forEach(([key]) => {
     const e = g(key); if (e && e.type === 'checkbox') e.checked = !!c[key];
   });

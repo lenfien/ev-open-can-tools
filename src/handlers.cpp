@@ -226,6 +226,7 @@ uint8_t CanHandler::
 CalcCustomOffset() const {
     uint8_t result = 0;
     for (auto &one : m_cnf.speed_limit_auto_cfg) {
+        if (one.speed_limit == 0 && one.offset_percent == 0) continue;
         if (m_state.speed_limit_fused >= one.speed_limit)
             result = one.offset_percent;
     }

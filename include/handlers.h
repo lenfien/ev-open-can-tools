@@ -40,7 +40,7 @@ struct CanConf {
 
     // auto offset table: speed_limit(km/h) → offset_percent(%), sorted ascending
     SpeedLimitToPercent speed_limit_auto_cfg[12] = {
-        {20, 60}, {30, 60}, {40, 50}, {50, 40}, {60, 33},
+        {0, 60}, {20, 60}, {30, 60}, {40, 50}, {50, 40}, {60, 33},
         {70, 12}, {80, 11}, {90, 10}, {100, 10}, {110, 10}, {120, 10}
     };
 };

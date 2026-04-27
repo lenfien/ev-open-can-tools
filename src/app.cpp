@@ -47,9 +47,8 @@ AppLoop() {
         bool should_send = h->Handle(frame, *g_can_driver);
         if (should_send && h->m_cnf.enable_inject) {
 
-            // 保证一些位永远不要被设置为1
             {
-                // 永远不要把这个位设置为1，否则直接停用1周。
+                // Never set this bit to 1 — otherwise it will directly trigger a 1-week suspension.
                 if (frame.id == 1021 && frame.GetMux() == 0)
                     frame.SetBit(52, 0);
             }
