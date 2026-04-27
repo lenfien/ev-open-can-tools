@@ -19,22 +19,9 @@ pio run -e feather_m4_can
 **Supported environments** (defined in `platformio.ini`):
 `feather_rp2040_can`, `feather_m4_can`, `esp32_twai`, `esp32_feather_v2_mcp2515`, `lilygo_tcan485_hw3`, `m5stack-atomic-can-base`, `m5stack-atoms3-mini-can-base`, `esp32_ext_mcp2515`, `waveshare_ESP32_S3_RS485_CAN`
 
-## Testing & Linting
+## Linting
 
 ```bash
-# Native C++ tests (no hardware required)
-pio test -e native
-pio test -e native_bypass_tlssc_requirement
-pio test -e native_log_buffer
-pio test -e native_nag
-
-# Run a single test suite
-pio test -e native -f test_native_hw4
-
-# Python tests
-python test/test_can_analyzer.py
-
-# Linting (clang-format)
 git ls-files '*.cpp' '*.h' '*.hpp' | xargs clang-format --dry-run --Werror --style=file
 ```
 
@@ -60,11 +47,10 @@ Logic is split between `include/` (types, interfaces, web UI) and `src/` (implem
 | `src/web_logic.cpp` | HTTP API handlers, WiFi management, OTA, settings persistence |
 | `include/app.h` | Global `g_can_handler` / `g_can_driver` declarations; `AppSetup()` / `AppLoop()` prototypes |
 | `include/handlers.h` | `CanConf`, `CanState`, `CanHandler` structs; `m_gtw_protector` ban-shield frame table |
-| `include/can_frame_types.h` | `CanFrame` — `id`, `dlc`, `data[8]`; `GetMux()`, `SetBit()` helpers |
+| `include/can_frame_types.h` | `CanFrame` — `id`, `dlc`, `data[8]`; `GetMux()`, `SetBit()` helpers (bits are LSB-first: bit N = byte N/8, mask 1«(N%8)) |
 | `include/web_logic.h` | HTTP route declarations, WiFi/AP state, web server instance |
 | `include/web_ui.h` | Embedded single-page app HTML/JS (CAN sniffer, feature toggles, WiFi config, OTA) |
 | `include/drivers/can_driver.h` | Abstract driver interface (init / read / send / setFilters) |
-| `include/drivers/mock_driver.h` | Mock driver used in native tests |
 | `platformio_profile.h` | User config: driver selection, vehicle variant, GPIO pins, credentials, feature flags |
 | `scripts/platformio_set_profile.py` | CLI to write `platformio_profile.h` |
 
@@ -92,6 +78,16 @@ Frame 2047 contains a 10-mux sequence. The shield stores the last-seen frame per
 
 Reference implementation of the FSD injection logic using an older `FSDConfig`-based API. Not included in any build target — kept as documentation of the CAN encoding (speed offset raw value, HW3 slew-rate limiter, etc.).
 
+## Plugin System
+
+JSON-based CAN modification rules can be installed at runtime via the web dashboard (URL, file upload, or paste). The firmware detects conflicts between plugin rules and base firmware logic. Plugin state is separate from `CanConf` NVS storage.
+
+## Versioning
+
+- Project version lives in `VERSION` (Semantic Versioning).
+- All changes go into the `Unreleased` section of `CHANGELOG.md` before merge.
+- `scripts/check_release_metadata.py` enforces `VERSION` / `CHANGELOG.md` consistency at release time.
+
 ## CI / Release
 
-GitHub Actions (`.github/workflows/ci.yml`) runs: clang-format lint → native tests → multi-board builds → release artifact upload. `scripts/check_release_metadata.py` validates `VERSION` and `CHANGELOG.md` consistency before release.
+GitHub Actions runs: clang-format lint → native tests → multi-board builds → release artifact upload.
