@@ -2,11 +2,11 @@
 #include <Arduino.h>
 
 static const char DASH_HTML[] PROGMEM = R"HTML(<!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>EV CAN Tools</title>
+<title>Tesla CAN 助手</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#111;color:#eee;font:14px/1.5 -apple-system,BlinkMacSystemFont,sans-serif;max-width:480px;margin:0 auto;padding:16px 12px 48px}
@@ -54,105 +54,105 @@ input:checked+.sl::before{transform:translateX(18px);background:#5b8fff}
 </head>
 <body>
 <div class="hdr">
-  <span class="htitle">EV CAN Tools</span>
+  <span class="htitle">Tesla CAN 助手</span>
   <div style="display:flex;align-items:center">
     <span id="dot"></span>
-    <button id="rfbtn" onclick="manualRefresh()" title="Refresh">&#8635;</button>
+    <button id="rfbtn" onclick="manualRefresh()" title="刷新">&#8635;</button>
   </div>
 </div>
 
-<h2>State</h2>
+<h2>状态</h2>
 <div class="card">
-  <div class="row"><span class="lbl">CAN Bus</span><span id="s_can" class="val">--</span></div>
-  <div class="row"><span class="lbl">Uptime</span><span id="s_up" class="val">--</span></div>
-  <div class="row"><span class="lbl">Frames RX / TX</span><span id="s_frm" class="val">--</span></div>
-  <div class="row"><span class="lbl">Follow distance</span><span id="s_fd" class="val">--</span></div>
-  <div class="row"><span class="lbl">Speed profile HW3 / HW4</span><span id="s_sp" class="val">--</span></div>
-  <div class="row"><span class="lbl">Speed limit fused / vision</span><span id="s_sl" class="val">--</span></div>
-  <div class="row"><span class="lbl">Speed offset</span><span id="s_so" class="val">--</span></div>
-  <div class="row"><span class="lbl">Gateway autopilot</span><span id="s_gw" class="val">--</span></div>
-  <div class="row"><span class="lbl">Ban shield hit / check</span><span id="s_bs" class="val">--</span></div>
+  <div class="row"><span class="lbl">CAN 总线</span><span id="s_can" class="val">--</span></div>
+  <div class="row"><span class="lbl">运行时间</span><span id="s_up" class="val">--</span></div>
+  <div class="row"><span class="lbl">帧 收 / 发</span><span id="s_frm" class="val">--</span></div>
+  <div class="row"><span class="lbl">跟车距离</span><span id="s_fd" class="val">--</span></div>
+  <div class="row"><span class="lbl">速度档位 HW3 / HW4</span><span id="s_sp" class="val">--</span></div>
+  <div class="row"><span class="lbl">限速 融合 / 视觉</span><span id="s_sl" class="val">--</span></div>
+  <div class="row"><span class="lbl">速度偏移</span><span id="s_so" class="val">--</span></div>
+  <div class="row"><span class="lbl">网关自动驾驶状态</span><span id="s_gw" class="val">--</span></div>
+  <div class="row"><span class="lbl">Ban 盾 命中 / 检查</span><span id="s_bs" class="val">--</span></div>
 </div>
 
-<h2>Features</h2>
+<h2>功能</h2>
 <div class="card" id="feat"></div>
 
-<h2>Speed Profile</h2>
+<h2>速度档位</h2>
 <div class="card" id="spd_tog"></div>
-<div class="card pad">
-  <span class="lbl">Profile (web source)</span>
+<div class="card pad" id="profile_web_card" style="display:none">
+  <span class="lbl">档位（网页来源）</span>
   <div class="pgrp">
-    <button class="pbtn" data-pv="1" onclick="setProfile(1)">Sloth</button>
-    <button class="pbtn" data-pv="2" onclick="setProfile(2)">Chill</button>
-    <button class="pbtn" data-pv="3" onclick="setProfile(3)">Normal</button>
-    <button class="pbtn" data-pv="4" onclick="setProfile(4)">Hurry</button>
-    <button class="pbtn" data-pv="5" onclick="setProfile(5)">Max</button>
+    <button class="pbtn" data-pv="1" onclick="setProfile(1)">最慢</button>
+    <button class="pbtn" data-pv="2" onclick="setProfile(2)">舒适</button>
+    <button class="pbtn" data-pv="3" onclick="setProfile(3)">标准</button>
+    <button class="pbtn" data-pv="4" onclick="setProfile(4)">快速</button>
+    <button class="pbtn" data-pv="5" onclick="setProfile(5)">最快</button>
   </div>
 </div>
 
-<h2>Speed Offset</h2>
+<h2>速度偏移</h2>
 <div class="card" id="off_tog"></div>
-<div class="card pad">
-  <span class="lbl">Fixed offset value (0 – 50)</span>
+<div class="card pad" id="offset_fix_card" style="display:none">
+  <span class="lbl">固定偏移值（0 – 50）</span>
   <div class="srow">
     <input type="number" id="speed_offset_fix_from_web" class="inp" min="0" max="50" placeholder="0">
-    <button class="btn" onclick="saveNum('speed_offset_fix_from_web')">Save</button>
+    <button class="btn" onclick="saveNum('speed_offset_fix_from_web')">保存</button>
   </div>
 </div>
 
-<h2>WiFi — Hotspot (AP)</h2>
+<h2>WiFi — 热点 (AP)</h2>
 <div class="card">
   <div class="row"><span class="lbl">SSID</span><span id="ap_ssid" class="val">--</span></div>
   <div class="row"><span class="lbl">IP</span><span id="ap_ip" class="val">--</span></div>
-  <div class="row"><span class="lbl">Clients</span><span id="ap_cli" class="val">--</span></div>
+  <div class="row"><span class="lbl">已连接设备</span><span id="ap_cli" class="val">--</span></div>
 </div>
 <div class="card pad">
-  <span class="lbl">Change hotspot name / password</span>
-  <input type="text"     id="ap_ssid_in" class="inp" placeholder="New SSID">
-  <input type="password" id="ap_pass_in" class="inp" placeholder="New password (min 8 chars)">
-  <button class="btn" onclick="saveAp()">Save AP config</button>
+  <span class="lbl">修改热点名称 / 密码</span>
+  <input type="text"     id="ap_ssid_in" class="inp" placeholder="新 SSID">
+  <input type="password" id="ap_pass_in" class="inp" placeholder="新密码（至少 8 位）">
+  <button class="btn" onclick="saveAp()">保存热点配置</button>
 </div>
 
-<h2>WiFi — Client (STA)</h2>
+<h2>WiFi — 客户端 (STA)</h2>
 <div class="card">
-  <div class="row"><span class="lbl">Status</span><span id="sta_st" class="val">--</span></div>
+  <div class="row"><span class="lbl">状态</span><span id="sta_st" class="val">--</span></div>
   <div class="row"><span class="lbl">SSID</span><span id="sta_ssid" class="val">--</span></div>
   <div class="row"><span class="lbl">IP</span><span id="sta_ip" class="val">--</span></div>
 </div>
 <div class="card pad">
-  <button class="btn" onclick="scanWifi()">Scan networks</button>
+  <button class="btn" onclick="scanWifi()">扫描网络</button>
   <div id="nets"></div>
   <input type="text"     id="sta_ssid_in" class="inp" placeholder="SSID">
-  <input type="password" id="sta_pass_in" class="inp" placeholder="Password">
-  <button class="btn" onclick="connectWifi()">Connect</button>
+  <input type="password" id="sta_pass_in" class="inp" placeholder="密码">
+  <button class="btn" onclick="connectWifi()">连接</button>
 </div>
 
-<h2>System</h2>
-<button class="btn danger" onclick="reboot()">Reboot</button>
+<h2>系统</h2>
+<button class="btn danger" onclick="reboot()">重启设备</button>
 
 <script>
-const GW=['NONE','HIGHWAY','ENHANCED','SELF_DRIVING','BASIC'];
+const GW=['无','高速','增强','自动驾驶','基础'];
 
 const FEATS=[
-  ['enable_inject','Injection active'],
-  ['enable_fsd','FSD enable'],
-  ['use_hw3_code','Use HW3 code'],
-  ['enable_ban_shield','Ban shield'],
-  ['enable_nag_suppress','Nag suppress'],
-  ['enable_summon_unlock','Summon unlock'],
-  ['disable_camera','Disable camera'],
-  ['enable_emergency_vehicle_detection_runtime','Emergency vehicle detection'],
-  ['enable_isa_speed_chime_suppress_runtime','ISA chime suppress'],
-  ['enable_enhanced_autopilot_runtime','Enhanced autopilot'],
-  ['enable_print','Serial print'],
+  ['enable_inject','注入激活'],
+  ['enable_fsd','FSD 启用'],
+  ['use_hw3_code','使用 HW3 代码'],
+  ['enable_ban_shield','Ban 盾保护'],
+  ['enable_nag_suppress','消除提示音'],
+  ['enable_summon_unlock','Summon 解锁'],
+  ['disable_camera','禁用摄像头'],
+  ['enable_emergency_vehicle_detection_runtime','紧急车辆检测'],
+  ['enable_isa_speed_chime_suppress_runtime','ISA 提示音抑制'],
+  ['enable_enhanced_autopilot_runtime','增强自动驾驶'],
+  ['enable_print','串口输出'],
 ];
 const SPD_TOGS=[
-  ['speed_profile_set_by_distance_or_web','Profile source: web (off = follow distance)'],
-  ['enable_set_hw3_profile','Write HW3 speed profile to frame'],
+  ['speed_profile_use_follow_distance','使用跟车距离拨杆控制档位'],
+  ['enable_set_hw3_profile','将速度档位写入 HW3 帧'],
 ];
 const OFF_TOGS=[
-  ['speed_offset_enable_override','Enable speed offset override'],
-  ['speed_offset_use_fix_or_dynamic','Use auto table (off = fixed value)'],
+  ['speed_offset_enable_override','启用速度偏移覆盖'],
+  ['speed_offset_use_fix_or_dynamic','使用自动表（关 = 固定值）'],
 ];
 
 function buildToggles(containerId, list) {
@@ -168,10 +168,22 @@ buildToggles('feat', FEATS);
 buildToggles('spd_tog', SPD_TOGS);
 buildToggles('off_tog', OFF_TOGS);
 
+function refreshCards() {
+  const useStalk   = g('speed_profile_use_follow_distance')?.checked;
+  const overrideOn = g('speed_offset_enable_override')?.checked;
+  const useDynamic = g('speed_offset_use_fix_or_dynamic')?.checked;
+  g('profile_web_card').style.display = useStalk ? 'none' : '';
+  g('offset_fix_card').style.display  = (overrideOn && !useDynamic) ? '' : 'none';
+}
 async function setConf(key, val) {
   const p = new URLSearchParams();
   p.set(key, (typeof val === 'boolean') ? (val ? '1' : '0') : String(val));
   try { await fetch('/config', {method:'POST', body:p}); } catch(e) {}
+  refreshCards();
+}
+async function setProfile(v) {
+  await setConf('speed_profile_from_web', v);
+  document.querySelectorAll('.pbtn').forEach(b => b.classList.toggle('act', +b.dataset.pv === v));
 }
 async function saveNum(key) {
   const v = document.getElementById(key).value;
@@ -191,7 +203,7 @@ function fmtUp(s) {
 }
 
 function updateState(s) {
-  txt('s_can', s.can_online ? 'Online' : 'Offline', s.can_online ? 'ok' : 'err');
+  txt('s_can', s.can_online ? '在线' : '离线', s.can_online ? 'ok' : 'err');
   txt('s_up',  fmtUp(s.uptime));
   txt('s_frm', s.frame_cnt+' / '+s.frame_sent);
   txt('s_fd',  s.follow_distance);
@@ -210,6 +222,7 @@ function updateCnf(c) {
   document.querySelectorAll('.pbtn').forEach(b => b.classList.toggle('act', +b.dataset.pv === c.speed_profile_from_web));
   const so = g('speed_offset_fix_from_web');
   if (so && document.activeElement !== so) so.value = c.speed_offset_fix_from_web;
+  refreshCards();
 }
 
 async function poll() {
@@ -234,14 +247,14 @@ async function loadAp() {
 async function loadSta() {
   try {
     const d = await (await fetch('/wifi_status')).json();
-    txt('sta_st',   d.connected ? 'Connected' : 'Disconnected', d.connected ? 'ok' : 'warn');
+    txt('sta_st',   d.connected ? '已连接' : '未连接', d.connected ? 'ok' : 'warn');
     txt('sta_ssid', d.ssid || '--');
     txt('sta_ip',   d.connected ? (d.ip||'--') : '--');
   } catch(e) {}
 }
 
 async function scanWifi() {
-  g('nets').innerHTML = '<div style="color:#555;padding:6px 0">Scanning...</div>';
+  g('nets').innerHTML = '<div style="color:#555;padding:6px 0">扫描中...</div>';
   try {
     const d = await (await fetch('/wifi_scan')).json();
     g('nets').innerHTML = d.networks.map(n => {
@@ -251,7 +264,7 @@ async function scanWifi() {
              '<span class="rssi">'+n.rssi+' dBm</span></div>';
     }).join('');
   } catch(e) {
-    g('nets').innerHTML = '<div style="color:#ff4f4f;padding:6px 0">Scan failed</div>';
+    g('nets').innerHTML = '<div style="color:#ff4f4f;padding:6px 0">扫描失败</div>';
   }
 }
 
@@ -263,17 +276,17 @@ async function connectWifi() {
 
 async function saveAp() {
   const ssid = g('ap_ssid_in').value, pass = g('ap_pass_in').value;
-  if (!ssid) return alert('SSID required');
-  if (pass && pass.length < 8) return alert('Password must be at least 8 chars');
+  if (!ssid) return alert('SSID 不能为空');
+  if (pass && pass.length < 8) return alert('密码至少需要 8 位');
   const p = new URLSearchParams({ssid, pass});
   try {
     await fetch('/ap_config', {method:'POST', body:p});
-    alert('Saved. Reboot to apply new hotspot settings.');
+    alert('已保存，重启后新热点配置生效。');
   } catch(e) {}
 }
 
 async function reboot() {
-  if (!confirm('Reboot device?')) return;
+  if (!confirm('确认重启设备？')) return;
   try { await fetch('/reboot', {method:'POST'}); } catch(e) {}
 }
 

@@ -9,6 +9,7 @@
 #include "drivers/can_driver.h"
 #include "handlers.h"
 #include "drivers/twai_driver.h"
+#include "web_logic.h"
 
 CanHandler *g_can_handler = nullptr;
 CanDriver* g_can_driver;
@@ -40,6 +41,7 @@ AppLoop() {
     {
         digitalWrite(PIN_LED, LOW);
         h->m_state.frame_cnt++;
+        mcpDashOnFrame(frame);
 
         // CanFrame original = frame;
         bool should_send = h->Handle(frame, *g_can_driver);

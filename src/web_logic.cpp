@@ -127,7 +127,7 @@ handleStatus() {
     JB(disable_camera);
     JB(enable_emergency_vehicle_detection_runtime);
     JB(enable_isa_speed_chime_suppress_runtime);
-    JB(speed_profile_set_by_distance_or_web);
+    JB(speed_profile_use_follow_distance);
     JU(speed_profile_from_web);
     JB(enable_set_hw3_profile);
     JB(speed_offset_enable_override);
@@ -155,7 +155,7 @@ handleConfig() {
         {"disable_camera",                             &c.disable_camera},
         {"enable_emergency_vehicle_detection_runtime", &c.enable_emergency_vehicle_detection_runtime},
         {"enable_isa_speed_chime_suppress_runtime",    &c.enable_isa_speed_chime_suppress_runtime},
-        {"speed_profile_set_by_distance_or_web",       &c.speed_profile_set_by_distance_or_web},
+        {"speed_profile_use_follow_distance",       &c.speed_profile_use_follow_distance},
         {"enable_set_hw3_profile",                     &c.enable_set_hw3_profile},
         {"speed_offset_enable_override",               &c.speed_offset_enable_override},
         {"speed_offset_use_fix_or_dynamic",            &c.speed_offset_use_fix_or_dynamic},

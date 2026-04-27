@@ -63,24 +63,25 @@ Handle1021Mux0(CanFrame &frame) {
         if (!m_cnf.use_hw3_code)
             frame.SetBit(60, true);
 
-        if (m_cnf.speed_profile_set_by_distance_or_web) {
-            switch (m_cnf.speed_profile_from_web) {
-                case 5:
-                case 4:
-                    m_state.speed_profile_to_hw3 = 2;
-                    break;
-                case 3:
-                    m_state.speed_profile_to_hw3 = 1;
-                    break;
-                default:
-                    m_state.speed_profile_to_hw3 = 0;
-                    break;
-            }
-        } else {
+        if (m_cnf.speed_profile_use_follow_distance) {
             switch (m_state.follow_distance) {
                 case 1:  m_state.speed_profile_to_hw3 = 2; break;
                 case 2:  m_state.speed_profile_to_hw3 = 1; break;
                 default: m_state.speed_profile_to_hw3 = 0; break;
+            }
+        }
+        else {
+            switch (m_cnf.speed_profile_from_web) {
+            case 5:
+            case 4:
+                m_state.speed_profile_to_hw3 = 2;
+                break;
+            case 3:
+                m_state.speed_profile_to_hw3 = 1;
+                break;
+            default:
+                m_state.speed_profile_to_hw3 = 0;
+                break;
             }
         }
 
@@ -123,7 +124,7 @@ Handle1021Mux2(CanFrame &frame) {
     if (!m_cnf.enable_fsd)
         return true;
 
-    if (m_cnf.speed_profile_set_by_distance_or_web) {
+    if (m_cnf.speed_profile_use_follow_distance) {
         switch (m_state.follow_distance) {
             case 1:  m_state.speed_profile_to_hw4 = 3; break;
             case 2:  m_state.speed_profile_to_hw4 = 2; break;
@@ -277,7 +278,7 @@ PrintCnf() {
         m_cnf.disable_camera, m_cnf.enable_emergency_vehicle_detection_runtime,
         m_cnf.enable_isa_speed_chime_suppress_runtime);
     Serial.printf("CanConf speed: profile_by_dist=%u profile_web=%u set_hw3=%u offset_en=%u offset_fix_dyn=%u offset_val=%u\n",
-        m_cnf.speed_profile_set_by_distance_or_web, m_cnf.speed_profile_from_web,
+        m_cnf.speed_profile_use_follow_distance, m_cnf.speed_profile_from_web,
         m_cnf.enable_set_hw3_profile, m_cnf.speed_offset_enable_override,
         m_cnf.speed_offset_use_fix_or_dynamic, m_cnf.speed_offset_fix_from_web);
     Serial.printf("CanConf speed_limit_auto_cfg:");

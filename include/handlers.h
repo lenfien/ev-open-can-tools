@@ -29,7 +29,7 @@ struct CanConf {
     uint32_t enable_isa_speed_chime_suppress_runtime   = false;
 
     // speed profile
-    uint32_t speed_profile_set_by_distance_or_web = true; // true=web, false=follow distance stalk
+    uint32_t speed_profile_use_follow_distance = true; // true=follow distance stalk, false=web
     uint32_t speed_profile_from_web               = 2;    // 1(fastest)–5(slowest), used when source=web
     uint32_t enable_set_hw3_profile               = true;
 
