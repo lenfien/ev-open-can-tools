@@ -16,6 +16,8 @@ CanDriver* g_can_driver;
 
 void
 AppSetup() {
+    g_can_handler = new CanHandler();
+
     delay(1500);
     Serial.begin(115200);
     unsigned long t0 = millis();

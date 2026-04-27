@@ -10,8 +10,6 @@
 
 void setup()
 {
-    g_can_handler = new CanHandler();
-
     AppSetup();
 
     delay(2000);

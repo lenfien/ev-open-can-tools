@@ -140,7 +140,7 @@ private:
     bool Handle1021Mux2(CanFrame &frame);
 
 public:
-    std::vector<uint32_t> filter_can_id_list = {880, 921, 1016, 1021, 2047, 838, 601};
+    std::vector<uint32_t> filter_can_id_list = {921, 1016, 1021, 2047};
 
     // Reference frames for ban shield — mux index → expected clean frame content.
     // A mux frame is only forwarded when its content differs from the stored reference.

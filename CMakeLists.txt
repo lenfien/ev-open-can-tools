@@ -1,2 +1,2 @@
 cmake_minimum_required(VERSION 3.10)
-add_executable(ev-open-can-tools src/main.cpp)
+add_executable(ev-open-can-tools src/*.cpp)
