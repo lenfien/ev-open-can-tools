@@ -1,6 +1,9 @@
 #pragma once
 
-#include <cstring>
+#include <memory>
+
+extern struct CanHandler *g_can_handler;
+extern struct CanDriver* g_can_driver;
 
 struct CanFrame
 {
@@ -10,12 +13,12 @@ struct CanFrame
 
 public:
     inline uint8_t
-    GetMux(uint32_t mux_length = 3) {
+    GetMux(uint32_t mux_length = 3) const {
         switch (mux_length) {
-            case 4:
-                return data[0] & 0x0F;
-            default:
-                return data[0] & 0x07;
+        case 4:
+            return data[0] & 0x0F;
+        default:
+            return data[0] & 0x07;
         }
     }
 
@@ -26,7 +29,7 @@ public:
 
         int byteIndex = bit / 8;
         int bitIndex = bit % 8;
-        uint8_t mask = static_cast<uint8_t>(1U << bitIndex);
+        auto mask = static_cast<uint8_t>(1U << bitIndex);
         if (value)
             data[byteIndex] |= mask;
         else

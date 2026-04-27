@@ -2,7 +2,7 @@
 // Created by hong- on 2026/4/26.
 //
 
-#include "app.h"
+#include "common.h"
 #include "web_logic.h"
 
 Preferences prefs;

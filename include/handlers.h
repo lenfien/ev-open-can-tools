@@ -1,6 +1,6 @@
 #pragma once
 
-#include "can_frame_types.h"
+#include "common.h"
 #include "drivers/can_driver.h"
 #include <Arduino.h>
 #include <vector>

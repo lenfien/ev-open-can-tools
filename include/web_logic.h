@@ -1,6 +1,6 @@
 #pragma once
 
-#include "app.h"
+#include "common.h"
 #include <WiFi.h>
 #include <WebServer.h>
 #include <Preferences.h>

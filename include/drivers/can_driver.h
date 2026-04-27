@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../can_frame_types.h"
+#include "../common.h"
 
 struct CanDriver
 {
