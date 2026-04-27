@@ -1,0 +1,27 @@
+﻿中文注释,可能的枚举值,名称,mux,起始位,长度
+Autopilot 当前状态，本项目用于判断是否处于激活状态,0=禁用; 1=不可用; 2=可用; 3=激活-正常; 4=激活-受限; 5=激活-导航; 6=激活-FSD; 8=中止中; 9=已中止; 14=故障; 15=SNA,DAS_autopilotState,-,0,4
+左后盲区监测预警等级,0=无警告; 1=警告L1; 2=警告L2; 3=SNA,DAS_blindSpotRearLeft,-,4,2
+右后盲区监测预警等级,0=无警告; 1=警告L1; 2=警告L2; 3=SNA,DAS_blindSpotRearRight,-,6,2
+★ 融合限速（雷达+视觉），本项目用于计算速度偏移，来自 data[1][4:0]×5,原始值×5=km/h，0=未知; 31=无限速,DAS_fusedSpeedLimit,-,8,5
+抑制当前限速超速声音警告,0=不抑制; 1=抑制,DAS_suppressSpeedWarning,-,13,1
+Summon 召唤路径上检测到障碍物,0=无障碍; 1=有障碍,DAS_summonObstacle,-,14,1
+Summon 已通过门闸区域,0=未通过; 1=已通过,DAS_summonClearedGate,-,15,1
+★ 纯视觉识别限速（不含雷达融合），本项目读取来自 data[2][4:0]×5,原始值×5=km/h，0=未知; 31=无限速,DAS_visionOnlySpeedLimit,-,16,5
+传感器加热器状态（雨雾除雾）,0=关/SNA; 1=开,DAS_heaterState,-,21,1
+前向碰撞预警（FCW）激活状态,0=无; 1=前碰撞预警; 3=SNA,DAS_forwardCollisionWarning,-,22,2
+自动泊车功能就绪状态,0=不可用; 1=就绪,DAS_autoparkReady,-,24,1
+已完成自动泊车,0=否; 1=是,DAS_autoParked,-,25,1
+自动泊车正在执行中,0=否; 1=是,DAS_autoparkActive,-,26,1
+Summon 前进最大距离已达到,0=否; 1=是,DAS_summonFwdLeashReached,-,27,1
+Summon 后退最大距离已达到,0=否; 1=是,DAS_summonRvsLeashReached,-,28,1
+车道安全系统（LSS）当前运行模式,0=故障; 1=LDW车道偏离预警; 2=LKA车道保持; 3=ELK紧急车道保持; 4=监控; 5=盲区; 6=中止; 7=关,DAS_lssState,-,29,3
+侧向碰撞主动规避方向,0=无; 1=向左规避; 2=向右规避; 3=SNA,DAS_sideCollisionAvoid,-,32,2
+侧向碰撞预警方向,0=无; 1=左警告; 2=右警告; 3=左右均警告,DAS_sideCollisionWarning,-,34,2
+侧向碰撞规避功能被抑制,0=未抑制; 1=已抑制,DAS_sideCollisionInhibit,-,36,1
+车道偏离预警方向和强度,0=无; 1=左偏离; 2=右偏离; 3=左严重; 4=右严重; 5=SNA,DAS_laneDepartureWarning,-,37,3
+车队限速功能状态,0=不可用; 1=可用; 2=激活; 3=保持,DAS_fleetSpeedState,-,40,2
+★ 手握方向盘检测状态（ECE R79 Nag 来源），本项目读取此字段判断是否需要抑制,0=不需要; 1=需要-检测到; 2=需要-未检测到; 3=需要-视觉提示; 4=需要-第1次提示音; 5=需要-第2次提示音; 6=需要-减速中; 7=需要-已触发停车; 8=已暂停; 9=升级提示1; 10=升级提示2; 15=SNA,DAS_autopilotHandsOnState,-,42,4
+自动变道（ALC）状态,0=禁用不可用; 1=无车道不可用; 2=声纳无效; 3=跟车中不可用; 4=出匝道不可用; 5=车速不可用; 6=仅左可用; 7=仅右可用; 8=左右均可用; 9=左变道中; 10=右变道中; 11~14=等待障碍通过; 15~20=中止; 21=实线; 22~27=被阻挡; 28=等待手握; 29=超时中止; 30=路线无效中止; 31=SNA,DAS_autoLaneChangeState,-,46,5
+Summon 召唤功能当前可用状态,0=不可用; 1=可用,DAS_summonAvailable,-,51,1
+帧计数器（0~15 循环，用于校验）,-,DAS_statusCounter,-,52,4
+帧校验和,-,DAS_statusChecksum,-,56,8

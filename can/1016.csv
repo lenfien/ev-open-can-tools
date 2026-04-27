@@ -1,0 +1,46 @@
+﻿名称,mux,起始位,长度,可能的枚举值,中文注释
+UI_autopilotControlRequest,-,0,1,0=传统横向控制; 1=新一代控制,Autopilot 控制模式请求（Legacy/NextGen）
+UI_ulcStalkConfirm,-,1,1,0=关; 1=开,ULC 拨杆确认（统一车道控制激活确认）
+UI_summonHeartbeat,-,2,2,-,Summon 心跳计数（持续更新以维持召唤连接）
+UI_curvSpeedAdaptDisable,-,4,1,0=启用; 1=禁用,弯道自适应速度调整禁用
+UI_dasDeveloper,-,5,1,0=关; 1=开,DAS 开发者模式启用（调试用途）
+UI_enableVinAssociation,-,6,1,0=关; 1=开,VIN 关联功能启用
+UI_lssLkaEnabled,-,7,1,0=关; 1=开,车道保持辅助（LKA）启用
+UI_lssLdwEnabled,-,8,1,0=关; 1=开,车道偏离预警（LDW）启用
+UI_coastToCoast,-,9,1,0=关; 1=开,跨州/长途 FSD 导航模式启用
+UI_autoSummonEnable,-,10,1,0=关; 1=开,自动召唤（Auto Summon）功能启用
+UI_exceptionListEnable,-,11,1,0=关; 1=开,FSD 路线例外列表启用
+UI_roadCheckDisable,-,12,1,0=启用; 1=禁用,FSD 路况检测禁用
+UI_driveOnMapsEnable,-,13,1,0=关; 1=开,基于地图的自动驾驶启用（Drive on Nav/Maps）
+UI_handsOnRequirementDisable,-,14,1,0=需要手握; 1=禁用要求,禁用手握方向盘要求（关闭 Nag 触发条件）
+UI_ulcOffHighway,-,15,1,0=关; 1=开,ULC（统一车道控制）在非高速公路上启用
+UI_fuseLanesDisable,-,16,1,0=启用融合; 1=禁用融合,车道融合功能禁用
+UI_fuseHPPDisable,-,17,1,0=启用; 1=禁用,高精度地图预测（HPP）融合禁用
+UI_fuseVehiclesDisable,-,18,1,0=启用; 1=禁用,车辆融合感知禁用
+UI_enableClipParkedTelemetry,-,19,1,0=关; 1=开,停车片段遥测上传启用
+UI_visionSpeedType,-,20,2,0=禁用; 1=1秒; 2=2秒; 3=优化,视觉限速识别时间窗口类型
+UI_curvatureDatabaseOnly,-,22,1,0=关; 1=开,仅使用曲率数据库（不用实时感知）
+UI_lssElkEnabled,-,23,1,0=关; 1=开,紧急车道保持（ELK）启用
+UI_summonExitType,-,24,2,0=直行; 1=右转; 2=左转; 3=SNA,Summon 召唤退出停车位方式
+UI_summonEntryType,-,26,2,0=直行; 1=右转; 2=左转; 3=SNA,Summon 召唤进入停车位方式
+UI_selfParkRequest,-,28,4,0=无; 1=前进泊车; 2=后退泊车; 3=中止; 4=准备; 5=暂停; 6=继续; 7=自动召唤前进; 8=自动召唤后退; 9=取消; 10=已准备; 11=Smart Summon; 12=无操作; 15=SNA,自动泊车/召唤动作请求
+UI_summonReverseDist,-,32,6,63=SNA，其余为后退距离（单位未知）,Summon 召唤最大后退距离
+UI_undertakeAssistEnable,-,38,1,0=关; 1=开,超车辅助（Undertake Assist）启用
+UI_adaptiveSetSpeedEnable,-,39,1,0=关; 1=开,自适应设定速度启用
+UI_drivingSide,-,40,2,0=左舵; 1=右舵; 2=未知,驾驶侧配置（左行/右行国家）
+UI_enableClipTelemetry,-,42,1,0=关; 1=开,行车片段遥测上传启用
+UI_enableTripTelemetry,-,43,1,0=关; 1=开,行程遥测上传启用
+UI_enableRoadSegmentTelemetry,-,44,1,0=关; 1=开,路段遥测上传启用
+UI_accFollowDistanceSetting,-,45,3,★ 本项目读取此字段控制速度档位（0=1格~6=7格; 7=SNA）,★ ACC 跟车距离拨杆设置（1~7格），本项目通过此值映射速度档位（HW3/HW4）
+UI_hasDriveOnNav,-,48,1,0=否; 1=是,车辆是否具备基于导航的自动驾驶功能
+UI_followNavRouteEnable,-,49,1,0=关; 1=开,跟随导航路线自动变道启用
+UI_ulcSpeedConfig,-,50,2,0=禁用; 1=温和; 2=适中; 3=激进,ULC 速度控制激进程度
+UI_ulcBlindSpotConfig,-,52,2,0=标准; 1=激进; 2=极限,ULC 盲区处理激进程度
+UI_suppressExitPassingLane,-,54,1,0=关; 1=开,抑制在超车道上的自动退出
+UI_enableClipStartStopTelemetry,-,55,1,0=关; 1=开,行车片段起止事件遥测启用
+UI_alcOffHighwayEnable,-,56,1,0=关; 1=开,非高速公路自动变道（ALC）启用
+UI_validationLoop,-,57,1,0=关; 1=开,验证循环模式启用（测试用途）
+UI_smartSummonType,-,58,2,0=Pin定位; 1=寻找我; 2=智能泊车,Smart Summon 召唤模式类型
+UI_enableVisionOnlyStops,-,60,1,0=关; 1=开,仅使用视觉识别停车标志/红绿灯（不依赖地图）
+UI_source3D,-,61,2,0=地图高程; 1=路径预测; 2=XYZ预测,3D 路径规划高程数据来源
+UI_isaSpeedingChimeMuted,-,63,1,0=未静音; 1=已静音,★ ISA 超速提示音静音（本项目 ISA chime suppress 关键 bit，bit 63）
