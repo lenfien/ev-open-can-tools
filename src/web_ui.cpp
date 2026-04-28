@@ -85,7 +85,7 @@ body.light .thknob{transform:translateX(26px)}
 .fcard.wide{grid-column:span 2}
 .fcard{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:11px 14px;display:flex;align-items:center;gap:12px}
 .feat-children{display:grid;grid-template-columns:1fr 1fr;gap:6px;transition:opacity .25s;grid-column:span 2}
-.feat-children.locked,#controlled.locked{opacity:.35;pointer-events:none}
+.feat-children.locked,#controlled.locked{}
 #controlled{transition:opacity .25s}
 .master-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;transition:border-color .2s,background .2s}
 .master-card.on{border-color:#3a5fa8;background:linear-gradient(135deg,var(--card) 60%,#0d1f3c)}
