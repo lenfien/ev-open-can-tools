@@ -133,6 +133,7 @@ handleStatus() {
     JB(speed_offset_enable_override);
     JB(speed_offset_use_fix_or_dynamic);
     JU(speed_offset_fix_from_web);
+    JB(start_from_park);
 #undef JB
 #undef JU
     j += ",\"auto_cfg\":[";
@@ -165,6 +166,7 @@ handleConfig() {
         {"enable_set_hw3_profile",                     &c.enable_set_hw3_profile},
         {"speed_offset_enable_override",               &c.speed_offset_enable_override},
         {"speed_offset_use_fix_or_dynamic",            &c.speed_offset_use_fix_or_dynamic},
+        {"start_from_park",                            &c.start_from_park},
     };
     for (auto &b : bools) {
         if (server.hasArg(b.k))

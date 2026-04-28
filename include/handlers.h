@@ -43,6 +43,8 @@ struct CanConf {
         {0, 60}, {20, 60}, {30, 60}, {40, 50}, {50, 40}, {60, 33},
         {70, 12}, {80, 11}, {90, 10}, {100, 10}, {110, 10}, {120, 10}
     };
+
+    uint32_t start_from_park = 0; //
 };
 
 struct CanState {
@@ -117,27 +119,34 @@ public:
 
 private:
     // CAN 921  — decode speed limits (fused + vision-only) from data[1]/data[2].
-    void Handle921(CanFrame &frame);
+    bool
+    Handle921(CanFrame &frame);
 
     // CAN 1016 — decode follow distance from data[5][7:5].
-    void Handle1016(CanFrame &frame);
+    bool
+    Handle1016(CanFrame &frame);
 
     // CAN 2047 — update gateway_autopilot (mux 2) and run ban shield comparison.
     //            Returns true if the frame changed and should be forwarded.
-    bool Handle2047(CanFrame &frame);
+    bool
+    Handle2047(CanFrame &frame);
 
     // CAN 1021 — dispatch to the appropriate mux handler below.
-    bool Handle1021(CanFrame &frame);
+    bool
+    Handle1021(CanFrame &frame);
 
     // CAN 1021 mux 0 — set FSD enable bits (46, 60), HW3 speed profile (data[6][2:1]),
     //                   and emergency vehicle detection bit (59).
-    bool Handle1021Mux0(CanFrame &frame);
+    bool
+    Handle1021Mux0(CanFrame &frame);
 
     // CAN 1021 mux 1 — clear nag bit (19), set nag override (47); optionally clear camera bit (43).
-    bool Handle1021Mux1(CanFrame &frame);
+    bool
+    Handle1021Mux1(CanFrame &frame);
 
     // CAN 1021 mux 2 — set HW4 speed profile (data[7][6:4]) and write speed offset byte.
-    bool Handle1021Mux2(CanFrame &frame);
+    bool
+    Handle1021Mux2(CanFrame &frame);
 
 public:
     std::vector<uint32_t> filter_can_id_list = {921, 1016, 1021, 2047};

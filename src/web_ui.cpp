@@ -117,7 +117,7 @@ body.light .thknob{transform:translateX(26px)}
 .adv-chevron.open{transform:rotate(180deg)}
 .adv-body{padding:4px 14px 14px}
 .cfg-row{display:flex;align-items:center;gap:8px;margin-top:10px}
-.cfg-spd{font-size:12px;color:var(--lbl);width:48px;flex-shrink:0}
+.cfg-spd{font-size:12px;color:var(--lbl);width:64px;flex-shrink:0;white-space:nowrap}
 .cfg-pct{font-size:12px;font-weight:600;color:#5b8fff;width:36px;text-align:right;flex-shrink:0}
 </style>
 </head>
@@ -146,7 +146,7 @@ body.light .thknob{transform:translateX(26px)}
 <div class="grid">
   <div class="tile"><span class="tlb">CAN 总线</span><span id="s_can" class="tval">--</span></div>
   <div class="tile"><span class="tlb">运行时间</span><span id="s_up" class="tval">--</span></div>
-  <div class="tile"><span class="tlb">帧 收 / 发</span><span id="s_frm" class="tval">--</span></div>
+  <div class="tile"><span class="tlb">帧/s 收 / 发</span><span id="s_frm" class="tval">--</span></div>
   <div class="tile"><span class="tlb">跟车距离</span><span id="s_fd" class="tval">--</span></div>
   <div class="tile"><span class="tlb">速度档位 HW3/HW4</span><span id="s_sp" class="tval">--</span></div>
   <div class="tile"><span class="tlb">限速 融合/视觉</span><span id="s_sl" class="tval">--</span></div>
@@ -279,6 +279,7 @@ const FEATS=[
   ['enable_emergency_vehicle_detection_runtime','紧急车辆检测'],
   ['enable_isa_speed_chime_suppress_runtime','ISA 提示音抑制'],
   ['enable_enhanced_autopilot_runtime','增强自动驾驶'],
+  ['start_from_park','驻车启动'],
 ];
 
 function buildToggles(containerId, list) {
@@ -370,7 +371,7 @@ function buildAutoCfgSliders(cfgArr) {
       body.insertAdjacentHTML('beforeend',
         '<div class="cfg-row" id="cfg-row-'+i+'">' +
         '<span class="cfg-spd">'+entry.spd+' km/h</span>' +
-        '<input type="range" class="slider" style="flex:1" min="0" max="100" value="'+entry.pct+'" oninput="onCfgSlide('+i+',this.value)">' +
+        '<input type="range" class="slider" style="flex:1" min="0" max="50" value="'+entry.pct+'" oninput="onCfgSlide('+i+',this.value)">' +
         '<span class="cfg-pct" id="cfg-pct-'+i+'">'+entry.pct+'%</span>' +
         '</div>');
     } else if (document.activeElement !== row.querySelector('input')) {
@@ -413,10 +414,19 @@ function fmtUp(s) {
   return h+':'+String(m).padStart(2,'0')+':'+String(ss).padStart(2,'0');
 }
 
+let _prevFrm={cnt:null,sent:null,up:null};
 function updateState(s) {
   ttxt('s_can', s.can_online ? '在线' : '离线', s.can_online ? 'ok' : 'err');
   ttxt('s_up',  fmtUp(s.uptime));
-  ttxt('s_frm', s.frame_cnt+' / '+s.frame_sent);
+  let frmTxt='-- / --';
+  if (_prevFrm.up !== null && s.uptime > _prevFrm.up) {
+    const dt = s.uptime - _prevFrm.up;
+    const rx = Math.round((s.frame_cnt  - _prevFrm.cnt)  / dt);
+    const tx = Math.round((s.frame_sent - _prevFrm.sent) / dt);
+    frmTxt = rx+' / '+tx;
+  }
+  _prevFrm = {cnt: s.frame_cnt, sent: s.frame_sent, up: s.uptime};
+  ttxt('s_frm', frmTxt);
   ttxt('s_fd',  s.follow_distance);
   ttxt('s_sp',  s.profile_hw3+' / '+s.profile_hw4);
   ttxt('s_sl',  s.speed_limit_fused+' / '+s.speed_limit_vision_only+' km/h');

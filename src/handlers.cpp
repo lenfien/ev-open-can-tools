@@ -7,19 +7,29 @@
 
 // ── CAN 921 — speed limits ────────────────────────────────────────
 
-void CanHandler::
+bool CanHandler::
 Handle921(CanFrame &frame) {
-    if (frame.dlc < 8) return;
+    if (frame.dlc < 8) return false;
+
+    bool need_send = false;
     m_state.speed_limit_fused       = (frame.data[1] & 0x1F) * 5;
     m_state.speed_limit_vision_only = (frame.data[2] & 0x1F) * 5;
+    if (m_cnf.enable_isa_speed_chime_suppress_runtime) {
+        frame.data[1] |= 0x20;
+        frame.data[7] = ComputeVehicleChecksum(frame);
+        need_send = true;
+    }
+
+    return need_send;
 }
 
 // ── CAN 1016 — follow distance ────────────────────────────────────
 
-void CanHandler::
+bool CanHandler::
 Handle1016(CanFrame &frame) {
-    if (frame.dlc < 8) return;
+    if (frame.dlc < 8) return false;
     m_state.follow_distance = (frame.data[5] & 0b11100000) >> 5;
+    return false;
 }
 
 // ── CAN 2047 — gateway autopilot + ban shield ─────────────────────
@@ -152,14 +162,22 @@ Handle1021Mux2(CanFrame &frame) {
             m_state.speed_offset = (uint8_t)CalcCustomOffset();
 
         if (m_state.speed_offset > 0) {
-            if (!m_cnf.use_hw3_code) {
-                frame.data[1] = (frame.data[1] & 0xC0) | (m_state.speed_offset & 0x3F);
-            } else {
-                m_state.speed_offset = ReRange(Clamp(m_state.speed_offset, 0, 60), 0, 60, 0, 240);
-                frame.data[1] &= ~(0b00111111);
-                frame.data[1] |= (m_state.speed_offset >> 2);
-            }
+            frame.data[1] = (frame.data[1] & 0xC0) | (m_state.speed_offset & 0x3F);
+            //
+            // if (!m_cnf.use_hw3_code) {
+            //     frame.data[1] = (frame.data[1] & 0xC0) | (m_state.speed_offset & 0x3F);
+            // }
+            // else {
+            //     m_state.speed_offset = ReRange(Clamp(m_state.speed_offset, 0, 60), 0, 60, 0, 240);
+            //     frame.data[1] &= ~(0b00111111);
+            //     frame.data[1] |= (m_state.speed_offset >> 2);
+            // }
         }
+    }
+
+    if (m_cnf.start_from_park) {
+        frame.SetBit(6, true);
+        frame.SetBit(7, true);
     }
 
     return true;
@@ -186,7 +204,7 @@ Handle(CanFrame &frame, CanDriver &driver) {
     bool should_send = false;
 
     switch (frame.id) {
-        case 921:  Handle921(frame);                 break;
+        case 921:  should_send = Handle921(frame);                 break;
         case 1016: Handle1016(frame);                break;
         case 2047: should_send = Handle2047(frame);  break;
         case 1021: should_send = Handle1021(frame);  break;
