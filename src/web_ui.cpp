@@ -1,7 +1,12 @@
-#pragma once
-#include <Arduino.h>
+//
+// Created by bamboozhang on 2026/4/28.
+//
 
-static const char DASH_HTML[] PROGMEM = R"HTML(<!DOCTYPE html>
+#include "web_logic.h"
+
+const char DASH_HTML[] PROGMEM =
+
+R"HTML(<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">

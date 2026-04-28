@@ -4,13 +4,15 @@
 #include <WiFi.h>
 #include <WebServer.h>
 #include <Preferences.h>
+#include <Arduino.h>
+
 #include "handlers.h"
-#include "web_ui.h"
 
 #define PREFS_NS "ADunlock"
 
 extern Preferences prefs;
 extern WebServer   server;
+extern const char DASH_HTML[];
 
 static unsigned long startMs     = 0;
 static bool          canOnline   = false;

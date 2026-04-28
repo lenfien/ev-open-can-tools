@@ -134,57 +134,6 @@ inline bool isFilteredId(uint32_t id) {
     return false;
 }
 
-// ── 处理器：Legacy（0x3EE / 0x045 / 0x2F8 / 0x438）─────────────────────
-static void handleLegacy(CanFrame& frame, CanDriver& driver) {
-    // 0x438 (1080) — UI_driverAssistAnonDebugParams：UI_visionSpeedSlider = 100（bit56，7-bit）
-    if (frame.id == 1080) {
-        if (frame.dlc < 8) return;
-        if (!cfg.overrideSpeedLimit) return;
-        frame.data[7] = (frame.data[7] & 0x80) | 100;  // bits[6:0] = 100%，保留 bit7
-        if (driver.send(frame)) cfg.modifiedCount++;
-        else                    cfg.errorCount++;
-        return;
-    }
-    // 0x2F8 (760) — UI_gpsVehicleSpeed：写入 UI_userSpeedOffset（bit40|6，raw = kph+30）。
-    // Byte 5 布局：bits 0-5 = offset（0-63），bit 6 保留，bit 7 = UI_userSpeedOffsetUnits
-    //（0=MPH，1=KPH）。保留 bits 6-7，使 offset 单位跟随车辆设置。
-    if (frame.id == 760) {
-        if (cfg.legacyOffset == 0) return;
-        if (frame.dlc < 6) return;
-        uint8_t raw = (uint8_t)(cfg.legacyOffset + 30);
-        frame.data[5] = (frame.data[5] & 0xC0) | (raw & 0x3F);
-        if (driver.send(frame)) cfg.modifiedCount++;
-        else                    cfg.errorCount++;
-        return;
-    }
-    // 0x045 (69) — 档杆位置 → 速度档位（仅自动模式）
-    if (frame.id == 69 && cfg.profileModeAuto) {
-        if (frame.dlc < 2) return;
-        uint8_t pos = frame.data[1] >> 5;
-        if      (pos <= 1) cfg.speedProfile = 2;
-        else if (pos == 2) cfg.speedProfile = 1;
-        else               cfg.speedProfile = 0;
-        return;
-    }
-    // 0x3EE (1006) — FSD 激活帧（mux 0/1）
-    if (frame.id == 1006) {
-        if (frame.dlc < 8) return;
-        auto index = readMuxID(frame);
-        if (index == 0) cfg.fsdTriggered = cfg.forceActivate || isFSDSelectedInUI(frame);
-        if (index == 0 && cfg.fsdTriggered && cfg.fsdEnable) {
-            setBit(frame, 46, true);
-            setSpeedProfileV12V13(frame, cfg.speedProfile);
-            if (driver.send(frame)) cfg.modifiedCount++;
-            else                    cfg.errorCount++;
-        }
-        if (index == 1 && cfg.fsdTriggered && cfg.fsdEnable) {
-            setBit(frame, 19, false);
-            if (cfg.removeVisionSpeedLimit) setBit(frame, 48, false);  // UI_enableVisionSpeedControl = 关闭
-            driver.send(frame);  // 仅抑制 nag 提示，不计入 FSD 修改次数
-        }
-    }
-}
-
 // ── 处理器：HW3（0x3FD / 0x3F8 / 0x313）────────────────────────────────
 static void handleHW3(CanFrame& frame, CanDriver& driver) {
     // 0x313 (787) — UI_trackModeSettings：回传时带 trackModeRequest=ON
