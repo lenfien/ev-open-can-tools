@@ -851,6 +851,8 @@ function dbgRefreshBody(key) {
   // 记录当前焦点
   const ae = document.activeElement;
   const focusedId = (ae && ae.id && ae.id.startsWith('dbg_')) ? ae.id : null;
+  // select 下拉框打开中或 number 输入中，跳过刷新避免打断用户操作
+  if (focusedId && (ae.tagName === 'SELECT' || ae.type === 'number')) return;
   body.innerHTML = dbgRenderGroup(DBG_GROUPS.find(x=>x.key===key), snap);
   if (focusedId) { const el = g(focusedId); if (el) el.focus(); }
 }

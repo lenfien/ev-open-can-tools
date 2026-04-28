@@ -290,7 +290,7 @@ Handle(CanFrame &frame, CanDriver &driver) {
 
     switch (frame.id) {
         case 921:  should_send = Handle921(frame);                 break;
-        case 1016: Handle1016(frame);                break;
+        case 1016: should_send = Handle1016(frame);  break;
         case 2047: should_send = Handle2047(frame);  break;
         case 1021: should_send = Handle1021(frame);  break;
     }
