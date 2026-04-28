@@ -214,23 +214,27 @@ static void
 handleConfig() {
     CanConf &c = g_can_handler->m_cnf;
 
+    // 1) Schema 驱动的通用字段：遍历所有 schema 条目，有 arg 就写
+    for (size_t i = 0; i < kSchemaCount; ++i) {
+        const FieldDesc &f = kSchema[i];
+        if (!server.hasArg(f.key)) continue;
+        String raw = server.arg(f.key);
+        uint32_t v;
+        if (f.type == FT_BOOL) {
+            v = (raw == "1" || raw == "true") ? 1u : 0u;
+        } else {
+            v = (uint32_t)raw.toInt();
+        }
+        SchemaApplyValue(f, c, v);
+    }
+
+    // 2) 特殊控件（带 UI 隐藏逻辑 / 派生计算 / 不适合直接塞 schema 的）
     struct { const char *k; uint32_t *f; } bools[] = {
         {"enable_inject",                              &c.enable_inject},
-        {"enable_fsd",                                 &c.enable_fsd},
-        {"enable_print",                               &c.enable_print},
-        {"use_hw3_code",                               &c.use_hw3_code},
-        {"enable_ban_shield",                          &c.enable_ban_shield},
-        {"enable_nag_suppress",                        &c.enable_nag_suppress},
-        {"enable_summon_unlock",                       &c.enable_summon_unlock},
-        {"enable_enhanced_autopilot_runtime",          &c.enable_enhanced_autopilot_runtime},
-        {"disable_camera",                             &c.disable_camera},
-        {"enable_emergency_vehicle_detection_runtime", &c.enable_emergency_vehicle_detection_runtime},
-        {"enable_isa_speed_chime_suppress_runtime",    &c.enable_isa_speed_chime_suppress_runtime},
-        {"speed_profile_use_follow_distance",       &c.speed_profile_use_follow_distance},
+        {"speed_profile_use_follow_distance",          &c.speed_profile_use_follow_distance},
         {"enable_set_hw3_profile",                     &c.enable_set_hw3_profile},
         {"speed_offset_enable_override",               &c.speed_offset_enable_override},
         {"speed_offset_use_fix_or_dynamic",            &c.speed_offset_use_fix_or_dynamic},
-        {"start_from_park",                            &c.start_from_park},
     };
     for (auto &b : bools) {
         if (server.hasArg(b.k))
@@ -252,6 +256,60 @@ handleConfig() {
 
     dashSavePrefs();
     server.send(200, "application/json", "{\"ok\":true}");
+}
+
+// GET /schema  → 返回所有 schema 项 的元数据数组，前端据此自动渲染 UI。
+static const char *
+schemaFieldTypeStr(FieldType t) {
+    switch (t) {
+        case FT_BOOL:   return "bool";
+        case FT_ENUM:   return "enum";
+        case FT_NUMBER: return "number";
+    }
+    return "bool";
+}
+
+static const char *
+schemaWidgetTypeStr(WidgetType w) {
+    switch (w) {
+        case WT_CHECKBOX: return "checkbox";
+        case WT_SELECT:   return "select";
+        case WT_SLIDER:   return "slider";
+        case WT_INPUT:    return "input";
+    }
+    return "checkbox";
+}
+
+static void
+handleSchema() {
+    String j = "[";
+    for (size_t i = 0; i < kSchemaCount; ++i) {
+        const FieldDesc &f = kSchema[i];
+        if (i > 0) j += ",";
+        j += "{\"key\":\"";       j += f.key;             j += "\"";
+        j += ",\"label\":\"";      j += f.label_zh;        j += "\"";
+        j += ",\"group\":\"";      j += (f.group ? f.group : ""); j += "\"";
+        j += ",\"type\":\"";       j += schemaFieldTypeStr(f.type);    j += "\"";
+        j += ",\"widget\":\"";     j += schemaWidgetTypeStr(f.widget); j += "\"";
+        if (f.type == FT_NUMBER) {
+            j += ",\"min\":"  + String(f.min_val);
+            j += ",\"max\":"  + String(f.max_val);
+            j += ",\"step\":" + String(f.step);
+        }
+        if (f.type == FT_ENUM && f.enum_options) {
+            j += ",\"options\":[";
+            bool first = true;
+            for (const EnumOption *op = f.enum_options; op->label_zh != nullptr; ++op) {
+                if (!first) j += ",";
+                first = false;
+                j += "{\"v\":" + String(op->value) + ",\"l\":\"" + String(op->label_zh) + "\"}";
+            }
+            j += "]";
+        }
+        j += "}";
+    }
+    j += "]";
+    server.send(200, "application/json", j);
 }
 
 static void
@@ -531,6 +589,7 @@ WebSetup(CanHandler * /*handler*/, CanDriver * /*driver*/) {
 
     server.on("/",             HTTP_GET,  handleRoot);
     server.on("/status",       HTTP_GET,  handleStatus);
+    server.on("/schema",       HTTP_GET,  handleSchema);
     server.on("/config",       HTTP_POST, handleConfig);
     server.on("/reboot",       HTTP_POST, handleReboot);
     server.on("/wifi_scan",    HTTP_GET,  handleWifiScan);

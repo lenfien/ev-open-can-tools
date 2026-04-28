@@ -4,7 +4,62 @@
 
 #include "handlers.h"
 #include <Preferences.h>
+#include <cstddef>
 #include <cstring>
+
+// ── Schema ────────────────────────────────────────────────────────
+// 主页上的通用 bool/枚举/数值 字段都在这里声明。
+// 要新增一个简单开关：
+//   1. 在 CanConf 里加一个 uint32_t 字段
+//   2. 在 kSchema 里加一行
+// C++ handler 里照常读 m_cnf.xxx；Web 端 UI 自动生成。
+
+// 便捷宏：一个纯逻辑 bool 开关（不直接按 bit 写 CAN，frame_id=0）
+// 注意：#KEY 把裸标识符字符串化为 "enable_fsd" 这样的 key；offsetof 仍用裸名字。
+#define SCHEMA_BOOL_LOGIC(KEY, LABEL, GROUP)                                                  \
+    { #KEY, LABEL, GROUP, FT_BOOL, WT_CHECKBOX, 0, -1, 0, 1, 0, 0, 0, nullptr,                \
+      offsetof(CanConf, KEY) }
+
+const FieldDesc kSchema[] = {
+    // ── FSD ──
+    SCHEMA_BOOL_LOGIC(enable_fsd,                                  "FSD 启用",          "FSD"),
+    SCHEMA_BOOL_LOGIC(use_hw3_code,                                "使用 HW3 代码",      "FSD"),
+    SCHEMA_BOOL_LOGIC(enable_summon_unlock,                        "Summon 解锁",       "FSD"),
+    SCHEMA_BOOL_LOGIC(enable_enhanced_autopilot_runtime,           "增强自动驾驶",       "FSD"),
+    SCHEMA_BOOL_LOGIC(enable_emergency_vehicle_detection_runtime,  "紧急车辆检测",       "FSD"),
+    SCHEMA_BOOL_LOGIC(start_from_park,                             "驻车启动",           "FSD"),
+
+    // ── 安全 ──
+    SCHEMA_BOOL_LOGIC(enable_ban_shield,                           "Ban 盾保护",       "安全"),
+    SCHEMA_BOOL_LOGIC(enable_nag_suppress,                         "消除提示音",       "安全"),
+    SCHEMA_BOOL_LOGIC(disable_camera,                              "禁用摄像头",       "安全"),
+    SCHEMA_BOOL_LOGIC(enable_isa_speed_chime_suppress_runtime,     "ISA 提示音抑制",   "安全"),
+
+    // ── 系统 ──
+    SCHEMA_BOOL_LOGIC(enable_print,                                "串口日志",         "系统"),
+};
+const size_t kSchemaCount = sizeof(kSchema) / sizeof(kSchema[0]);
+
+// 通过 key 找到 schema 条目；没找到返回 nullptr。
+const FieldDesc *SchemaFindByKey(const char *key) {
+    for (size_t i = 0; i < kSchemaCount; ++i) {
+        if (strcmp(kSchema[i].key, key) == 0) return &kSchema[i];
+    }
+    return nullptr;
+}
+
+// 按 schema 条目把值写入 CanConf。值统一按 uint32_t 存储。
+void SchemaApplyValue(const FieldDesc &f, CanConf &cnf, uint32_t v) {
+    // 对数值/枚举做范围 clamp
+    if (f.type == FT_NUMBER && f.max_val > f.min_val) {
+        int32_t sv = (int32_t)v;
+        if (sv < f.min_val) sv = f.min_val;
+        if (sv > f.max_val) sv = f.max_val;
+        v = (uint32_t)sv;
+    }
+    uint32_t *slot = (uint32_t *)((char *)&cnf + f.conf_offset);
+    *slot = v;
+}
 
 // ── CAN 921 — speed limits ────────────────────────────────────────
 

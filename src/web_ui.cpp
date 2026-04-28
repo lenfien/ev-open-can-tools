@@ -181,9 +181,6 @@ body.light .thknob{transform:translateX(26px)}
 </div>
 
 <div id="controlled" class="locked">
-<h2>功能</h2>
-<div id="feat"></div>
-
 <h2>速度档位</h2>
 <div class="card">
   <div class="tog">
@@ -239,6 +236,8 @@ body.light .thknob{transform:translateX(26px)}
   </div>
 </div>
 
+<div id="schema_root"></div>
+
 </div><!-- controlled -->
 </div><!-- pg_main -->
 
@@ -271,12 +270,6 @@ body.light .thknob{transform:translateX(26px)}
 </div>
 
 <h2>系统</h2>
-<div class="card">
-  <div class="tog">
-    <span class="tlbl">串口输出</span>
-    <label class="sw"><input type="checkbox" id="enable_print" onchange="setConf('enable_print',this.checked)"><span class="sl"></span></label>
-  </div>
-</div>
 <button class="btn danger" onclick="reboot()">重启设备</button>
 </div><!-- pg_wifi -->
 
@@ -307,47 +300,62 @@ body.light .thknob{transform:translateX(26px)}
 <script>
 const GW=['无','高速','增强','自动驾驶','基础'];
 
-const FEATS=[
-  ['enable_fsd','FSD 启用'],
-  ['use_hw3_code','使用 HW3 代码'],
-  ['enable_ban_shield','Ban 盾保护'],
-  ['enable_nag_suppress','消除提示音'],
-  ['enable_summon_unlock','Summon 解锁'],
-  ['disable_camera','禁用摄像头'],
-  ['enable_emergency_vehicle_detection_runtime','紧急车辆检测'],
-  ['enable_isa_speed_chime_suppress_runtime','ISA 提示音抑制'],
-  ['enable_enhanced_autopilot_runtime','增强自动驾驶'],
-  ['start_from_park','驻车启动'],
-];
+// 主页大部分开关由 /schema 提供的元数据驱动渲染。SCHEMA 为字段描述数组。
+let SCHEMA = [];
+const SCHEMA_GRP_COLORS = {'FSD':'#5b8fff','安全':'#f5a623','系统':'#3dba72'};
 
-function buildToggles(containerId, list) {
-  const el = document.getElementById(containerId);
-  list.forEach(([key, lbl]) => {
-    el.insertAdjacentHTML('beforeend',
-      '<div class="tog"><span class="tlbl">'+lbl+'</span>' +
-      '<label class="sw"><input type="checkbox" id="'+key+'" onchange="setConf(\''+key+'\',this.checked)">' +
-      '<span class="sl"></span></label></div>');
+function renderSchemaGroups() {
+  const root = document.getElementById('schema_root');
+  root.innerHTML = '';
+  // 按 group 分桶，保持 schema 本身顺序
+  const order = [];
+  const groups = {};
+  SCHEMA.forEach(f => {
+    const g0 = f.group || '其他';
+    if (!(g0 in groups)) { groups[g0] = []; order.push(g0); }
+    groups[g0].push(f);
+  });
+  order.forEach(g0 => {
+    const h2 = document.createElement('h2'); h2.textContent = g0; root.appendChild(h2);
+    const card = document.createElement('div'); card.className = 'card';
+    groups[g0].forEach(f => {
+      card.insertAdjacentHTML('beforeend', schemaRowHtml(f));
+    });
+    root.appendChild(card);
   });
 }
-const FEAT_COLORS=['#5b8fff','#3dba72','#f5a623','#ff6b6b','#a78bfa','#34d399','#fb923c','#60a5fa','#f472b6','#4ade80','#facc15'];
-function buildFeatureCards(containerId, list) {
-  const el = document.getElementById(containerId);
-  el.className = 'flist';
-  list.forEach(([key, lbl], i) => {
-    const col = FEAT_COLORS[i % FEAT_COLORS.length];
-    el.insertAdjacentHTML('beforeend',
-      '<div class="fcard"><span class="ficon" style="background:'+col+'"></span>' +
-      '<span class="fname">'+lbl+'</span>' +
-      '<label class="sw"><input type="checkbox" id="'+key+'" onchange="setConf(\''+key+'\',this.checked)">' +
-      '<span class="sl"></span></label></div>');
-  });
+
+function schemaRowHtml(f) {
+  // 目前仅用到 bool (checkbox)；enum / number 预留，渲染为 select / input
+  if (f.type === 'bool') {
+    return '<div class="tog"><span class="tlbl">'+f.label+'</span>' +
+           '<label class="sw"><input type="checkbox" id="'+f.key+'" onchange="setConf(\''+f.key+'\',this.checked)">' +
+           '<span class="sl"></span></label></div>';
+  }
+  if (f.type === 'enum' && Array.isArray(f.options)) {
+    let opts = f.options.map(o => '<option value="'+o.v+'">'+o.l+'</option>').join('');
+    return '<div class="tog"><span class="tlbl">'+f.label+'</span>' +
+           '<select id="'+f.key+'" class="inp" style="width:auto;margin-top:0" onchange="setConf(\''+f.key+'\',+this.value)">'+opts+'</select></div>';
+  }
+  // number
+  const min = (f.min!==undefined?f.min:0), max = (f.max!==undefined?f.max:255);
+  return '<div class="tog"><span class="tlbl">'+f.label+'</span>' +
+         '<input type="number" id="'+f.key+'" class="inp" style="width:90px;margin-top:0" min="'+min+'" max="'+max+'" onchange="setConf(\''+f.key+'\',+this.value)"></div>';
 }
+
+async function loadSchema() {
+  try {
+    const r = await fetch('/schema');
+    SCHEMA = await r.json();
+  } catch(e) { SCHEMA = []; }
+  renderSchemaGroups();
+}
+
 function syncMaster(on) {
   document.getElementById('controlled').classList.toggle('locked', !on);
   const card = document.getElementById('master-card');
   if (card) card.classList.toggle('on', on);
 }
-buildFeatureCards('feat', FEATS);
 syncMaster(false);
 
 function switchTab(name) {
@@ -480,11 +488,17 @@ function ttxt(id, t, cls) {
 
 function updateCnf(c) {
   const segInj = g('seg_inject'); if (segInj) segInj.classList.toggle('right', !!c.enable_inject);
-  FEATS.forEach(([key]) => {
-    const e = g(key); if (e && e.type === 'checkbox') e.checked = !!c[key];
+  // Schema 驱动字段统一按类型回填
+  SCHEMA.forEach(f => {
+    const e = g(f.key); if (!e) return;
+    const v = c[f.key];
+    if (f.type === 'bool') {
+      if (e.type === 'checkbox') e.checked = !!v;
+    } else {
+      if (document.activeElement !== e) e.value = (v !== undefined ? v : '');
+    }
   });
   const hw3 = g('enable_set_hw3_profile'); if (hw3) hw3.checked = !!c.enable_set_hw3_profile;
-  const prnt = g('enable_print'); if (prnt) prnt.checked = !!c.enable_print;
   const ovr = g('speed_offset_enable_override'); if (ovr) ovr.checked = !!c.speed_offset_enable_override;
   _useStalk   = !!c.speed_profile_use_follow_distance;
   _overrideOn = !!c.speed_offset_enable_override;
@@ -502,6 +516,7 @@ function updateCnf(c) {
 
 async function poll() {
   try {
+    if (SCHEMA.length === 0) await loadSchema();
     const r = await fetch('/status');
     if (!r.ok) throw 0;
     const d = await r.json();
@@ -895,7 +910,7 @@ async function dbgSaveArchive() {
   }
 }
 
-poll(); loadAp(); loadSta();
+loadSchema(); poll(); loadAp(); loadSta();
 setInterval(poll, 2000);
 setInterval(loadAp, 15000);
 setInterval(loadSta, 6000);

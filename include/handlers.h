@@ -12,8 +12,47 @@ struct SpeedLimitToPercent {
     uint32_t offset_percent = 0;
 };
 
+// ── Schema 驱动的字段描述 ───────────────────────────────────────────
+// 主页上的通用 bool / 枚举 / 数值开关由 schema 统一描述；
+// C++ 侧在 handlers.cpp 里静态声明 kSchema[]，Web 前端通过 /schema 拉取并自动渲染。
+// 新增一个功能 = 只在 kSchema[] 里加一行（外加 CanConf 里补一个 uint32_t 字段）。
+enum FieldType  : uint8_t { FT_BOOL, FT_ENUM, FT_NUMBER };
+enum WidgetType : uint8_t { WT_CHECKBOX, WT_SELECT, WT_SLIDER, WT_INPUT };
+
+struct EnumOption {
+    uint32_t    value;    // 编码值
+    const char *label_zh; // 中文显示；nullptr 作为数组结束标记
+};
+
+struct FieldDesc {
+    const char *key;      // 内部 key，同时是 /config 的参数名
+    const char *label_zh; // UI 上的中文标签
+    const char *group;    // 分组名（如 "FSD" / "安全" / "系统"）；nullptr 表示不分组
+    FieldType   type;
+    WidgetType  widget;
+
+    // CAN 映射（可选；frame_id == 0 表示纯逻辑开关，不直接按 bit 写 CAN）
+    uint32_t frame_id;   // 0 = 无
+    int8_t   mux;        // -1 = 无 mux
+    uint8_t  bit_offset; // LSB-first，和 CanFrame::SetBit 一致
+    uint8_t  bit_width;  // 1 = bool；N = 枚举/数值
+
+    // 数值字段
+    int32_t min_val, max_val, step;
+
+    // 枚举字段（以 {0,nullptr} 结尾的数组）
+    const EnumOption *enum_options;
+
+    // 指向 CanConf 里存储位置的偏移；handler 读 / Web 写都走它。
+    // 使用 uint32_t 作为统一存储类型。
+    size_t conf_offset;
+};
+
+extern const FieldDesc kSchema[];
+extern const size_t    kSchemaCount;
+
 struct CanConf {
-    uint32_t version = 1;
+    uint32_t version = 2;
 
     uint32_t enable_inject    = false;
     uint32_t enable_fsd       = false;
@@ -46,6 +85,12 @@ struct CanConf {
 
     uint32_t start_from_park = 0; //
 };
+
+// 按 key 查找 schema 条目；找不到返回 nullptr。实现见 handlers.cpp。
+const FieldDesc *SchemaFindByKey(const char *key);
+
+// 按 schema 条目把值写入 CanConf（含范围 clamp）。实现见 handlers.cpp。
+void SchemaApplyValue(const FieldDesc &f, CanConf &cnf, uint32_t v);
 
 struct CanState {
     uint32_t follow_distance      = 1; // 1–5, from CAN 1016 data[5][7:5]
