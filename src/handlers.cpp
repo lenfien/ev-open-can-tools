@@ -4,6 +4,7 @@
 
 #include "handlers.h"
 #include <Preferences.h>
+#include <cstring>
 
 // ── CAN 921 — speed limits ────────────────────────────────────────
 
@@ -29,7 +30,15 @@ bool CanHandler::
 Handle1016(CanFrame &frame) {
     if (frame.dlc < 8) return false;
     m_state.follow_distance = (frame.data[5] & 0b11100000) >> 5;
-    return false;
+
+    // 缓存最近一次原始帧，供调试页展示
+    memcpy(m_dbg.last_1016.data, frame.data, 8);
+    m_dbg.last_1016.seen       = true;
+    m_dbg.last_1016.updated_ms = millis();
+
+    // 调试页覆盖：有任何 bit 被覆盖就改写并转发
+    bool overridden = ApplyDebugOverride(frame, m_dbg.ovr_1016);
+    return overridden;
 }
 
 // ── CAN 2047 — gateway autopilot + ban shield ─────────────────────
@@ -104,6 +113,13 @@ Handle1021Mux0(CanFrame &frame) {
     if (m_cnf.enable_emergency_vehicle_detection_runtime)
         frame.SetBit(59, true);
 
+    // 缓存原始帧（未覆盖前的 m_cnf 逻辑结果之前的值）— 放在最开头更符合
+    // "当前值" 语义，但这里简化为 handler 出口前保存覆盖应用前的值。
+    memcpy(m_dbg.last_1021_m0.data, frame.data, 8);
+    m_dbg.last_1021_m0.seen       = true;
+    m_dbg.last_1021_m0.updated_ms = millis();
+
+    ApplyDebugOverride(frame, m_dbg.ovr_1021_m0);
     return true;
 }
 
@@ -123,6 +139,14 @@ Handle1021Mux1(CanFrame &frame) {
         frame.SetBit(43, false);
         should_send = true;
     }
+
+    // 缓存原始帧用于调试页显示
+    memcpy(m_dbg.last_1021_m1.data, frame.data, 8);
+    m_dbg.last_1021_m1.seen       = true;
+    m_dbg.last_1021_m1.updated_ms = millis();
+
+    if (ApplyDebugOverride(frame, m_dbg.ovr_1021_m1))
+        should_send = true;
 
     return should_send;
 }
@@ -180,6 +204,12 @@ Handle1021Mux2(CanFrame &frame) {
         frame.SetBit(7, true);
     }
 
+    // 缓存原始帧用于调试页显示
+    memcpy(m_dbg.last_1021_m2.data, frame.data, 8);
+    m_dbg.last_1021_m2.seen       = true;
+    m_dbg.last_1021_m2.updated_ms = millis();
+
+    ApplyDebugOverride(frame, m_dbg.ovr_1021_m2);
     return true;
 }
 
@@ -224,6 +254,28 @@ Handle(CanFrame &frame, CanDriver &driver) {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────
+
+// 应用调试覆盖：按 mask/value 位级写入 frame，返回是否实际修改了任何 bit。
+// 安全红线：1021 mux 选择器 (bit 0/1/2) 与 ban protection bit 52 永不接受覆盖。
+bool CanHandler::
+ApplyDebugOverride(CanFrame &frame, const DebugOverride &ovr) {
+    // 拷贝一份 mask 并强制清掉红线位
+    uint8_t mask[8];
+    memcpy(mask, ovr.mask, 8);
+    // 禁止覆盖 mux 选择器 data[0] bit[0..2]
+    mask[0] &= static_cast<uint8_t>(~0x07);
+    // 禁止覆盖 ban protection bit 52 = data[6] bit 4
+    mask[6] &= static_cast<uint8_t>(~(1U << 4));
+
+    bool changed = false;
+    for (int i = 0; i < 8; i++) {
+        if (!mask[i]) continue;
+        uint8_t before = frame.data[i];
+        frame.data[i]  = static_cast<uint8_t>((before & ~mask[i]) | (ovr.value[i] & mask[i]));
+        if (frame.data[i] != before) changed = true;
+    }
+    return changed;
+}
 
 int CanHandler::
 Clamp(int value, int min, int max) {

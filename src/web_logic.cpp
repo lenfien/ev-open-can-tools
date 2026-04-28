@@ -10,6 +10,70 @@ WebServer   server(80);
 
 // ── Prefs ─────────────────────────────────────────────────────────
 
+// NVS key 用于持久化四组调试覆盖（mask+value），共 64 字节。
+// 结构：[ovr_1016 mask8 val8][ovr_1021_m0 mask8 val8][ovr_1021_m1 mask8 val8][ovr_1021_m2 mask8 val8]
+static constexpr const char *PREFS_KEY_DBG_OVR = "dbg_ovr";
+static constexpr size_t       DBG_OVR_BYTES    = 4 * 16; // 4 组 * (8 mask + 8 value)
+
+static void
+dbgPackOverrides(uint8_t out[DBG_OVR_BYTES]) {
+    const DebugOverride *arr[4] = {
+        &g_can_handler->m_dbg.ovr_1016,
+        &g_can_handler->m_dbg.ovr_1021_m0,
+        &g_can_handler->m_dbg.ovr_1021_m1,
+        &g_can_handler->m_dbg.ovr_1021_m2,
+    };
+    uint8_t *p = out;
+    for (int i = 0; i < 4; i++) {
+        memcpy(p, arr[i]->mask,  8); p += 8;
+        memcpy(p, arr[i]->value, 8); p += 8;
+    }
+}
+
+static void
+dbgUnpackOverrides(const uint8_t in[DBG_OVR_BYTES]) {
+    DebugOverride *arr[4] = {
+        &g_can_handler->m_dbg.ovr_1016,
+        &g_can_handler->m_dbg.ovr_1021_m0,
+        &g_can_handler->m_dbg.ovr_1021_m1,
+        &g_can_handler->m_dbg.ovr_1021_m2,
+    };
+    const uint8_t *p = in;
+    for (int i = 0; i < 4; i++) {
+        memcpy(arr[i]->mask,  p, 8); p += 8;
+        memcpy(arr[i]->value, p, 8); p += 8;
+    }
+}
+
+static void
+dbgSaveArchive() {
+    uint8_t buf[DBG_OVR_BYTES];
+    dbgPackOverrides(buf);
+    prefs.begin(PREFS_NS, false);
+    prefs.putBytes(PREFS_KEY_DBG_OVR, buf, DBG_OVR_BYTES);
+    prefs.end();
+}
+
+static void
+dbgLoadArchive() {
+    prefs.begin(PREFS_NS, true);
+    size_t sz = prefs.getBytesLength(PREFS_KEY_DBG_OVR);
+    if (sz == DBG_OVR_BYTES) {
+        uint8_t buf[DBG_OVR_BYTES];
+        prefs.getBytes(PREFS_KEY_DBG_OVR, buf, DBG_OVR_BYTES);
+        dbgUnpackOverrides(buf);
+        Serial.println("[DBG] archive restored from NVS");
+    }
+    prefs.end();
+}
+
+static void
+dbgClearArchive() {
+    prefs.begin(PREFS_NS, false);
+    prefs.remove(PREFS_KEY_DBG_OVR);
+    prefs.end();
+}
+
 static void
 dashSavePrefs() {
     prefs.begin(PREFS_NS, false);
@@ -299,6 +363,137 @@ handleApConfig() {
     server.send(200, "application/json", "{\"ok\":true}");
 }
 
+// ── Debug overlay (不落盘，用于调试页覆盖指定 bit) ─────────────
+
+static DebugOverride *
+dbgPickOverride(const String &frame_key) {
+    if (frame_key == "1016")    return &g_can_handler->m_dbg.ovr_1016;
+    if (frame_key == "1021_m0") return &g_can_handler->m_dbg.ovr_1021_m0;
+    if (frame_key == "1021_m1") return &g_can_handler->m_dbg.ovr_1021_m1;
+    if (frame_key == "1021_m2") return &g_can_handler->m_dbg.ovr_1021_m2;
+    return nullptr;
+}
+
+static const DebugLastFrame *
+dbgPickLast(const String &frame_key) {
+    if (frame_key == "1016")    return &g_can_handler->m_dbg.last_1016;
+    if (frame_key == "1021_m0") return &g_can_handler->m_dbg.last_1021_m0;
+    if (frame_key == "1021_m1") return &g_can_handler->m_dbg.last_1021_m1;
+    if (frame_key == "1021_m2") return &g_can_handler->m_dbg.last_1021_m2;
+    return nullptr;
+}
+
+static void
+dbgAppendGroup(String &j, const char *key, const DebugLastFrame &last, const DebugOverride &ovr) {
+    j += "\""; j += key; j += "\":{";
+    j += "\"seen\":"; j += (last.seen ? "true" : "false");
+    j += ",\"data\":[";
+    for (int i = 0; i < 8; i++) {
+        if (i) j += ",";
+        j += String(last.data[i]);
+    }
+    j += "],\"mask\":[";
+    for (int i = 0; i < 8; i++) {
+        if (i) j += ",";
+        j += String(ovr.mask[i]);
+    }
+    j += "],\"val\":[";
+    for (int i = 0; i < 8; i++) {
+        if (i) j += ",";
+        j += String(ovr.value[i]);
+    }
+    j += "]}";
+}
+
+static void
+handleDebugStatus() {
+    String j = "{";
+    dbgAppendGroup(j, "f1016",  g_can_handler->m_dbg.last_1016,    g_can_handler->m_dbg.ovr_1016);
+    j += ",";
+    dbgAppendGroup(j, "f1021_m0", g_can_handler->m_dbg.last_1021_m0, g_can_handler->m_dbg.ovr_1021_m0);
+    j += ",";
+    dbgAppendGroup(j, "f1021_m1", g_can_handler->m_dbg.last_1021_m1, g_can_handler->m_dbg.ovr_1021_m1);
+    j += ",";
+    dbgAppendGroup(j, "f1021_m2", g_can_handler->m_dbg.last_1021_m2, g_can_handler->m_dbg.ovr_1021_m2);
+    j += "}";
+    server.send(200, "application/json", j);
+}
+
+// POST /debug_set
+//   frame=1016|1021_m0|1021_m1|1021_m2
+//   start=<bit offset 0..63>
+//   length=<1..32>
+//   value=<uint>
+//   override=0|1   (1=开启覆盖并写入 value; 0=清除这段 bits 的覆盖)
+static void
+handleDebugSet() {
+    if (!server.hasArg("frame") || !server.hasArg("start") || !server.hasArg("length")) {
+        server.send(400, "application/json", "{\"ok\":false,\"error\":\"missing args\"}");
+        return;
+    }
+    DebugOverride *ovr = dbgPickOverride(server.arg("frame"));
+    if (!ovr) {
+        server.send(400, "application/json", "{\"ok\":false,\"error\":\"bad frame\"}");
+        return;
+    }
+    int start  = server.arg("start").toInt();
+    int length = server.arg("length").toInt();
+    if (start < 0 || length <= 0 || length > 32 || start + length > 64) {
+        server.send(400, "application/json", "{\"ok\":false,\"error\":\"bad range\"}");
+        return;
+    }
+    bool   on    = server.hasArg("override") && server.arg("override") == "1";
+    uint32_t val = server.hasArg("value") ? (uint32_t)strtoul(server.arg("value").c_str(), nullptr, 10) : 0u;
+
+    for (int i = 0; i < length; i++) {
+        int  bit      = start + i;
+        int  byteIdx  = bit / 8;
+        int  bitIdx   = bit % 8;
+        uint8_t mbit  = (uint8_t)(1u << bitIdx);
+        if (on) {
+            ovr->mask[byteIdx]  |= mbit;
+            if ((val >> i) & 1u) ovr->value[byteIdx] |=  mbit;
+            else                 ovr->value[byteIdx] &= (uint8_t)~mbit;
+        } else {
+            ovr->mask[byteIdx]  &= (uint8_t)~mbit;
+            ovr->value[byteIdx] &= (uint8_t)~mbit;
+        }
+    }
+    server.send(200, "application/json", "{\"ok\":true}");
+}
+
+static void
+handleDebugClear() {
+    if (!server.hasArg("frame")) {
+        server.send(400, "application/json", "{\"ok\":false,\"error\":\"missing frame\"}");
+        return;
+    }
+    if (server.arg("frame") == "all") {
+        g_can_handler->m_dbg.ovr_1016    = {};
+        g_can_handler->m_dbg.ovr_1021_m0 = {};
+        g_can_handler->m_dbg.ovr_1021_m1 = {};
+        g_can_handler->m_dbg.ovr_1021_m2 = {};
+        // 清除内存同时抹掉 NVS 存档，避免重启后又被加载回来。
+        dbgClearArchive();
+        server.send(200, "application/json", "{\"ok\":true}");
+        return;
+    }
+    DebugOverride *ovr = dbgPickOverride(server.arg("frame"));
+    if (!ovr) {
+        server.send(400, "application/json", "{\"ok\":false,\"error\":\"bad frame\"}");
+        return;
+    }
+    *ovr = {};
+    server.send(200, "application/json", "{\"ok\":true}");
+}
+
+// POST /debug_archive_save — 把当前四组 DebugOverride 整体写入 NVS，重启后自动恢复。
+static void
+handleDebugArchiveSave() {
+    dbgSaveArchive();
+    server.send(200, "application/json", "{\"ok\":true}");
+}
+
 // ── Task & public API ─────────────────────────────────────────────
 
 static void
@@ -320,6 +515,7 @@ void
 WebSetup(CanHandler * /*handler*/, CanDriver * /*driver*/) {
     startMs = millis();
     dashLoadPrefs();
+    dbgLoadArchive();
 
     if (strlen(staSSID)) {
         WiFi.mode(WIFI_AP_STA);
@@ -333,15 +529,19 @@ WebSetup(CanHandler * /*handler*/, CanDriver * /*driver*/) {
     }
     Serial.printf("[WIFI] AP: %s  IP: %s\n", apSSID, WiFi.softAPIP().toString().c_str());
 
-    server.on("/",            HTTP_GET,  handleRoot);
-    server.on("/status",      HTTP_GET,  handleStatus);
-    server.on("/config",      HTTP_POST, handleConfig);
-    server.on("/reboot",      HTTP_POST, handleReboot);
-    server.on("/wifi_scan",   HTTP_GET,  handleWifiScan);
-    server.on("/wifi_config", HTTP_POST, handleWifiConfig);
-    server.on("/wifi_status", HTTP_GET,  handleWifiStatus);
-    server.on("/ap_status",   HTTP_GET,  handleApStatus);
-    server.on("/ap_config",   HTTP_POST, handleApConfig);
+    server.on("/",             HTTP_GET,  handleRoot);
+    server.on("/status",       HTTP_GET,  handleStatus);
+    server.on("/config",       HTTP_POST, handleConfig);
+    server.on("/reboot",       HTTP_POST, handleReboot);
+    server.on("/wifi_scan",    HTTP_GET,  handleWifiScan);
+    server.on("/wifi_config",  HTTP_POST, handleWifiConfig);
+    server.on("/wifi_status",  HTTP_GET,  handleWifiStatus);
+    server.on("/ap_status",    HTTP_GET,  handleApStatus);
+    server.on("/ap_config",    HTTP_POST, handleApConfig);
+    server.on("/debug_status",       HTTP_GET,  handleDebugStatus);
+    server.on("/debug_set",          HTTP_POST, handleDebugSet);
+    server.on("/debug_clear",        HTTP_POST, handleDebugClear);
+    server.on("/debug_archive_save", HTTP_POST, handleDebugArchiveSave);
     server.begin();
 
     xTaskCreatePinnedToCore(webTask, "web", 6144, nullptr, 1, nullptr, 0);

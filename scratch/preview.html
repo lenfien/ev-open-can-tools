@@ -1,17 +1,319 @@
-//
-// Created by bamboozhang on 2026/4/28.
-//
-
-#include "web_logic.h"
-
-const char DASH_HTML[] PROGMEM =
-
-R"HTML(<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Tesla CAN 助手</title>
+<title>Tesla CAN 助手 (Mock 预览)</title>
+
+<!-- ============================================================
+  Mock 层：拦截 fetch，伪造后端返回，让这份前端在浏览器里完整运行。
+  真机上不会有这段脚本（真页面由 web_ui.cpp 的 DASH_HTML 提供）。
+  ============================================================ -->
+<script>
+(function () {
+  'use strict';
+
+  // ---- 假状态（对齐 CanState / CanConf） ----
+  const mockState = {
+    follow_distance: 4,
+    profile_hw3: 2,
+    profile_hw4: 3,
+    frame_cnt: 0,
+    frame_sent: 0,
+    ban_shield_cnt: 12,
+    ban_shield_check_cnt: 340,
+    speed_limit_fused: 60,
+    speed_limit_vision_only: 55,
+    speed_offset: 5,
+    gateway_autopilot: 3, // 自动驾驶
+    uptime: 0,
+    can_online: true,
+    _startTime: Date.now(),
+  };
+
+  const mockCnf = {
+    enable_inject: false,
+    enable_fsd: true,
+    enable_print: false,
+    use_hw3_code: false,
+    enable_ban_shield: true,
+    enable_nag_suppress: true,
+    enable_summon_unlock: false,
+    enable_enhanced_autopilot_runtime: false,
+    disable_camera: false,
+    enable_emergency_vehicle_detection_runtime: true,
+    enable_isa_speed_chime_suppress_runtime: true,
+    speed_profile_use_follow_distance: true,
+    speed_profile_from_web: 3,
+    enable_set_hw3_profile: false,
+    speed_offset_enable_override: false,
+    speed_offset_use_fix_or_dynamic: false,
+    speed_offset_fix_from_web: 10,
+    start_from_park: false,
+    auto_cfg: [
+      { spd: 30,  pct: 5  },
+      { spd: 40,  pct: 8  },
+      { spd: 50,  pct: 10 },
+      { spd: 60,  pct: 12 },
+      { spd: 70,  pct: 15 },
+      { spd: 80,  pct: 18 },
+      { spd: 90,  pct: 20 },
+      { spd: 100, pct: 22 },
+      { spd: 110, pct: 25 },
+      { spd: 120, pct: 28 },
+      { spd: 0,   pct: 0  },
+      { spd: 0,   pct: 0  },
+    ],
+  };
+
+  // ---- 调试层：每帧 8 字节 raw + 8 字节 mask + 8 字节 override value ----
+  function newFrame(data) {
+    return {
+      seen: true,
+      data: data.slice(0, 8),
+      mask: [0, 0, 0, 0, 0, 0, 0, 0],
+      val:  [0, 0, 0, 0, 0, 0, 0, 0],
+      last_ms: 0,
+    };
+  }
+
+  // 按 handlers 的位布局造一组"像模像样"的原始字节。
+  // 1016: bit45..47 = 4 (跟车距离), bit63 = 1 (ISA静音), bit0 = 0 (Legacy AP)
+  //   bit45..47 = 0b100 -> byte5 = 0b10000000 = 0x80
+  //   bit63 = 1          -> byte7 |= 0b10000000 = 0x80
+  // 1021 mux0: data[0]=0 (mux=0), bit46=1(FSD), bit47=1(hasFSD), bit6..7 of byte6=HW3档位(2)
+  //   bit46,47 -> byte5 = 0b11000000 = 0xC0
+  //   HW3 档位 = data[6][2:1] = 2 -> byte6 = (2<<1) = 0b00000100 = 0x04
+  //   mux 有效 bit63=1 -> byte7 = 0x80
+  // 1021 mux1: data[0]=1, bit19=1(applyEceR79), bit43=0(enableCabinCamera 暂不开)
+  //   byte0 = 0x01; byte2 bit3 = 1 -> byte2 = 0x08
+  //   mux 有效 bit63=1 -> byte7 = 0x80
+  // 1021 mux2: data[0]=2, bit5=1(EVD), bit6=1(ParkBrakeConfirm), bit7=1(StartFromPark),
+  //            HW4 档位 data[7][6:4]=3, offset byte? 这里用 bit8..13=5 做示范
+  //   byte0 = 0x02; byte0 bit5,6,7 = 0b11100000 -> byte0 |= 0xE0 => 0xE2
+  //   bit8..13 = 5 -> byte1 = 5
+  //   HW4 档位 bit4..6 of byte7 = 3 -> byte7 |= (3<<4) = 0x30
+  //   mux 有效 bit63=1 -> byte7 |= 0x80 => 0xB0
+  const mockDbg = {
+    f1016:    newFrame([0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x80]),
+    f1021_m0: newFrame([0x00, 0x00, 0x00, 0x00, 0x00, 0xC0, 0x04, 0x80]),
+    f1021_m1: newFrame([0x01, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x80]),
+    f1021_m2: newFrame([0xE2, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0xB0]),
+  };
+
+  // 给 raw 数据加一点自然扰动（让"当前值"感觉在呼吸）
+  function jitterRaw() {
+    // 每次 poll 把 1016 的 VIN 关联位 (bit6) 或 lssLdw (bit8) 做个缓慢翻转
+    // 这里用最小侵入：只改 byte0 的 bit1（UI_ulcStalkConfirm），其他信号保持
+    const t = Math.floor(Date.now() / 3000) & 1;
+    mockDbg.f1016.data[0] = (mockDbg.f1016.data[0] & ~0x02) | (t ? 0x02 : 0);
+  }
+
+  // ---- 小工具 ----
+  function jsonResp(obj) {
+    return new Response(JSON.stringify(obj),
+      { status: 200, headers: { 'Content-Type': 'application/json' } });
+  }
+  function okResp() { return jsonResp({ ok: true }); }
+
+  function parseForm(body) {
+    const out = {};
+    if (!body) return out;
+    const text = (typeof body === 'string') ? body
+                : (body instanceof URLSearchParams ? body.toString() : String(body));
+    text.split('&').forEach(kv => {
+      if (!kv) return;
+      const i = kv.indexOf('=');
+      const k = decodeURIComponent((i < 0 ? kv : kv.slice(0, i)).replace(/\+/g, ' '));
+      const v = decodeURIComponent((i < 0 ? ''  : kv.slice(i + 1)).replace(/\+/g, ' '));
+      out[k] = v;
+    });
+    return out;
+  }
+
+  function pickDbgFrame(name) {
+    return mockDbg[name === '1016' ? 'f1016'
+         : name === '1021_m0' ? 'f1021_m0'
+         : name === '1021_m1' ? 'f1021_m1'
+         : name === '1021_m2' ? 'f1021_m2' : null] || null;
+  }
+
+  // ---- 主 mock 分发 ----
+  // 用 localStorage 充当 ESP32 NVS，模拟 "保存存档 → 重启后恢复" 的完整行为。
+  const MOCK_NVS_KEY = 'mock_esp32_nvs_dbg_ovr_v1';
+  const origFetch = window.fetch.bind(window);
+
+  window.fetch = function mockFetch(input, init) {
+    const url    = (typeof input === 'string') ? input : (input && input.url) || '';
+    const method = ((init && init.method) || 'GET').toUpperCase();
+    const path   = url.split('?')[0];
+
+    // 让真实外部 URL 走原 fetch
+    if (/^https?:/.test(url) && !url.startsWith(location.origin)) {
+      return origFetch(input, init);
+    }
+
+    // --- GET /status ---
+    if (path === '/status' && method === 'GET') {
+      mockState.uptime = Math.floor((Date.now() - mockState._startTime) / 1000);
+      mockState.frame_cnt  += 120;
+      mockState.frame_sent += mockCnf.enable_inject ? 30 : 0;
+      return jsonResp({ state: { ...mockState }, cnf: { ...mockCnf } });
+    }
+
+    // --- POST /config ---
+    if (path === '/config' && method === 'POST') {
+      const args = parseForm(init && init.body);
+      Object.keys(args).forEach(k => {
+        if (k.startsWith('auto_cfg_')) {
+          const i = +k.slice('auto_cfg_'.length);
+          if (mockCnf.auto_cfg[i]) {
+            mockCnf.auto_cfg[i].pct = Math.max(0, Math.min(100, +args[k] | 0));
+          }
+          return;
+        }
+        if (k === 'speed_profile_from_web') {
+          const v = +args[k] | 0;
+          if (v >= 1 && v <= 5) mockCnf.speed_profile_from_web = v;
+          return;
+        }
+        if (k === 'speed_offset_fix_from_web') {
+          mockCnf.speed_offset_fix_from_web = Math.max(0, Math.min(50, +args[k] | 0));
+          mockState.speed_offset = mockCnf.speed_offset_fix_from_web;
+          return;
+        }
+        if (k in mockCnf) {
+          mockCnf[k] = (args[k] === '1' || args[k] === 'true');
+        }
+      });
+      return okResp();
+    }
+
+    // --- GET /ap_status ---
+    if (path === '/ap_status' && method === 'GET') {
+      return jsonResp({ ssid: 'Tesla-CAN-Mock', ip: '192.168.4.1', clients: 1, hidden: false });
+    }
+
+    // --- GET /wifi_status ---
+    if (path === '/wifi_status' && method === 'GET') {
+      return jsonResp({ connected: false, ssid: '', static: false });
+    }
+
+    // --- GET /wifi_scan ---
+    if (path === '/wifi_scan' && method === 'GET') {
+      return jsonResp({ networks: [
+        { ssid: 'HomeWifi',     rssi: -42, enc: true  },
+        { ssid: 'Tesla_Garage', rssi: -58, enc: true  },
+        { ssid: 'CMCC-Guest',   rssi: -71, enc: false },
+      ]});
+    }
+
+    if (path === '/wifi_config' && method === 'POST') return okResp();
+    if (path === '/ap_config'   && method === 'POST') return okResp();
+    if (path === '/reboot'      && method === 'POST') return okResp();
+
+    // --- GET /debug_status ---
+    if (path === '/debug_status' && method === 'GET') {
+      jitterRaw();
+      const now = Date.now();
+      ['f1016','f1021_m0','f1021_m1','f1021_m2'].forEach(k => {
+        const fr = mockDbg[k];
+        fr.last_ms = now;
+        // 应用 override：mask 覆盖的 bit 用 val 顶替 raw，生成"对外可见的 data"
+        // 真固件实际注入后，下一帧 raw 也会反映出来；这里我们直接写回 raw 模拟这个效果
+      });
+      // 把 mask/value 应用到 data 上（模拟注入生效后车端回传的样子）
+      const snap = {};
+      ['f1016','f1021_m0','f1021_m1','f1021_m2'].forEach(k => {
+        const fr = mockDbg[k];
+        const data = fr.data.slice();
+        for (let i = 0; i < 8; i++) {
+          data[i] = (data[i] & ~fr.mask[i]) | (fr.val[i] & fr.mask[i]);
+        }
+        snap[k] = { seen: fr.seen, data, mask: fr.mask.slice(), val: fr.val.slice() };
+      });
+      return jsonResp(snap);
+    }
+
+    // --- POST /debug_set ---
+    if (path === '/debug_set' && method === 'POST') {
+      const a = parseForm(init && init.body);
+      const fr = pickDbgFrame(a.frame);
+      if (!fr) return jsonResp({ ok: false, error: 'bad frame' });
+      const start  = +a.start  | 0;
+      const length = +a.length | 0;
+      const value  = (+a.value) >>> 0;
+      const on     = a.override === '1';
+      for (let i = 0; i < length; i++) {
+        const b = start + i, bi = b >> 3, bo = b & 7, m = 1 << bo;
+        if (on) {
+          fr.mask[bi] |= m;
+          if ((value >>> i) & 1) fr.val[bi] |=  m;
+          else                   fr.val[bi] &= ~m & 0xFF;
+        } else {
+          fr.mask[bi] &= ~m & 0xFF;
+          fr.val[bi]  &= ~m & 0xFF;
+        }
+      }
+      return okResp();
+    }
+
+    // --- POST /debug_clear ---
+    if (path === '/debug_clear' && method === 'POST') {
+      const a = parseForm(init && init.body);
+      const clear = fr => { fr.mask.fill(0); fr.val.fill(0); };
+      if (a.frame === 'all') {
+        ['f1016','f1021_m0','f1021_m1','f1021_m2'].forEach(k => clear(mockDbg[k]));
+        // 对齐 ESP32 侧：清除全部覆盖的同时抹掉 NVS 存档
+        try { localStorage.removeItem(MOCK_NVS_KEY); } catch(e) {}
+      } else {
+        const fr = pickDbgFrame(a.frame);
+        if (fr) clear(fr);
+      }
+      return okResp();
+    }
+
+    // --- POST /debug_archive_save ---
+    // 模拟 ESP32 把当前 4 组 mask/value 落到 NVS。
+    // 这里用 localStorage 充当 NVS：刷新浏览器后，启动时会把它读回 mockDbg。
+    if (path === '/debug_archive_save' && method === 'POST') {
+      try {
+        const snap = {};
+        ['f1016','f1021_m0','f1021_m1','f1021_m2'].forEach(k => {
+          snap[k] = { mask: mockDbg[k].mask.slice(), val: mockDbg[k].val.slice() };
+        });
+        localStorage.setItem(MOCK_NVS_KEY, JSON.stringify(snap));
+        return okResp();
+      } catch(e) {
+        return jsonResp({ ok: false, error: String(e && e.message || e) });
+      }
+    }
+
+    // 兜底：其他请求直接返回 404
+    return new Response('mock: not handled', { status: 404 });
+  };
+
+  // 启动恢复：模拟 ESP32 WebSetup() 里的 dbgLoadArchive()。
+  try {
+    const saved = localStorage.getItem(MOCK_NVS_KEY);
+    if (saved) {
+      const snap = JSON.parse(saved);
+      ['f1016','f1021_m0','f1021_m1','f1021_m2'].forEach(k => {
+        if (snap[k] && snap[k].mask && snap[k].val) {
+          mockDbg[k].mask = snap[k].mask.slice();
+          mockDbg[k].val  = snap[k].val.slice();
+        }
+      });
+      console.log('%c[MOCK] 已从 "NVS" 恢复调试覆盖存档', 'color:#3dba72');
+    }
+  } catch(e) {}
+
+  // 提示用户这是 mock 预览
+  console.log('%c[MOCK] preview.html · 所有 /status /config /debug_* 等请求已被前端 mock 拦截',
+              'color:#5b8fff;font-weight:bold');
+})();
+</script>
+
 <style>
 :root{
   --bg:#111;--text:#eee;--h2:#555;
@@ -142,8 +444,11 @@ body.light .thknob{transform:translateX(26px)}
 .dbg-ctrl .sl::before{width:14px;height:14px}
 .dbg-ctrl input:checked+.sl::before{transform:translateX(16px)}
 .dbg-tip{font-size:11px;color:var(--lbl);padding:8px 2px;line-height:1.5}
-.dbg-actions{display:flex;gap:8px;margin-bottom:10px}
-.dbg-actions .btn{margin-top:0;flex:1}
+.dbg-actions{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.dbg-actions .btn{margin-top:0;flex:1 1 calc(50% - 4px);min-width:0}
+.dbg-toast{position:fixed;bottom:78px;left:50%;transform:translateX(-50%);background:#2a3f6e;color:#eef3ff;border:1px solid #3a5fa8;border-radius:8px;padding:9px 16px;font-size:13px;box-shadow:0 2px 12px rgba(0,0,0,.35);opacity:0;transition:opacity .2s;pointer-events:none;z-index:200;max-width:90%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dbg-toast.show{opacity:1}
+body.light .dbg-toast{background:#eaf0ff;color:#1d3a7a;border-color:#b8c9f7;box-shadow:0 2px 10px rgba(0,0,0,.08)}
 </style>
 </head>
 <body>
@@ -283,10 +588,11 @@ body.light .thknob{transform:translateX(26px)}
 <div id="pg_debug" class="pg">
 <div class="dbg-tip">调试页：默认只读当前 CAN 实时解码值。仅当勾选右侧“覆盖”后，网页给定的值才会写入帧并发送。覆盖默认只在内存，重启即清；点“保存存档”后会落到设备 NVS，重启后自动恢复。<br>红线：1021 mux 选择器 (bit 0–2) 与 ban protection (bit 52) 不可被覆盖，已隐藏。</div>
 <div class="dbg-actions">
-  <button class="btn" onclick="dbgSaveArchive()">保存存档</button>
+  <button class="btn" onclick="dbgArchiveSave()">保存存档</button>
   <button class="btn danger" onclick="dbgClearAll()">清除全部覆盖</button>
 </div>
 <div id="dbg_root"></div>
+<div id="dbg_toast" class="dbg-toast"></div>
 </div><!-- pg_debug -->
 
 <nav class="tabbar">
@@ -883,15 +1189,30 @@ async function dbgClearAll() {
   const p = new URLSearchParams({frame:'all'});
   try { await fetch('/debug_clear', {method:'POST', body:p}); } catch(e) {}
   dbgPoll();
+  dbgToast('已清除全部覆盖');
 }
 
-async function dbgSaveArchive() {
+// ── 调试存档：请求设备把当前 4 组覆盖落到 NVS；重启后自动恢复 ──
+let _dbgToastTimer = null;
+function dbgToast(msg, isErr) {
+  const el = g('dbg_toast');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.background = isErr ? '#5c2020' : '';
+  el.style.borderColor = isErr ? '#7a2424' : '';
+  el.style.color       = isErr ? '#ffd0d0' : '';
+  el.classList.add('show');
+  clearTimeout(_dbgToastTimer);
+  _dbgToastTimer = setTimeout(() => el.classList.remove('show'), 1800);
+}
+
+async function dbgArchiveSave() {
   try {
     const r = await fetch('/debug_archive_save', {method:'POST'});
     if (!r.ok) throw 0;
-    alert('存档已保存，重启设备后将自动恢复当前覆盖。');
+    dbgToast('存档已保存，重启后自动恢复');
   } catch(e) {
-    alert('保存失败，请检查连接。');
+    dbgToast('保存失败，请检查连接', true);
   }
 }
 
@@ -902,4 +1223,4 @@ setInterval(loadSta, 6000);
 setInterval(dbgPoll, 1500);
 </script>
 </body>
-</html>)HTML";
+</html>

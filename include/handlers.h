@@ -66,6 +66,37 @@ struct CanState {
     uint32_t gateway_autopilot = 0; // from CAN 2047 mux-2 data[5][4:2]
 };
 
+// ── Debug override (not persisted, cleared on reboot) ─────────────
+// 每个帧/mux 维护一份 8 字节的 mask/value：
+//   mask[i] 的每一位 = 1 表示对应 bit 由调试页接管；
+//   写帧前按位：frame.data[i] = (frame.data[i] & ~mask[i]) | (value[i] & mask[i]);
+struct DebugOverride {
+    uint8_t mask[8]  = {0};
+    uint8_t value[8] = {0};
+};
+
+// 最近一次收到的原始帧内容，调试页用于展示"当前值"。
+// seen=false 表示还没收到过，前端显示 "--"。
+struct DebugLastFrame {
+    bool    seen       = false;
+    uint8_t data[8]    = {0};
+    uint32_t updated_ms = 0;
+};
+
+struct DebugState {
+    // 四组覆盖（按 1016 和 1021 的三个 mux 分别独立）
+    DebugOverride ovr_1016;
+    DebugOverride ovr_1021_m0;
+    DebugOverride ovr_1021_m1;
+    DebugOverride ovr_1021_m2;
+
+    // 最近一次原始帧内容
+    DebugLastFrame last_1016;
+    DebugLastFrame last_1021_m0;
+    DebugLastFrame last_1021_m1;
+    DebugLastFrame last_1021_m2;
+};
+
 struct CanHandler {
 public:
     // Main entry point — called for every received frame.
@@ -116,6 +147,10 @@ public:
     // Print all m_state fields to Serial.
     void
     PrintState();
+
+    // 将 ovr 中被 mask 标记的位写入 frame。返回是否有任何 bit 被改写。
+    bool
+    ApplyDebugOverride(CanFrame &frame, const DebugOverride &ovr);
 
 private:
     // CAN 921  — decode speed limits (fused + vision-only) from data[1]/data[2].
@@ -168,4 +203,5 @@ public:
 
     CanConf  m_cnf;
     CanState m_state;
+    DebugState m_dbg; // 调试覆盖 / 最近一次帧（非持久化）
 };
