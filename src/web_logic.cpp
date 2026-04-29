@@ -86,8 +86,8 @@ dashLoadPrefs() {
     prefs.begin(PREFS_NS, false);
     g_can_handler->LoadConf(prefs);
 
-    String apS = prefs.getString("ap_ssid", "");
-    String apP = prefs.getString("ap_pass", "");
+    String apS = prefs.isKey("ap_ssid") ? prefs.getString("ap_ssid") : "";
+    String apP = prefs.isKey("ap_pass") ? prefs.getString("ap_pass") : "";
     strlcpy(apSSID, apS.length() ? apS.c_str() : DASH_SSID, sizeof(apSSID));
     strlcpy(apPass, apP.length() ? apP.c_str() : DASH_PASS, sizeof(apPass));
     apHidden = prefs.getBool("ap_hidden", false);
@@ -185,11 +185,11 @@ handleStatus() {
     JB(enable_print);
     JB(use_hw3_code);
     JB(enable_ban_shield);
-    JB(enable_nag_suppress);
-    JB(enable_summon_unlock);
-    JB(enable_enhanced_autopilot_runtime);
+    // JB(enable_nag_suppress);
+    // JB(enable_summon_unlock);
+    // JB(enable_enhanced_autopilot_runtime);
     JB(disable_camera);
-    JB(enable_emergency_vehicle_detection_runtime);
+    // JB(enable_emergency_vehicle_detection_runtime);
     JB(enable_isa_speed_chime_suppress_runtime);
     JB(speed_profile_use_follow_distance);
     JU(speed_profile_from_web);
@@ -580,6 +580,7 @@ WebSetup(CanHandler * /*handler*/, CanDriver * /*driver*/) {
         WiFi.softAP(apSSID, apPass, 1, apHidden ? 1 : 0, 4);
         if (staStaticIP && (uint32_t)staIP != 0)
             WiFi.config(staIP, staGW, staMask, staDNS);
+        WiFi.setSleep(WIFI_PS_NONE);
         WiFi.begin(staSSID, staPass);
     } else {
         WiFi.mode(WIFI_AP);

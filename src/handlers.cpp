@@ -24,14 +24,14 @@ const FieldDesc kSchema[] = {
     // ── FSD ──
     SCHEMA_BOOL_LOGIC(enable_fsd,                                  "FSD 启用",          "FSD"),
     SCHEMA_BOOL_LOGIC(use_hw3_code,                                "使用 HW3 代码",      "FSD"),
-    SCHEMA_BOOL_LOGIC(enable_summon_unlock,                        "Summon 解锁",       "FSD"),
-    SCHEMA_BOOL_LOGIC(enable_enhanced_autopilot_runtime,           "增强自动驾驶",       "FSD"),
-    SCHEMA_BOOL_LOGIC(enable_emergency_vehicle_detection_runtime,  "紧急车辆检测",       "FSD"),
+    // SCHEMA_BOOL_LOGIC(enable_summon_unlock,                        "Summon 解锁",       "FSD"),
+    // SCHEMA_BOOL_LOGIC(enable_enhanced_autopilot_runtime,           "增强自动驾驶",       "FSD"),
+    // SCHEMA_BOOL_LOGIC(enable_emergency_vehicle_detection_runtime,  "紧急车辆检测",       "FSD"),
     SCHEMA_BOOL_LOGIC(start_from_park,                             "驻车启动",           "FSD"),
 
     // ── 安全 ──
     SCHEMA_BOOL_LOGIC(enable_ban_shield,                           "Ban 盾保护",       "安全"),
-    SCHEMA_BOOL_LOGIC(enable_nag_suppress,                         "消除提示音",       "安全"),
+    // SCHEMA_BOOL_LOGIC(enable_nag_suppress,                         "消除提示音",       "安全"),
     SCHEMA_BOOL_LOGIC(disable_camera,                              "禁用摄像头",       "安全"),
     SCHEMA_BOOL_LOGIC(enable_isa_speed_chime_suppress_runtime,     "ISA 提示音抑制",   "安全"),
 
@@ -165,9 +165,6 @@ Handle1021Mux0(CanFrame &frame) {
         }
     }
 
-    if (m_cnf.enable_emergency_vehicle_detection_runtime)
-        frame.SetBit(59, true);
-
     // 缓存原始帧（未覆盖前的 m_cnf 逻辑结果之前的值）— 放在最开头更符合
     // "当前值" 语义，但这里简化为 handler 出口前保存覆盖应用前的值。
     memcpy(m_dbg.last_1021_m0.data, frame.data, 8);
@@ -183,12 +180,6 @@ Handle1021Mux0(CanFrame &frame) {
 bool CanHandler::
 Handle1021Mux1(CanFrame &frame) {
     bool should_send = false;
-
-    if (m_cnf.enable_nag_suppress) {
-        frame.SetBit(19, false);
-        frame.SetBit(47, true);
-        should_send = true;
-    }
 
     if (m_cnf.disable_camera) {
         frame.SetBit(43, false);
@@ -397,12 +388,15 @@ LoadConf(Preferences &prefs) {
 
 void CanHandler::
 PrintCnf() {
-    Serial.printf("CanConf: version=%u inject=%u fsd=%u print=%u hw3_code=%u ban_shield=%u nag=%u summon=%u eap=%u no_cam=%u evd=%u isa=%u\n",
-        m_cnf.version, m_cnf.enable_inject, m_cnf.enable_fsd, m_cnf.enable_print,
-        m_cnf.use_hw3_code, m_cnf.enable_ban_shield, m_cnf.enable_nag_suppress,
-        m_cnf.enable_summon_unlock, m_cnf.enable_enhanced_autopilot_runtime,
-        m_cnf.disable_camera, m_cnf.enable_emergency_vehicle_detection_runtime,
-        m_cnf.enable_isa_speed_chime_suppress_runtime);
+    // Serial.printf("CanConf: version=%u inject=%u fsd=%u print=%u hw3_code=%u ban_shield=%u nag=%u summon=%u eap=%u no_cam=%u evd=%u isa=%u\n",
+    //     m_cnf.version, m_cnf.enable_inject, m_cnf.enable_fsd, m_cnf.enable_print,
+    //     m_cnf.use_hw3_code, m_cnf.enable_ban_shield,
+    //     m_cnf.enable_nag_suppress,
+    //     m_cnf.enable_summon_unlock,
+    //     m_cnf.enable_enhanced_autopilot_runtime,
+    //     m_cnf.disable_camera,
+    //     m_cnf.enable_emergency_vehicle_detection_runtime,
+    //     m_cnf.enable_isa_speed_chime_suppress_runtime);
     Serial.printf("CanConf speed: profile_by_dist=%u profile_web=%u set_hw3=%u offset_en=%u offset_fix_dyn=%u offset_val=%u\n",
         m_cnf.speed_profile_use_follow_distance, m_cnf.speed_profile_from_web,
         m_cnf.enable_set_hw3_profile, m_cnf.speed_offset_enable_override,

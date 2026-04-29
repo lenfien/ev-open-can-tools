@@ -52,7 +52,7 @@ extern const FieldDesc kSchema[];
 extern const size_t    kSchemaCount;
 
 struct CanConf {
-    uint32_t version = 2;
+    uint32_t version = 3;
 
     uint32_t enable_inject    = false;
     uint32_t enable_fsd       = false;
@@ -60,11 +60,7 @@ struct CanConf {
 
     uint32_t use_hw3_code                              = false;
     uint32_t enable_ban_shield                         = true;
-    uint32_t enable_nag_suppress                       = false;
-    uint32_t enable_summon_unlock                      = false;
-    uint32_t enable_enhanced_autopilot_runtime         = false;
     uint32_t disable_camera                            = false;
-    uint32_t enable_emergency_vehicle_detection_runtime = true;
     uint32_t enable_isa_speed_chime_suppress_runtime   = false;
 
     // speed profile
