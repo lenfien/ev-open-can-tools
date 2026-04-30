@@ -105,33 +105,6 @@ dashLoadPrefs() {
     g_can_handler->PrintCnf();
 }
 
-// ── WiFi helpers ──────────────────────────────────────────────────
-
-static void
-dashConnectSTA() {
-    if (!strlen(staSSID)) return;
-    WiFi.mode(WIFI_AP_STA);
-    WiFi.softAP(apSSID, apPass, 1, apHidden ? 1 : 0, 4);
-    if (staStaticIP && (uint32_t)staIP != 0)
-        WiFi.config(staIP, staGW, staMask, staDNS);
-    else
-        WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE, INADDR_NONE);
-    WiFi.begin(staSSID, staPass);
-}
-
-static void
-dashCheckWifi() {
-    static unsigned long lastCheck = 0;
-    if (!strlen(staSSID) || millis() - lastCheck < 5000) return;
-    lastCheck = millis();
-    bool connected = WiFi.status() == WL_CONNECTED;
-    if (connected != staConnected) {
-        staConnected = connected;
-        Serial.printf("[WIFI] STA %s\n",
-            connected ? WiFi.localIP().toString().c_str() : "disconnected");
-    }
-}
-
 // ── JSON helper ───────────────────────────────────────────────────
 
 static String
@@ -317,6 +290,44 @@ handleReboot() {
     server.send(200, "text/plain", "Rebooting...");
     delay(200);
     ESP.restart();
+}
+
+// ------------------------ WIFI ----------------------------- //
+
+static void
+dashConnectSTA() {
+    if (!strlen(staSSID)) return;
+    WiFi.mode(WIFI_AP_STA);
+    WiFi.setSleep(false);
+    WiFi.persistent(false);
+    WiFi.softAP(apSSID, apPass, 1, apHidden ? 1 : 0, 4);
+
+    if (staStaticIP && (uint32_t)staIP != 0)
+        WiFi.config(staIP, staGW, staMask, staDNS);
+    else
+        WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE, INADDR_NONE);
+    WiFi.begin(staSSID, staPass);
+}
+
+static void
+dashCheckWifi() {
+    static unsigned long lastCheck  = 0;
+    static unsigned long lastReconn = 0;
+    if (!strlen(staSSID) || millis() - lastCheck < 5000) return;
+    lastCheck = millis();
+
+    bool connected = WiFi.status() == WL_CONNECTED;
+    if (connected != staConnected) {
+        staConnected = connected;
+        Serial.printf("[WIFI] STA %s\n", connected ? WiFi.localIP().toString().c_str() : "disconnected");
+    }
+
+    if (!connected && millis() - lastReconn > 30000) {
+        lastReconn = millis();
+        Serial.println("[WIFI] reconnecting...");
+        WiFi.disconnect(false);
+        WiFi.begin(staSSID, staPass);
+    }
 }
 
 static void
@@ -580,6 +591,7 @@ WebSetup(CanHandler * /*handler*/, CanDriver * /*driver*/) {
         WiFi.softAP(apSSID, apPass, 1, apHidden ? 1 : 0, 4);
         if (staStaticIP && (uint32_t)staIP != 0)
             WiFi.config(staIP, staGW, staMask, staDNS);
+        WiFi.setAutoReconnect(false);
         WiFi.setSleep(WIFI_PS_NONE);
         WiFi.begin(staSSID, staPass);
     } else {
