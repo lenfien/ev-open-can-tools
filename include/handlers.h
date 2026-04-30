@@ -60,6 +60,7 @@ struct CanConf {
 
     uint32_t use_hw3_code                              = false;
     uint32_t enable_ban_shield                         = true;
+    uint32_t enable_nag_suppress                       = false;
     uint32_t disable_camera                            = false;
     uint32_t enable_isa_speed_chime_suppress_runtime   = false;
 
@@ -80,6 +81,7 @@ struct CanConf {
     };
 
     uint32_t start_from_park = 0; //
+    uint32_t camera_by_distance = 0;
 };
 
 // 按 key 查找 schema 条目；找不到返回 nullptr。实现见 handlers.cpp。

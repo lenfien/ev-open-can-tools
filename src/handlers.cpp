@@ -30,10 +30,11 @@ const FieldDesc kSchema[] = {
     SCHEMA_BOOL_LOGIC(start_from_park,                             "驻车启动",           "FSD"),
 
     // ── 安全 ──
-    SCHEMA_BOOL_LOGIC(enable_ban_shield,                           "Ban 盾保护",       "安全"),
-    // SCHEMA_BOOL_LOGIC(enable_nag_suppress,                         "消除提示音",       "安全"),
-    SCHEMA_BOOL_LOGIC(disable_camera,                              "禁用摄像头",       "安全"),
-    SCHEMA_BOOL_LOGIC(enable_isa_speed_chime_suppress_runtime,     "ISA 提示音抑制",   "安全"),
+    SCHEMA_BOOL_LOGIC(enable_ban_shield,                           "Ban 盾保护",                       "安全"),
+    SCHEMA_BOOL_LOGIC(enable_nag_suppress,                         "消除提示音",                        "安全"),
+    SCHEMA_BOOL_LOGIC(disable_camera,                              "禁用摄像头",                        "安全"),
+    SCHEMA_BOOL_LOGIC(enable_isa_speed_chime_suppress_runtime,     "ISA 提示音抑制",                    "安全") ,
+    SCHEMA_BOOL_LOGIC(camera_by_distance,                          "根据距离关闭摄像头(>1:关闭;1:打开)",   "安全"),
 
     // ── 系统 ──
     SCHEMA_BOOL_LOGIC(enable_print,                                "串口日志",         "系统"),
@@ -85,6 +86,9 @@ bool CanHandler::
 Handle1016(CanFrame &frame) {
     if (frame.dlc < 8) return false;
     m_state.follow_distance = (frame.data[5] & 0b11100000) >> 5;
+
+    if (m_cnf.camera_by_distance)
+        m_cnf.disable_camera = m_state.follow_distance > 1;
 
     // 缓存最近一次原始帧，供调试页展示
     memcpy(m_dbg.last_1016.data, frame.data, 8);
@@ -183,6 +187,11 @@ Handle1021Mux1(CanFrame &frame) {
 
     if (m_cnf.disable_camera) {
         frame.SetBit(43, false);
+        should_send = true;
+    }
+
+    if (m_cnf.enable_nag_suppress) {
+        frame.SetBit(19, false);
         should_send = true;
     }
 

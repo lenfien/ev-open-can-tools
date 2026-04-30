@@ -158,7 +158,7 @@ handleStatus() {
     JB(enable_print);
     JB(use_hw3_code);
     JB(enable_ban_shield);
-    // JB(enable_nag_suppress);
+    JB(enable_nag_suppress);
     // JB(enable_summon_unlock);
     // JB(enable_enhanced_autopilot_runtime);
     JB(disable_camera);
@@ -171,6 +171,7 @@ handleStatus() {
     JB(speed_offset_use_fix_or_dynamic);
     JU(speed_offset_fix_from_web);
     JB(start_from_park);
+    JB(camera_by_distance);
 #undef JB
 #undef JU
     j += ",\"auto_cfg\":[";
