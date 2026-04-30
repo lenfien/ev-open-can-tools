@@ -289,6 +289,9 @@ static void
 handleReboot() {
     server.send(200, "text/plain", "Rebooting...");
     delay(200);
+    WiFi.disconnect(true);
+    WiFi.mode(WIFI_OFF);
+    delay(100);
     ESP.restart();
 }
 
@@ -596,18 +599,15 @@ WebSetup(CanHandler * /*handler*/, CanDriver * /*driver*/) {
     dashLoadPrefs();
     dbgLoadArchive();
 
+    WiFi.persistent(false);
+    WiFi.mode(WIFI_AP_STA);
+    WiFi.softAP(apSSID, apPass, 1, apHidden ? 1 : 0, 4);
     if (strlen(staSSID)) {
-        WiFi.persistent(false);
-        WiFi.mode(WIFI_AP_STA);
-        WiFi.softAP(apSSID, apPass, 1, apHidden ? 1 : 0, 4);
         if (staStaticIP && (uint32_t)staIP != 0)
             WiFi.config(staIP, staGW, staMask, staDNS);
         WiFi.setAutoReconnect(false);
         WiFi.setSleep(WIFI_PS_NONE);
         WiFi.begin(staSSID, staPass);
-    } else {
-        WiFi.mode(WIFI_AP);
-        WiFi.softAP(apSSID, apPass, 1, apHidden ? 1 : 0, 4);
     }
     Serial.printf("[WIFI] AP: %s  IP: %s\n", apSSID, WiFi.softAPIP().toString().c_str());
 
