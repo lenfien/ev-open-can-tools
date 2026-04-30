@@ -298,8 +298,9 @@ static void
 dashConnectSTA() {
     if (!strlen(staSSID)) return;
     WiFi.mode(WIFI_AP_STA);
-    WiFi.setSleep(false);
     WiFi.persistent(false);
+    WiFi.setAutoReconnect(false);
+    WiFi.setSleep(false);
     WiFi.softAP(apSSID, apPass, 1, apHidden ? 1 : 0, 4);
 
     if (staStaticIP && (uint32_t)staIP != 0)
@@ -332,7 +333,16 @@ dashCheckWifi() {
 
 static void
 handleWifiScan() {
-    int n = WiFi.scanNetworks(false, false, false, 300);
+    int n = WiFi.scanComplete();
+    if (n == WIFI_SCAN_RUNNING) {
+        server.send(202, "application/json", "{\"scanning\":true}");
+        return;
+    }
+    if (n == WIFI_SCAN_FAILED || n == 0) {
+        WiFi.scanNetworks(true, false, false, 120);
+        server.send(202, "application/json", "{\"scanning\":true}");
+        return;
+    }
     String j = "{\"networks\":[";
     for (int i = 0; i < n && i < 20; i++) {
         if (i) j += ",";
@@ -587,6 +597,7 @@ WebSetup(CanHandler * /*handler*/, CanDriver * /*driver*/) {
     dbgLoadArchive();
 
     if (strlen(staSSID)) {
+        WiFi.persistent(false);
         WiFi.mode(WIFI_AP_STA);
         WiFi.softAP(apSSID, apPass, 1, apHidden ? 1 : 0, 4);
         if (staStaticIP && (uint32_t)staIP != 0)

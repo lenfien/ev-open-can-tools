@@ -546,13 +546,19 @@ async function loadSta() {
 async function scanWifi() {
   g('nets').innerHTML = '<div style="color:#555;padding:6px 0">扫描中...</div>';
   try {
-    const d = await (await fetch('/wifi_scan')).json();
-    g('nets').innerHTML = d.networks.map(n => {
-      const esc = n.ssid.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-      return '<div class="net" onclick="g(\'sta_ssid_in\').value=\''+esc+'\'">'+
-             '<span>'+esc+(n.enc?' &#128274;':'')+'</span>'+
-             '<span class="rssi">'+n.rssi+' dBm</span></div>';
-    }).join('');
+    for (let i = 0; i < 10; i++) {
+      const resp = await fetch('/wifi_scan');
+      const d = await resp.json();
+      if (d.scanning) { await new Promise(r => setTimeout(r, 1500)); continue; }
+      g('nets').innerHTML = d.networks.map(n => {
+        const esc = n.ssid.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+        return '<div class="net" onclick="g(\'sta_ssid_in\').value=\''+esc+'\'">'+
+               '<span>'+esc+(n.enc?' &#128274;':'')+'</span>'+
+               '<span class="rssi">'+n.rssi+' dBm</span></div>';
+      }).join('');
+      return;
+    }
+    g('nets').innerHTML = '<div style="color:#ff4f4f;padding:6px 0">扫描超时</div>';
   } catch(e) {
     g('nets').innerHTML = '<div style="color:#ff4f4f;padding:6px 0">扫描失败</div>';
   }
