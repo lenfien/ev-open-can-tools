@@ -232,8 +232,10 @@ Handle1021Mux2(CanFrame &frame) {
         }
     }
 
-    frame.data[7] &= ~(0x07 << 4);
-    frame.data[7] |= (m_state.speed_profile_to_hw4 & 0x07) << 4;
+    if (!m_cnf.enable_set_hw3_profile) {
+        frame.data[7] &= ~(0x07 << 4);
+        frame.data[7] |= (m_state.speed_profile_to_hw4 & 0x07) << 4;
+    }
 
     if (m_cnf.speed_offset_enable_override) {
         m_state.speed_offset = m_cnf.speed_offset_fix_from_web;
@@ -242,15 +244,6 @@ Handle1021Mux2(CanFrame &frame) {
 
         if (m_state.speed_offset > 0) {
             frame.data[1] = (frame.data[1] & 0xC0) | (m_state.speed_offset & 0x3F);
-            //
-            // if (!m_cnf.use_hw3_code) {
-            //     frame.data[1] = (frame.data[1] & 0xC0) | (m_state.speed_offset & 0x3F);
-            // }
-            // else {
-            //     m_state.speed_offset = ReRange(Clamp(m_state.speed_offset, 0, 60), 0, 60, 0, 240);
-            //     frame.data[1] &= ~(0b00111111);
-            //     frame.data[1] |= (m_state.speed_offset >> 2);
-            // }
         }
     }
 
