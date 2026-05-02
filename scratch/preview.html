@@ -480,8 +480,8 @@ body.light{
   --tabbar:#f9f9f9;--tab-c:#8e8e93;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font:14px/1.5 -apple-system,BlinkMacSystemFont,sans-serif;max-width:480px;margin:0 auto;padding:16px 12px 68px;transition:background .2s,color .2s}
-h2{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--h2);margin:22px 0 6px}
+body{background:var(--bg);color:var(--text);font:14px/1.5 -apple-system,BlinkMacSystemFont,sans-serif;max-width:480px;margin:0 auto;padding:16px 12px 80px;transition:background .2s,color .2s}
+h2{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--h2);margin:22px 0 6px;transition:color .45s ease}
 .card{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:6px}
 .row{display:flex;justify-content:space-between;align-items:center;padding:9px 14px;border-bottom:1px solid var(--sep)}
 .row:last-child{border-bottom:none}
@@ -555,10 +555,12 @@ body.light .led{background:#c8ccd3;border-color:#b0b4bc;box-shadow:inset 0 1px 2
 .tval{font-size:15px;font-weight:700;color:var(--tval);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pg{display:none}
 .pg.act{display:block}
-.tabbar{position:fixed;bottom:0;left:0;right:0;max-width:480px;margin:0 auto;display:flex;background:var(--tabbar);border-top:1px solid var(--border);z-index:100}
-.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 0 12px;background:none;border:none;color:var(--tab-c);cursor:pointer;font-size:10px;gap:3px;transition:color .15s;letter-spacing:.02em}
+亮是啊,.tabbar{position:fixed;bottom:12px;left:12px;right:12px;max-width:456px;margin:0 auto;display:flex;background:var(--tabbar);border:1px solid var(--border);border-radius:22px;padding:4px;box-shadow:0 6px 20px rgba(0,0,0,.28),0 2px 6px rgba(0,0,0,.18);z-index:100;transition:background .45s ease,border-color .45s ease,box-shadow .45s ease,-webkit-backdrop-filter .45s ease,backdrop-filter .45s ease}
+body.light .tabbar{box-shadow:0 6px 18px rgba(0,0,0,.10),0 2px 6px rgba(0,0,0,.06)}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 0 8px;background:none;border:none;border-radius:18px;color:var(--tab-c);cursor:pointer;font-size:10px;gap:3px;transition:color .45s ease,background .25s ease;letter-spacing:.02em}
 .tab svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.tab.act{color:#5b8fff}
+.tab.act{color:#5b8fff;background:rgba(91,143,255,.14)}
+body.light .tab.act{background:rgba(91,143,255,.12)}
 .segsw{position:relative;display:grid;grid-template-columns:1fr 1fr;background:var(--sw-off);border-radius:20px;padding:2px;cursor:pointer;flex-shrink:0}
 .segopt{display:flex;align-items:center;justify-content:center;padding:5px 10px;font-size:11px;font-weight:600;position:relative;z-index:1;user-select:none;color:var(--tlbl);white-space:nowrap;transition:color .2s}
 .segsw.right .segopt:last-of-type,.segsw:not(.right) .segopt:first-of-type{color:#fff}
@@ -602,16 +604,16 @@ body.light .led{background:#c8ccd3;border-color:#b0b4bc;box-shadow:inset 0 1px 2
 .dbg-actions .btn{margin-top:0;flex:1}
 /* ===== 响应式：≤640px 维持手机原样；≥641px 按屏幕档位放宽并提升列数 ===== */
 @media (min-width:641px){
-  body{max-width:720px;padding:20px 18px 76px}
-  .tabbar{max-width:720px}
+  body{max-width:720px;padding:20px 18px 84px}
+  .tabbar{max-width:696px}
   .grid{grid-template-columns:repeat(4,1fr)}
   .flist{grid-template-columns:repeat(4,1fr)}
   .fcard.wide{grid-column:span 2}
   .feat-children{grid-template-columns:repeat(4,1fr);grid-column:span 4}
 }
 @media (min-width:1025px){
-  body{max-width:960px;padding:24px 20px 80px}
-  .tabbar{max-width:960px}
+  body{max-width:960px;padding:24px 20px 88px}
+  .tabbar{max-width:936px}
   .grid{grid-template-columns:repeat(5,1fr)}
   .flist{grid-template-columns:repeat(5,1fr)}
   .fcard.wide{grid-column:span 2}
@@ -620,15 +622,157 @@ body.light .led{background:#c8ccd3;border-color:#b0b4bc;box-shadow:inset 0 1px 2
 }
 @media (min-width:1440px){
   body{max-width:1120px}
-  .tabbar{max-width:1120px}
+  .tabbar{max-width:1096px}
   .grid{grid-template-columns:repeat(6,1fr)}
   .flist{grid-template-columns:repeat(6,1fr)}
   .fcard.wide{grid-column:span 2}
   .feat-children{grid-template-columns:repeat(6,1fr);grid-column:span 6}
 }
+/* ===== 注入中全局动效 ===== */
+/* 主题感知颜色：全部通过变量驱动，切暗/亮时即时跟随 */
+:root{
+  --inj-a:91,143,255;   /* 主调蓝（暗色背景更显眼） */
+  --inj-b:122,168,255;  /* 副调亮蓝 */
+  --inj-c:168,200,255;  /* 高光 */
+  --inj-alpha-glow:.22;
+  --inj-alpha-edge:.55;
+  --inj-alpha-aurora:.28;
+}
+body.light{
+  --inj-a:58,95,168;
+  --inj-b:91,143,255;
+  --inj-c:140,180,240;
+  --inj-alpha-glow:.14;
+  --inj-alpha-edge:.38;
+  --inj-alpha-aurora:.18;
+}
+/* 背景柔和呼吸光晕：两处径向渐变缓慢脉动，营造"脉搏"感 */
+.inj-glow{position:fixed;inset:0;pointer-events:none;z-index:-1;opacity:0;transition:opacity .6s ease}
+body.injecting .inj-glow{opacity:1;animation:injPulse 5.5s ease-in-out infinite}
+.inj-glow::before,.inj-glow::after{content:'';position:absolute;width:70vmax;height:70vmax;border-radius:50%;filter:blur(60px)}
+.inj-glow::before{top:-20vmax;left:-20vmax;background:radial-gradient(circle,rgba(var(--inj-a),var(--inj-alpha-glow)) 0%,rgba(var(--inj-a),0) 65%)}
+.inj-glow::after{bottom:-25vmax;right:-25vmax;background:radial-gradient(circle,rgba(var(--inj-b),calc(var(--inj-alpha-glow) * .75)) 0%,rgba(var(--inj-b),0) 65%)}
+@keyframes injPulse{0%,100%{opacity:.7}50%{opacity:1}}
+/* 极光层：四个彩色光斑在背景里缓慢旋转+位移，像流动的极光，不像进度条 */
+.inj-aurora{position:fixed;inset:-20%;pointer-events:none;z-index:-1;opacity:0;transition:opacity .6s ease;filter:blur(80px)}
+body.injecting .inj-aurora{opacity:1;animation:injAuroraSpin 28s linear infinite}
+.inj-aurora::before,.inj-aurora::after{content:'';position:absolute;inset:0;background:
+  radial-gradient(ellipse 40% 30% at 20% 25%,rgba(var(--inj-a),var(--inj-alpha-aurora)) 0%,transparent 60%),
+  radial-gradient(ellipse 35% 28% at 80% 30%,rgba(var(--inj-c),calc(var(--inj-alpha-aurora) * .7)) 0%,transparent 60%),
+  radial-gradient(ellipse 45% 32% at 75% 80%,rgba(var(--inj-b),var(--inj-alpha-aurora)) 0%,transparent 60%),
+  radial-gradient(ellipse 38% 30% at 25% 75%,rgba(var(--inj-a),calc(var(--inj-alpha-aurora) * .8)) 0%,transparent 60%)}
+.inj-aurora::after{animation:injAuroraDrift 14s ease-in-out infinite alternate;mix-blend-mode:screen}
+body.light .inj-aurora::after{mix-blend-mode:multiply}
+@keyframes injAuroraSpin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+@keyframes injAuroraDrift{0%{transform:translate(-4%,-3%) scale(1)}100%{transform:translate(5%,4%) scale(1.08)}}
+/* 左右边缘：容器只管定位/发光，动画放到::before上； */
+/* 这样主元素不带动画，切主题时 var() 能被正常重新解析，不会因合成层缓存导致色值冻结。 */
+.inj-edge{position:fixed;top:0;bottom:0;width:2px;pointer-events:none;z-index:9998;opacity:0;transition:opacity .4s ease,box-shadow .2s ease}
+.inj-edge.l{left:0;box-shadow:0 0 10px rgba(var(--inj-a),var(--inj-alpha-edge))}
+.inj-edge.r{right:0;box-shadow:0 0 10px rgba(var(--inj-a),var(--inj-alpha-edge))}
+.inj-edge::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,
+  transparent 0%,
+  rgba(var(--inj-a),0) 10%,
+  rgba(var(--inj-a),var(--inj-alpha-edge)) 25%,
+  rgba(var(--inj-a),0) 40%,
+  rgba(var(--inj-b),var(--inj-alpha-edge)) 55%,
+  rgba(var(--inj-b),0) 70%,
+  rgba(var(--inj-a),var(--inj-alpha-edge)) 85%,
+  transparent 100%);background-size:100% 300%}
+body.injecting .inj-edge{opacity:.85}
+body.injecting .inj-edge.l::before{animation:injEdgeDown 6s linear infinite}
+body.injecting .inj-edge.r::before{animation:injEdgeUp 6s linear infinite}
+@keyframes injEdgeDown{0%{background-position:0 -100%}100%{background-position:0 200%}}
+@keyframes injEdgeUp{0%{background-position:0 200%}100%{background-position:0 -100%}}
+/* 毛玻璃（glassmorphism）：注入开启时，卡片变成半透明磨砂玻璃，让背景的极光透过来 */
+/* 卡片自身保持平滑过渡，避免切换瞬间的硬跳变 */
+.card,.tile,.fcard,.master-card{transition:background .45s ease,border-color .45s ease,backdrop-filter .45s ease,-webkit-backdrop-filter .45s ease,box-shadow .25s ease,transform .08s}
+/* 深色：玻璃偏冷白，微弱反光边缘 */
+body.injecting{--glass-bg:rgba(30,36,52,.72);--glass-bg-on:rgba(58,95,168,.60);--glass-border:rgba(255,255,255,.12);--glass-border-on:rgba(122,168,255,.60);--glass-shadow:0 4px 24px rgba(0,0,0,.32)}
+body.injecting.light{--glass-bg:rgba(255,255,255,.72);--glass-bg-on:rgba(219,232,255,.82);--glass-border:rgba(91,143,255,.22);--glass-border-on:rgba(58,95,168,.48);--glass-shadow:0 4px 18px rgba(58,95,168,.14)}
+body.injecting .card,
+body.injecting .tile,
+body.injecting .fcard,
+body.injecting .master-card{
+  background:var(--glass-bg);
+  border-color:var(--glass-border);
+  -webkit-backdrop-filter:blur(14px) saturate(160%);
+  backdrop-filter:blur(14px) saturate(160%);
+  box-shadow:var(--glass-shadow);
+}
+/* 激活态（已开启的功能卡 / 总开关），用带色玻璃 + 更亮的边缘反光 */
+body.injecting .fcard.on,
+body.injecting .master-card.on{
+  background:var(--glass-bg-on);
+  border-color:var(--glass-border-on);
+  -webkit-backdrop-filter:blur(14px) saturate(180%);
+  backdrop-filter:blur(14px) saturate(180%);
+}
+/* :active 按下效果在玻璃态下也保留反馈，但用更柔和的玻璃反光 */
+body.injecting .fcard:active{background:rgba(91,143,255,.22)}
+/* 卡内元素同步玻璃化，避免"卡透了、里面按钮/输入/Wi-Fi 行还实色"的突兀感 */
+/* 注意：.pbtn.act（当前选中档位）与 .btn（强调按钮）保持实色，保留强视觉区分 */
+.pbtn,.inp,.net{transition:background .45s ease,border-color .45s ease,backdrop-filter .45s ease,-webkit-backdrop-filter .45s ease,color .15s ease}
+body.injecting .pbtn:not(.act),
+body.injecting .inp,
+body.injecting .net{
+  background:var(--glass-bg);
+  border-color:var(--glass-border);
+  -webkit-backdrop-filter:blur(10px) saturate(160%);
+  backdrop-filter:blur(10px) saturate(160%);
+}
+/* 注入态下档位按钮（最慢/舒适/…）未选中文字对齐其他标签亮度，避免在玻璃背景上显得过暗 */
+body.injecting .pbtn:not(.act){color:var(--tlbl)}
+body.injecting .pbtn:not(.act):hover,
+body.injecting .net:hover{
+  background:var(--glass-bg-on);
+  border-color:var(--glass-border-on);
+}
+/* 圆形 iOS 开关：关闭态底座跟随玻璃化；打开态（蓝色）保持实色作为强状态指示 */
+.sl{transition:background .45s ease,-webkit-backdrop-filter .45s ease,backdrop-filter .45s ease}
+body.injecting input:not(:checked)+.sl{
+  background:var(--glass-bg);
+  -webkit-backdrop-filter:blur(8px) saturate(160%);
+  backdrop-filter:blur(8px) saturate(160%);
+}
+/* 分段开关（关闭注入/开启注入、跟着距离/固定）：外壳玻璃化，蓝色滑块保持实色 */
+.segsw,.thsw{transition:background .45s ease,-webkit-backdrop-filter .45s ease,backdrop-filter .45s ease}
+body.injecting .segsw,
+body.injecting .thsw{
+  background:var(--glass-bg);
+  -webkit-backdrop-filter:blur(8px) saturate(160%);
+  backdrop-filter:blur(8px) saturate(160%);
+}
+/* 注入态下每组卡片标题 h2 提亮：暗色 → 纯白；亮色 → 深色（在玻璃背景上更清晰） */
+body.injecting h2{color:#fff}
+body.injecting.light h2{color:#1c1c1e}
+/* 注入态下底部 Tab 栏玻璃化，未激活文字提亮，激活仍保持蓝色 */
+body.injecting .tabbar{
+  background:var(--glass-bg);
+  border-color:var(--glass-border);
+  box-shadow:0 8px 24px rgba(0,0,0,.32),0 2px 8px rgba(0,0,0,.22);
+  -webkit-backdrop-filter:blur(14px) saturate(160%);
+  backdrop-filter:blur(14px) saturate(160%);
+}
+body.injecting .tab{color:rgba(255,255,255,.78)}
+body.injecting.light .tab{color:rgba(28,28,30,.72)}
+body.injecting .tab.act{color:#5b8fff}
+/* 尊重用户"减少动画"偏好（无障碍） */
+@media (prefers-reduced-motion:reduce){
+  body.injecting .inj-glow,
+  body.injecting .inj-aurora,
+  body.injecting .inj-aurora::after,
+  body.injecting .inj-edge.l::before,
+  body.injecting .inj-edge.r::before{animation:none}
+}
 </style>
 </head>
 <body>
+<!-- 注入中全局动效层（仅当 body.injecting 时可见） -->
+<div class="inj-glow" aria-hidden="true"></div>
+<div class="inj-aurora" aria-hidden="true"></div>
+<div class="inj-edge l" aria-hidden="true"></div>
+<div class="inj-edge r" aria-hidden="true"></div>
 <div class="hdr">
   <span class="htitle">Tesla CAN 助手</span>
   <div style="display:flex;align-items:center;gap:10px">
@@ -915,6 +1059,7 @@ function syncMaster(on) {
   document.getElementById('controlled').classList.toggle('locked', !on);
   const card = document.getElementById('master-card');
   if (card) card.classList.toggle('on', on);
+  document.body.classList.toggle('injecting', !!on);
 }
 syncMaster(false);
 
