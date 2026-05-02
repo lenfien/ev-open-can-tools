@@ -191,7 +191,7 @@ Handle2047(CanFrame &frame) {
 bool CanHandler::
 Handle1021Mux0(CanFrame &frame) {
     if (m_cnf.enable_fsd) {
-        if (m_cnf.ap_first && m_state.das_ap_state <= 2)
+        if (m_cnf.ap_first && m_state.das_ap_state < 2)
             return false;
 
         frame.SetBit(46, true);
@@ -352,7 +352,7 @@ Handle(CanFrame &frame, CanDriver &driver) {
         case 1016: should_send = Handle1016(frame);  break;
         case 2047: should_send = Handle2047(frame);  break;
         case 1021: should_send = Handle1021(frame);  break;
-    case 923:  should_send = Handle923(frame);                 break;
+        case 923:  should_send = Handle923(frame);                 break;
     }
 
     if (m_cnf.enable_print) {
