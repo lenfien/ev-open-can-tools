@@ -135,46 +135,37 @@ handleStatus() {
 
     CanState &s = g_can_handler->m_state;
     CanConf  &c = g_can_handler->m_cnf;
+    // 保证下面 schema 驱动的输出用的是最新值
+    s.can_online = canOnline ? 1u : 0u;
 
     String j = "{\"state\":{";
-    j += "\"follow_distance\":"          + String(s.follow_distance);
-    j += ",\"profile_hw3\":"             + String(s.speed_profile_to_hw3);
-    j += ",\"profile_hw4\":"             + String(s.speed_profile_to_hw4);
-    j += ",\"frame_cnt\":"               + String(s.frame_cnt);
-    j += ",\"frame_sent\":"              + String(s.frame_sent);
-    j += ",\"ban_shield_cnt\":"          + String(s.ban_shield_cnt);
-    j += ",\"ban_shield_check_cnt\":"    + String(s.ban_shield_check_cnt);
-    j += ",\"speed_limit_fused\":"       + String(s.speed_limit_fused);
-    j += ",\"speed_limit_vision_only\":" + String(s.speed_limit_vision_only);
-    j += ",\"speed_offset\":"            + String(s.speed_offset);
-    j += ",\"gateway_autopilot\":"       + String(s.gateway_autopilot);
-    j += ",\"uptime\":"                  + String(millis() / 1000);
-    j += ",\"can_online\":"              + String(canOnline ? "true" : "false");
+    // schema 驱动：遍历 kStateSchema[] 输出所有只读状态字段（key 即 JSON 字段名）
+    bool first = true;
+    for (size_t i = 0; i < kStateSchemaCount; ++i) {
+        const StateFieldDesc &f = kStateSchema[i];
+        uint32_t *slot = (uint32_t *)((char *)&s + f.state_offset);
+        if (!first) j += ",";
+        first = false;
+        j += "\""; j += f.key; j += "\":" + String(*slot);
+    }
+    // 非 schema 的状态补充字段：只剩 uptime（运行时间 tile 用）。
+    if (!first) j += ",";
+    j += "\"uptime\":" + String(millis() / 1000);
     j += "},\"cnf\":{";
-#define JB(field) j += ",\"" #field "\":" + String(c.field ? "true" : "false")
-#define JU(field) j += ",\"" #field "\":" + String(c.field)
-    j += "\"enable_inject\":"            + String(c.enable_inject ? "true" : "false");
-    JB(enable_fsd);
-    JB(enable_print);
-    JB(use_hw3_code);
-    JB(enable_ban_shield);
-    JB(enable_nag_suppress);
-    // JB(enable_summon_unlock);
-    // JB(enable_enhanced_autopilot_runtime);
-    JB(disable_camera);
-    // JB(enable_emergency_vehicle_detection_runtime);
-    JB(enable_isa_speed_chime_suppress_runtime);
-    JB(speed_profile_use_follow_distance);
-    JU(speed_profile_from_web);
-    JB(enable_set_hw3_profile);
-    JB(speed_offset_enable_override);
-    JB(speed_offset_use_fix_or_dynamic);
-    JU(speed_offset_fix_from_web);
-    JB(start_from_park);
-    JB(camera_by_distance);
-#undef JB
-#undef JU
-    j += ",\"auto_cfg\":[";
+    // schema 驱动：遍历 kCnfSchema[] 输出所有可写字段（包括 hidden 字段，前端特殊 UI 也读这里）
+    bool cnfFirst = true;
+    for (size_t i = 0; i < kCnfSchemaCount; ++i) {
+        const CnfFieldDesc &f = kCnfSchema[i];
+        uint32_t *slot = (uint32_t *)((char *)&c + f.conf_offset);
+        if (!cnfFirst) j += ",";
+        cnfFirst = false;
+        j += "\""; j += f.key; j += "\":";
+        if (f.type == FT_BOOL) j += (*slot ? "true" : "false");
+        else                   j += String(*slot);
+    }
+    // auto_cfg 是数组结构，不在 schema 里；保留手写。
+    if (!cnfFirst) j += ",";
+    j += "\"auto_cfg\":[";
     for (int i = 0; i < 12; i++) {
         if (i > 0) j += ",";
         j += "{\"spd\":" + String(c.speed_limit_auto_cfg[i].speed_limit);
@@ -188,9 +179,9 @@ static void
 handleConfig() {
     CanConf &c = g_can_handler->m_cnf;
 
-    // 1) Schema 驱动的通用字段：遍历所有 schema 条目，有 arg 就写
-    for (size_t i = 0; i < kSchemaCount; ++i) {
-        const FieldDesc &f = kSchema[i];
+    // 1) Schema 驱动的通用字段：遍历 kCnfSchema[]，有 arg 就写（state 字段只读，不出现在这里）。
+    for (size_t i = 0; i < kCnfSchemaCount; ++i) {
+        const CnfFieldDesc &f = kCnfSchema[i];
         if (!server.hasArg(f.key)) continue;
         String raw = server.arg(f.key);
         uint32_t v;
@@ -202,26 +193,7 @@ handleConfig() {
         SchemaApplyValue(f, c, v);
     }
 
-    // 2) 特殊控件（带 UI 隐藏逻辑 / 派生计算 / 不适合直接塞 schema 的）
-    struct { const char *k; uint32_t *f; } bools[] = {
-        {"enable_inject",                              &c.enable_inject},
-        {"speed_profile_use_follow_distance",          &c.speed_profile_use_follow_distance},
-        {"enable_set_hw3_profile",                     &c.enable_set_hw3_profile},
-        {"speed_offset_enable_override",               &c.speed_offset_enable_override},
-        {"speed_offset_use_fix_or_dynamic",            &c.speed_offset_use_fix_or_dynamic},
-    };
-    for (auto &b : bools) {
-        if (server.hasArg(b.k))
-            *b.f = server.arg(b.k) == "1" ? 1u : 0u;
-    }
-    if (server.hasArg("speed_profile_from_web")) {
-        uint32_t v = (uint32_t)server.arg("speed_profile_from_web").toInt();
-        if (v >= 1 && v <= 5) c.speed_profile_from_web = v;
-    }
-    if (server.hasArg("speed_offset_fix_from_web")) {
-        int v = server.arg("speed_offset_fix_from_web").toInt();
-        c.speed_offset_fix_from_web = (uint32_t)constrain(v, 0, 50);
-    }
+    // 2) 数组条目（不在 schema 中，手写）
     for (int i = 0; i < 12; i++) {
         String key = "auto_cfg_" + String(i);
         if (server.hasArg(key))
@@ -256,15 +228,16 @@ schemaWidgetTypeStr(WidgetType w) {
 
 static void
 handleSchema() {
-    String j = "[";
-    for (size_t i = 0; i < kSchemaCount; ++i) {
-        const FieldDesc &f = kSchema[i];
+    String j = "{\"cnf\":[";
+    for (size_t i = 0; i < kCnfSchemaCount; ++i) {
+        const CnfFieldDesc &f = kCnfSchema[i];
         if (i > 0) j += ",";
-        j += "{\"key\":\"";       j += f.key;             j += "\"";
-        j += ",\"label\":\"";      j += f.label_zh;        j += "\"";
-        j += ",\"group\":\"";      j += (f.group ? f.group : ""); j += "\"";
-        j += ",\"type\":\"";       j += schemaFieldTypeStr(f.type);    j += "\"";
-        j += ",\"widget\":\"";     j += schemaWidgetTypeStr(f.widget); j += "\"";
+        j += "{\"key\":\"";    j += f.key;             j += "\"";
+        j += ",\"label\":\"";   j += f.label_zh;        j += "\"";
+        j += ",\"group\":\"";   j += (f.group ? f.group : ""); j += "\"";
+        j += ",\"type\":\"";    j += schemaFieldTypeStr(f.type);    j += "\"";
+        j += ",\"widget\":\"";  j += schemaWidgetTypeStr(f.widget); j += "\"";
+        if (f.hidden) { j += ",\"hidden\":true"; }
         if (f.type == FT_NUMBER) {
             j += ",\"min\":"  + String(f.min_val);
             j += ",\"max\":"  + String(f.max_val);
@@ -282,7 +255,21 @@ handleSchema() {
         }
         j += "}";
     }
-    j += "]";
+    j += "],\"state\":[";
+    for (size_t i = 0; i < kStateSchemaCount; ++i) {
+        const StateFieldDesc &f = kStateSchema[i];
+        if (i > 0) j += ",";
+        j += "{\"key\":\"";    j += f.key;             j += "\"";
+        j += ",\"label\":\"";   j += f.label_zh;        j += "\"";
+        j += ",\"type\":\"";    j += schemaFieldTypeStr(f.type);    j += "\"";
+        if (f.unit)        { j += ",\"unit\":\"";       j += f.unit;            j += "\""; }
+        if (f.tile)        { j += ",\"tile\":\"";       j += f.tile;            j += "\""; }
+        if (f.tile_label)  { j += ",\"tile_label\":\""; j += f.tile_label;      j += "\""; }
+        if (f.tile_sep)    { j += ",\"tile_sep\":\"";   j += jesc(f.tile_sep);  j += "\""; }
+        if (f.enum_labels) { j += ",\"enum_labels\":\""; j += jesc(f.enum_labels); j += "\""; }
+        j += "}";
+    }
+    j += "]}";
     server.send(200, "application/json", j);
 }
 
@@ -636,4 +623,27 @@ void
 mcpDashboardLoop() {
     if (canOnline && millis() - lastFrameMs > 10000)
         canOnline = false;
+
+    // 每 1 秒采样一次 frame_cnt / frame_sent 的差分，得到每秒收/发帧数，
+    // 写回 CanState.frame_rx_rate / frame_tx_rate，前端从 schema 驱动的 /status 直接拿到。
+    static uint32_t lastSampleMs   = 0;
+    static uint32_t lastFrameCnt   = 0;
+    static uint32_t lastFrameSent  = 0;
+    uint32_t now = millis();
+    if (lastSampleMs == 0) {
+        lastSampleMs  = now;
+        lastFrameCnt  = g_can_handler->m_state.frame_cnt;
+        lastFrameSent = g_can_handler->m_state.frame_sent;
+    } else if (now - lastSampleMs >= 1000) {
+        uint32_t dt_ms = now - lastSampleMs;
+        uint32_t cnt   = g_can_handler->m_state.frame_cnt;
+        uint32_t sent  = g_can_handler->m_state.frame_sent;
+        g_can_handler->m_state.frame_rx_rate = (uint32_t)((uint64_t)(cnt  - lastFrameCnt)  * 1000u / dt_ms);
+        g_can_handler->m_state.frame_tx_rate = (uint32_t)((uint64_t)(sent - lastFrameSent) * 1000u / dt_ms);
+        lastSampleMs  = now;
+        lastFrameCnt  = cnt;
+        lastFrameSent = sent;
+    }
+
+    g_can_handler->m_state.can_online = canOnline ? 1u : 0u;
 }

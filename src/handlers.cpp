@@ -8,49 +8,100 @@
 #include <cstring>
 
 // ── Schema ────────────────────────────────────────────────────────
-// 主页上的通用 bool/枚举/数值 字段都在这里声明。
-// 要新增一个简单开关：
-//   1. 在 CanConf 里加一个 uint32_t 字段
-//   2. 在 kSchema 里加一行
-// C++ handler 里照常读 m_cnf.xxx；Web 端 UI 自动生成。
+// 主页上的可写开关 / 只读状态都在这里声明。
+//   可写字段（渲染成表单控件）→ kCnfSchema[]
+//   只读字段（渲染成顶部小卡片）→ kStateSchema[]
+//
+// 新增一个简单开关：
+//   1. 在 CanConf  里加一个 uint32_t 字段
+//   2. 在 kCnfSchema 里加一行
+// 新增一个只读状态：
+//   1. 在 CanState 里加一个 uint32_t 字段
+//   2. 在 kStateSchema 里加一行
+// C++ handler 里照常读写 m_cnf.xxx / m_state.xxx；CAN bit 映射手写在各 handler 里。
 
-// 便捷宏：一个纯逻辑 bool 开关（不直接按 bit 写 CAN，frame_id=0）
+// ── cnf（可写）─────────────────────────────────────────────────────
+// 一个纯 bool 开关
 // 注意：#KEY 把裸标识符字符串化为 "enable_fsd" 这样的 key；offsetof 仍用裸名字。
-#define SCHEMA_BOOL_LOGIC(KEY, LABEL, GROUP)                                                  \
-    { #KEY, LABEL, GROUP, FT_BOOL, WT_CHECKBOX, 0, -1, 0, 1, 0, 0, 0, nullptr,                \
-      offsetof(CanConf, KEY) }
+#define CNF_BOOL(KEY, LABEL, GROUP) \
+    { #KEY, LABEL, GROUP, FT_BOOL, WT_CHECKBOX, 0, 1, 1, nullptr, offsetof(CanConf, KEY), false }
 
-const FieldDesc kSchema[] = {
+// 前端有自定义控件（不走自动渲染）的 cnf 字段：hidden=true
+// 后端 /status、/config、/schema 仍照常遍历；前端 renderSchemaGroups() 会跳过自动渲染。
+#define CNF_HIDDEN_BOOL(KEY) \
+    { #KEY, #KEY, nullptr, FT_BOOL, WT_CHECKBOX, 0, 1, 1, nullptr, offsetof(CanConf, KEY), true }
+
+#define CNF_HIDDEN_NUM(KEY, MINV, MAXV, STEPV) \
+    { #KEY, #KEY, nullptr, FT_NUMBER, WT_INPUT, MINV, MAXV, STEPV, nullptr, offsetof(CanConf, KEY), true }
+
+// ── state（只读；显示在主页顶部小卡片）──────────────────────────
+// 用法约定：
+//   - tile == nullptr  → 字段独占一个 tile，标题取 tile_label（若空则取 label）。
+//   - tile != nullptr  → 同 tile 的字段按 schema 顺序合并到一个 tile；
+//                        标题取第一个非空的 tile_label；字段之间用 tile_sep 拼接；单位 unit 跟在值后。
+// 数值（显示原始数字 + 可选单位）
+#define STATE_NUM(KEY, LABEL, UNIT, TILE, TILE_LBL, SEP) \
+    { #KEY, LABEL, FT_NUMBER, offsetof(CanState, KEY), UNIT, TILE, TILE_LBL, SEP, nullptr }
+
+// 用 "离线|在线" 或 "无|高速|..." 的轻量枚举映射显示（无需单独定义 EnumOption 数组）
+#define STATE_ENUM(KEY, LABEL, LABELS, TILE, TILE_LBL, SEP) \
+    { #KEY, LABEL, FT_ENUM, offsetof(CanState, KEY), nullptr, TILE, TILE_LBL, SEP, LABELS }
+
+const StateFieldDesc kStateSchema[] = {
+    STATE_ENUM(can_online,               "CAN 总线",     "离线|在线",                  nullptr, "CAN 总线",           " / "),
+    STATE_NUM (frame_rx_rate,            "帧/s 收",      nullptr, "frm", "帧/s 收 / 发",      " / "),
+    STATE_NUM (frame_tx_rate,            "帧/s 发",      nullptr, "frm", "帧/s 收 / 发",      " / "),
+    STATE_NUM (follow_distance,          "跟车距离",      nullptr, nullptr, "跟车距离",         " / "),
+    STATE_NUM (speed_profile_to_hw3,     "档位 HW3",     nullptr, "sp",  "速度档位 HW3/HW4",   " / "),
+    STATE_NUM (speed_profile_to_hw4,     "档位 HW4",     nullptr, "sp",  "速度档位 HW3/HW4",   " / "),
+    STATE_NUM (speed_limit_fused,        "限速 融合",     "km/h",  "sl",  "限速 融合/视觉",     " / "),
+    STATE_NUM (speed_limit_vision_only,  "限速 视觉",     "km/h",  "sl",  "限速 融合/视觉",     " / "),
+    STATE_NUM (speed_offset,             "速度偏移",      "%",     nullptr, "速度偏移",         " / "),
+    STATE_ENUM(gateway_autopilot,        "网关自动驾驶", "无|高速|增强|自动驾驶|基础",         nullptr, "网关自动驾驶",       " / "),
+    STATE_NUM (ban_shield_cnt,           "Ban 命中",     nullptr, "bs",  "Ban 盾 命中/检查",    " / "),
+    STATE_NUM (ban_shield_check_cnt,     "Ban 检查",     nullptr, "bs",  "Ban 盾 命中/检查",    " / "),
+    STATE_NUM (das_ap_state,             "DAS AP 状态",  nullptr, "das", "DAS AP 状态",         " / "),
+};
+const size_t kStateSchemaCount = sizeof(kStateSchema) / sizeof(kStateSchema[0]);
+
+const CnfFieldDesc kCnfSchema[] = {
     // ── FSD ──
-    SCHEMA_BOOL_LOGIC(enable_fsd,                                  "FSD 启用",          "FSD"),
-    SCHEMA_BOOL_LOGIC(use_hw3_code,                                "使用 HW3 代码",      "FSD"),
-    // SCHEMA_BOOL_LOGIC(enable_summon_unlock,                        "Summon 解锁",       "FSD"),
-    // SCHEMA_BOOL_LOGIC(enable_enhanced_autopilot_runtime,           "增强自动驾驶",       "FSD"),
-    // SCHEMA_BOOL_LOGIC(enable_emergency_vehicle_detection_runtime,  "紧急车辆检测",       "FSD"),
-    SCHEMA_BOOL_LOGIC(start_from_park,                             "驻车启动",           "FSD"),
+    CNF_BOOL(enable_fsd,                                  "FSD 启用",          "FSD"),
+    CNF_BOOL(use_hw3_code,                                "使用 HW3 代码",      "FSD"),
+    CNF_BOOL(start_from_park,                             "驻车启动",            "FSD"),
+    CNF_BOOL(ap_first,                                    "APFirst 模式",       "FSD"),
 
     // ── 安全 ──
-    SCHEMA_BOOL_LOGIC(enable_ban_shield,                           "Ban 盾保护",                       "安全"),
-    SCHEMA_BOOL_LOGIC(enable_nag_suppress,                         "消除提示音",                        "安全"),
-    SCHEMA_BOOL_LOGIC(disable_camera,                              "禁用摄像头",                        "安全"),
-    SCHEMA_BOOL_LOGIC(enable_isa_speed_chime_suppress_runtime,     "ISA 提示音抑制",                    "安全") ,
-    SCHEMA_BOOL_LOGIC(camera_by_distance,                          "根据距离关闭摄像头(>1:关闭;1:打开)",   "安全"),
+    CNF_BOOL(enable_ban_shield,                           "Ban 盾保护",                        "安全"),
+    CNF_BOOL(enable_nag_suppress,                         "消除提示音",                         "安全"),
+    CNF_BOOL(disable_camera,                              "禁用摄像头",                         "安全"),
+    CNF_BOOL(enable_isa_speed_chime_suppress_runtime,     "ISA 提示音抑制",                     "安全"),
+    CNF_BOOL(camera_by_distance,                          "根据距离关闭摄像头(>1:关闭;1:打开)",    "安全"),
 
     // ── 系统 ──
-    SCHEMA_BOOL_LOGIC(enable_print,                                "串口日志",         "系统"),
-};
-const size_t kSchemaCount = sizeof(kSchema) / sizeof(kSchema[0]);
+    CNF_BOOL(enable_print,                                "串口日志",                          "系统"),
 
-// 通过 key 找到 schema 条目；没找到返回 nullptr。
-const FieldDesc *SchemaFindByKey(const char *key) {
-    for (size_t i = 0; i < kSchemaCount; ++i) {
-        if (strcmp(kSchema[i].key, key) == 0) return &kSchema[i];
+    // ── Hidden（前端自定义 UI；后端通过 schema 自动收发）──
+    CNF_HIDDEN_BOOL(enable_inject),
+    CNF_HIDDEN_BOOL(speed_profile_use_follow_distance),
+    CNF_HIDDEN_BOOL(enable_set_hw3_profile),
+    CNF_HIDDEN_BOOL(speed_offset_enable_override),
+    CNF_HIDDEN_BOOL(speed_offset_use_fix_or_dynamic),
+    CNF_HIDDEN_NUM (speed_profile_from_web,    1,  5, 1),
+    CNF_HIDDEN_NUM (speed_offset_fix_from_web, 0, 50, 1),
+};
+const size_t kCnfSchemaCount = sizeof(kCnfSchema) / sizeof(kCnfSchema[0]);
+
+// 通过 key 找到 cnf schema 条目；没找到返回 nullptr。
+const CnfFieldDesc *CnfSchemaFindByKey(const char *key) {
+    for (size_t i = 0; i < kCnfSchemaCount; ++i) {
+        if (strcmp(kCnfSchema[i].key, key) == 0) return &kCnfSchema[i];
     }
     return nullptr;
 }
 
 // 按 schema 条目把值写入 CanConf。值统一按 uint32_t 存储。
-void SchemaApplyValue(const FieldDesc &f, CanConf &cnf, uint32_t v) {
+void SchemaApplyValue(const CnfFieldDesc &f, CanConf &cnf, uint32_t v) {
     // 对数值/枚举做范围 clamp
     if (f.type == FT_NUMBER && f.max_val > f.min_val) {
         int32_t sv = (int32_t)v;
@@ -138,6 +189,8 @@ bool CanHandler::
 Handle1021Mux0(CanFrame &frame) {
     if (m_cnf.enable_fsd) {
         frame.SetBit(46, true);
+        frame.SetBit(59, true);
+
         if (!m_cnf.use_hw3_code)
             frame.SetBit(60, true);
 
@@ -277,6 +330,13 @@ Handle1021(CanFrame &frame) {
 
 // ── Main dispatch ─────────────────────────────────────────────────
 
+bool CanHandler::Handle923(const CanFrame &frame) {
+    if (frame.dlc < 7)
+        return false;
+    m_state.das_ap_state = (frame.data[1] >> 4) & 0x0F;
+    return false;
+}
+
 bool CanHandler::
 Handle(CanFrame &frame, CanDriver &driver) {
     bool should_send = false;
@@ -286,6 +346,7 @@ Handle(CanFrame &frame, CanDriver &driver) {
         case 1016: should_send = Handle1016(frame);  break;
         case 2047: should_send = Handle2047(frame);  break;
         case 1021: should_send = Handle1021(frame);  break;
+    case 923:  should_send = Handle923(frame);                 break;
     }
 
     if (m_cnf.enable_print) {

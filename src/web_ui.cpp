@@ -12,6 +12,8 @@ R"HTML(<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Tesla CAN 助手</title>
+<!-- Favicon：Tesla logo，base64 内联，无需额外 HTTP 路由；fill=currentColor 支持主题自适应 -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9Ii0zOC4wMzc2IC02My4xMjU1IDMyOS42NTkyIDM3OC43NTMiIGZpbGw9ImN1cnJlbnRDb2xvciI+PHBhdGggZD0iTTEyNi44MDYgMjUyLjUwMmwzNS40NzYtMTk5LjUxOWMzMy44MTUgMCA0NC40ODEgMy43MDggNDYuMDIxIDE4Ljg0MyAwIDAgMjIuNjg0LTguNDU4IDM0LjEyNS0yNS42MzYtNDQuNjQ2LTIwLjY4OC04OS41MDUtMjEuNjIxLTg5LjUwNS0yMS42MjFsLTI2LjE3NiAzMS44ODIuMDU5LS4wMDQtMjYuMTc2LTMxLjg4M3MtNDQuODYuOTM0LTg5LjUgMjEuNjIyYzExLjQzMSAxNy4xNzggMzQuMTI0IDI1LjYzNiAzNC4xMjQgMjUuNjM2IDEuNTQ5LTE1LjEzNiAxMi4yMDItMTguODQ0IDQ1Ljc5LTE4Ljg2OGwzNS43NjIgMTk5LjU0OCIvPjxwYXRoIGQ9Ik0xMjYuNzkyIDE1LjM2YzM2LjA5LS4yNzYgNzcuMzk5IDUuNTgzIDExOS42ODcgMjQuMDE0IDUuNjUyLTEwLjE3MyA3LjEwNS0xNC42NjkgNy4xMDUtMTQuNjY5QzIwNy4zNTcgNi40MTYgMTY0LjA2Ni4xNTcgMTI2Ljc4NyAwIDg5LjUxLjE1NyA0Ni4yMjEgNi40MTcgMCAyNC43MDVjMCAwIDIuMDYyIDUuNTM4IDcuMSAxNC42NjkgNDIuMjgtMTguNDMxIDgzLjU5Ni0yNC4yOSAxMTkuNjg3LTI0LjAxNGguMDA1Ii8+PC9zdmc+">
 <style>
 :root{
   --bg:#111;--text:#eee;--h2:#555;
@@ -81,10 +83,22 @@ body.light .thknob{transform:translateX(26px)}
 @keyframes spin{to{transform:rotate(360deg)}}
 .spinning{animation:spin .4s linear}
 .pad{padding:12px 14px}
-.flist{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px}
+.flist{display:grid;grid-template-columns:repeat(3,1fr);grid-auto-flow:dense;gap:8px;margin-bottom:6px}
 .fcard.wide{grid-column:span 2}
-.fcard{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:11px 14px;display:flex;align-items:center;gap:12px}
-.feat-children{display:grid;grid-template-columns:1fr 1fr;gap:6px;transition:opacity .25s;grid-column:span 2}
+.fcard.w3{grid-column:span 3}
+.fcard{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 12px;min-height:62px;box-sizing:border-box;display:grid;grid-template-columns:1fr auto;grid-template-rows:auto 1fr;gap:6px 8px;min-width:0;transition:border-color .15s,background .15s,transform .08s}
+.fcard.on{border-color:#3a5fa8;background:linear-gradient(135deg,var(--card) 60%,#0d1f3c)}
+body.light .fcard.on{background:linear-gradient(135deg,var(--card) 60%,#dbe8ff)}
+.fcard:active{transform:scale(.97);background:rgba(91,143,255,.08)}
+.fcard .ficon{display:none}
+.fcard .fname{grid-column:1 / -1;grid-row:1;font-size:12px;color:var(--fname);line-height:1.25;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;align-self:start}
+.fcard .led{grid-column:2;grid-row:2;justify-self:end;align-self:end}
+.fcard{cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none}
+.led{width:14px;height:14px;border-radius:50%;background:#3a3f4b;border:1px solid #555;box-shadow:inset 0 1px 2px rgba(0,0,0,.6);transition:background .2s,box-shadow .3s,border-color .2s;flex-shrink:0}
+body.light .led{background:#c8ccd3;border-color:#b0b4bc;box-shadow:inset 0 1px 2px rgba(0,0,0,.15)}
+.fcard.on .led{background:#5b8fff;border-color:#7aa8ff;box-shadow:0 0 8px #5b8fff,0 0 14px rgba(91,143,255,.6),inset 0 1px 2px rgba(255,255,255,.4);animation:ledPulse 2.2s ease-in-out infinite}
+@keyframes ledPulse{0%,100%{box-shadow:0 0 6px #5b8fff,0 0 10px rgba(91,143,255,.5),inset 0 1px 2px rgba(255,255,255,.4)}50%{box-shadow:0 0 12px #5b8fff,0 0 20px rgba(91,143,255,.8),inset 0 1px 2px rgba(255,255,255,.4)}}
+.feat-children{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;transition:opacity .25s;grid-column:span 3}
 .feat-children.locked,#controlled.locked{}
 #controlled{transition:opacity .25s}
 .master-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;transition:border-color .2s,background .2s}
@@ -144,6 +158,32 @@ body.light .thknob{transform:translateX(26px)}
 .dbg-tip{font-size:11px;color:var(--lbl);padding:8px 2px;line-height:1.5}
 .dbg-actions{display:flex;gap:8px;margin-bottom:10px}
 .dbg-actions .btn{margin-top:0;flex:1}
+/* ===== 响应式：≤640px 维持手机原样；≥641px 按屏幕档位放宽并提升列数 ===== */
+@media (min-width:641px){
+  body{max-width:720px;padding:20px 18px 76px}
+  .tabbar{max-width:720px}
+  .grid{grid-template-columns:repeat(4,1fr)}
+  .flist{grid-template-columns:repeat(4,1fr)}
+  .fcard.wide{grid-column:span 2}
+  .feat-children{grid-template-columns:repeat(4,1fr);grid-column:span 4}
+}
+@media (min-width:1025px){
+  body{max-width:960px;padding:24px 20px 80px}
+  .tabbar{max-width:960px}
+  .grid{grid-template-columns:repeat(5,1fr)}
+  .flist{grid-template-columns:repeat(5,1fr)}
+  .fcard.wide{grid-column:span 2}
+  .feat-children{grid-template-columns:repeat(5,1fr);grid-column:span 5}
+  .htitle{font-size:20px}
+}
+@media (min-width:1440px){
+  body{max-width:1120px}
+  .tabbar{max-width:1120px}
+  .grid{grid-template-columns:repeat(6,1fr)}
+  .flist{grid-template-columns:repeat(6,1fr)}
+  .fcard.wide{grid-column:span 2}
+  .feat-children{grid-template-columns:repeat(6,1fr);grid-column:span 6}
+}
 </style>
 </head>
 <body>
@@ -168,17 +208,7 @@ body.light .thknob{transform:translateX(26px)}
 <div id="pg_main" class="pg act">
 
 <h2>状态</h2>
-<div class="grid">
-  <div class="tile"><span class="tlb">CAN 总线</span><span id="s_can" class="tval">--</span></div>
-  <div class="tile"><span class="tlb">运行时间</span><span id="s_up" class="tval">--</span></div>
-  <div class="tile"><span class="tlb">帧/s 收 / 发</span><span id="s_frm" class="tval">--</span></div>
-  <div class="tile"><span class="tlb">跟车距离</span><span id="s_fd" class="tval">--</span></div>
-  <div class="tile"><span class="tlb">速度档位 HW3/HW4</span><span id="s_sp" class="tval">--</span></div>
-  <div class="tile"><span class="tlb">限速 融合/视觉</span><span id="s_sl" class="tval">--</span></div>
-  <div class="tile"><span class="tlb">速度偏移</span><span id="s_so" class="tval">--</span></div>
-  <div class="tile"><span class="tlb">网关自动驾驶</span><span id="s_gw" class="tval">--</span></div>
-  <div class="tile"><span class="tlb">Ban 盾 命中/检查</span><span id="s_bs" class="tval">--</span></div>
-</div>
+<div id="state_root" class="grid"></div>
 
 <div id="controlled" class="locked">
 <h2>速度档位</h2>
@@ -300,37 +330,121 @@ body.light .thknob{transform:translateX(26px)}
 <script>
 const GW=['无','高速','增强','自动驾驶','基础'];
 
-// 主页大部分开关由 /schema 提供的元数据驱动渲染。SCHEMA 为字段描述数组。
-let SCHEMA = [];
+// 主页大部分开关由 /schema 提供的元数据驱动渲染。
+// SCHEMA = { cnf:[...可写字段...], state:[...只读字段...] }
+let SCHEMA = { cnf: [], state: [] };
 const SCHEMA_GRP_COLORS = {'FSD':'#5b8fff','安全':'#f5a623','系统':'#3dba72'};
+
+// 状态小卡片结构：tile_key -> { label, fields:[schema 条目，按在 SCHEMA.state 中的顺序], sep }
+// tile_key 由 schema 的 f.tile 提供；f.tile==null 时 tile_key 退化为 f.key（字段独占一卡片）。
+let STATE_TILES = [];       // 按添加顺序保存的 tile_key 数组
+let STATE_TILE_MAP = {};    // tile_key -> { label, fields:[], sep }
+
+function stateEnumText(f, v) {
+  if (!f.enum_labels) return v;
+  const arr = f.enum_labels.split('|');
+  return (v >= 0 && v < arr.length) ? arr[v] : String(v);
+}
+
+function renderStateTiles() {
+  STATE_TILES = [];
+  STATE_TILE_MAP = {};
+  (SCHEMA.state || []).forEach(f => {
+    const tkey = f.tile ? f.tile : f.key;
+    if (!(tkey in STATE_TILE_MAP)) {
+      STATE_TILE_MAP[tkey] = { label: f.tile_label || f.label, fields: [], sep: f.tile_sep || ' / ' };
+      STATE_TILES.push(tkey);
+    }
+    const t = STATE_TILE_MAP[tkey];
+    if (!t.label && f.tile_label) t.label = f.tile_label;
+    if (f.tile_sep) t.sep = f.tile_sep;
+    t.fields.push(f);
+  });
+
+  const root = document.getElementById('state_root');
+  root.innerHTML = '';
+  // 固定附加一个 “运行时间” tile（uptime 不在 schema中，由 web 层直接下发）
+  const addTile = (id, lbl) => {
+    root.insertAdjacentHTML('beforeend',
+      '<div class="tile"><span class="tlb">'+lbl+'</span><span id="'+id+'" class="tval">--</span></div>');
+  };
+  // 顺序：CAN 总线（如果在 schema 中）→运行时间→其余 schema tile
+  //  为简单，直接按 schema 顺序渲染，在 can_online tile 之后插入 uptime；如果没 can_online tile 则放在最前。
+  let uptimeInserted = false;
+  STATE_TILES.forEach(tk => {
+    const t = STATE_TILE_MAP[tk];
+    addTile('tile_'+tk, t.label || tk);
+    if (!uptimeInserted && tk === 'can_online') {
+      addTile('tile__uptime', '运行时间');
+      uptimeInserted = true;
+    }
+  });
+  if (!uptimeInserted) {
+    root.insertAdjacentHTML('afterbegin',
+      '<div class="tile"><span class="tlb">运行时间</span><span id="tile__uptime" class="tval">--</span></div>');
+  }
+}
 
 function renderSchemaGroups() {
   const root = document.getElementById('schema_root');
   root.innerHTML = '';
-  // 按 group 分桶，保持 schema 本身顺序
+  // 按 group 分桶，保持 schema 本身顺序。
+  // hidden 字段有前端自定义控件，跳过。
   const order = [];
   const groups = {};
-  SCHEMA.forEach(f => {
+  (SCHEMA.cnf || []).forEach(f => {
+    if (f.hidden) return;
     const g0 = f.group || '其他';
     if (!(g0 in groups)) { groups[g0] = []; order.push(g0); }
     groups[g0].push(f);
   });
   order.forEach(g0 => {
     const h2 = document.createElement('h2'); h2.textContent = g0; root.appendChild(h2);
-    const card = document.createElement('div'); card.className = 'card';
-    groups[g0].forEach(f => {
-      card.insertAdjacentHTML('beforeend', schemaRowHtml(f));
-    });
-    root.appendChild(card);
+    // 同一个 group 内分两桶：bool -> 卡片墙 .flist/.fcard；其它 -> .card/.tog 行列表
+    const bools = groups[g0].filter(f => f.type === 'bool');
+    const others = groups[g0].filter(f => f.type !== 'bool');
+    if (bools.length > 0) {
+      const list = document.createElement('div'); list.className = 'flist';
+      bools.forEach(f => list.insertAdjacentHTML('beforeend', schemaRowHtml(f)));
+      root.appendChild(list);
+    }
+    if (others.length > 0) {
+      const card = document.createElement('div'); card.className = 'card';
+      others.forEach(f => card.insertAdjacentHTML('beforeend', schemaRowHtml(f)));
+      root.appendChild(card);
+    }
   });
+  autosizeFcards();
 }
 
+// 名称单行放不下的 .fcard 自动扩展占位：1→2→3 格，只扩到刚好装下为止
+function autosizeFcards() {
+  document.querySelectorAll('.fcard').forEach(c => {
+    c.classList.remove('wide');
+    c.classList.remove('w3');
+    const n = c.querySelector('.fname');
+    if (!n) return;
+    if (n.scrollWidth > n.clientWidth + 1) {
+      c.classList.add('wide');
+      if (n.scrollWidth > n.clientWidth + 1) {
+        c.classList.remove('wide');
+        c.classList.add('w3');
+      }
+    }
+  });
+}
+let _fcResizeT = 0;
+window.addEventListener('resize', () => {
+  clearTimeout(_fcResizeT);
+  _fcResizeT = setTimeout(autosizeFcards, 120);
+});
+
 function schemaRowHtml(f) {
-  // 目前仅用到 bool (checkbox)；enum / number 预留，渲染为 select / input
+  // bool 渲染为卡片（.fcard），自动排入外层 .flist 网格
   if (f.type === 'bool') {
-    return '<div class="tog"><span class="tlbl">'+f.label+'</span>' +
-           '<label class="sw"><input type="checkbox" id="'+f.key+'" onchange="setConf(\''+f.key+'\',this.checked)">' +
-           '<span class="sl"></span></label></div>';
+    return '<label class="fcard" id="fc_'+f.key+'" for="'+f.key+'">' +
+           '<input type="checkbox" id="'+f.key+'" style="display:none" onchange="onBoolCardChange(\''+f.key+'\',this.checked)">' +
+           '<span class="ficon"></span><span class="fname">'+f.label+'</span><span class="led"></span></label>';
   }
   if (f.type === 'enum' && Array.isArray(f.options)) {
     let opts = f.options.map(o => '<option value="'+o.v+'">'+o.l+'</option>').join('');
@@ -346,8 +460,12 @@ function schemaRowHtml(f) {
 async function loadSchema() {
   try {
     const r = await fetch('/schema');
-    SCHEMA = await r.json();
-  } catch(e) { SCHEMA = []; }
+    const d = await r.json();
+    // 兼容：新格式 {cnf,state}；旧版数组格式暂不再支持。
+    SCHEMA = (d && typeof d === 'object' && !Array.isArray(d)) ? { cnf: d.cnf || [], state: d.state || [] }
+                                                               : { cnf: [], state: [] };
+  } catch(e) { SCHEMA = { cnf: [], state: [] }; }
+  renderStateTiles();
   renderSchemaGroups();
 }
 
@@ -439,6 +557,12 @@ async function setConf(key, val) {
   try { await fetch('/config', {method:'POST', body:p}); } catch(e) {}
   refreshCards();
 }
+// schema 驱动 bool 卡片切换：先置卡片 on 态，再下发设置。
+function onBoolCardChange(key, on) {
+  const fc = document.getElementById('fc_'+key);
+  if (fc) fc.classList.toggle('on', !!on);
+  setConf(key, !!on);
+}
 async function setProfile(v) {
   await setConf('speed_profile_from_web', v);
   document.querySelectorAll('.pbtn').forEach(b => b.classList.toggle('act', +b.dataset.pv === v));
@@ -460,25 +584,50 @@ function fmtUp(s) {
   return h+':'+String(m).padStart(2,'0')+':'+String(ss).padStart(2,'0');
 }
 
-let _prevFrm={cnt:null,sent:null,up:null};
 function updateState(s) {
-  ttxt('s_can', s.can_online ? '在线' : '离线', s.can_online ? 'ok' : 'err');
-  ttxt('s_up',  fmtUp(s.uptime));
-  let frmTxt='-- / --';
-  if (_prevFrm.up !== null && s.uptime > _prevFrm.up) {
-    const dt = s.uptime - _prevFrm.up;
-    const rx = Math.round((s.frame_cnt  - _prevFrm.cnt)  / dt);
-    const tx = Math.round((s.frame_sent - _prevFrm.sent) / dt);
-    frmTxt = rx+' / '+tx;
-  }
-  _prevFrm = {cnt: s.frame_cnt, sent: s.frame_sent, up: s.uptime};
-  ttxt('s_frm', frmTxt);
-  ttxt('s_fd',  s.follow_distance);
-  ttxt('s_sp',  s.profile_hw3+' / '+s.profile_hw4);
-  ttxt('s_sl',  s.speed_limit_fused+' / '+s.speed_limit_vision_only+' km/h');
-  ttxt('s_so',  s.speed_offset);
-  ttxt('s_gw',  GW[s.gateway_autopilot] || s.gateway_autopilot);
-  ttxt('s_bs',  s.ban_shield_cnt+' / '+s.ban_shield_check_cnt);
+  // 运行时间（非 schema）
+  ttxt('tile__uptime', fmtUp(s.uptime));
+
+  // Schema 驱动：按 tile 合并字段
+  STATE_TILES.forEach(tk => {
+    const t = STATE_TILE_MAP[tk];
+    const id = 'tile_'+tk;
+    const el = g(id);
+    if (!el) return;
+    // 先把所有字段渲染成“值文本”（不带单位），同时记录“这个字段是否真有值（用于末尾贴单位）”。
+    // 单位策略：同一 tile 内，如果所有“有 unit 且有值”的字段共用同一个 unit，则仅在整体末尾贴一次；
+    //          否则（unit 不一致）退回老行为：每个元素各自带自己的 unit，避免丢失语义。
+    let commonUnit = null;     // 记录观察到的第一个 unit
+    let unitUniform = true;    // 是否所有字段的 unit 都一致
+    let anyValued = false;     // 是否至少有一个字段取到了值
+    t.fields.forEach(f => {
+      const v = s[f.key];
+      if (v === undefined || v === null) return;
+      anyValued = true;
+      if (!f.unit) { unitUniform = false; return; }
+      if (commonUnit === null) commonUnit = f.unit;
+      else if (commonUnit !== f.unit) unitUniform = false;
+    });
+    const perFieldUnit = !unitUniform;    // true=每个元素各自带 unit；false=仅末尾合并
+    const parts = t.fields.map(f => {
+      const v = s[f.key];
+      if (v === undefined || v === null) return '--';
+      let txt = (f.type === 'enum') ? stateEnumText(f, +v) : String(v);
+      if (perFieldUnit && f.unit) txt += ' ' + f.unit;
+      return txt;
+    });
+    let joined = parts.join(t.sep || ' / ');
+    if (!perFieldUnit && anyValued && commonUnit) joined += ' ' + commonUnit;
+    el.textContent = joined;
+
+    // CAN 总线特殊着色：在线绿、离线红
+    if (tk === 'can_online') {
+      const on = !!s.can_online;
+      el.className = 'tval ' + (on ? 'ok' : 'err');
+    } else {
+      el.className = 'tval';
+    }
+  });
 }
 function ttxt(id, t, cls) {
   const e = g(id);
@@ -488,12 +637,16 @@ function ttxt(id, t, cls) {
 
 function updateCnf(c) {
   const segInj = g('seg_inject'); if (segInj) segInj.classList.toggle('right', !!c.enable_inject);
-  // Schema 驱动字段统一按类型回填
-  SCHEMA.forEach(f => {
+  // Schema 驱动字段统一按类型回填（只处理 cnf 字段，state 字段不会出现在表单中）
+  // hidden 字段由手写 UI 自己回填，这里跳过。
+  (SCHEMA.cnf || []).forEach(f => {
+    if (f.hidden) return;
     const e = g(f.key); if (!e) return;
     const v = c[f.key];
     if (f.type === 'bool') {
       if (e.type === 'checkbox') e.checked = !!v;
+      const fc = document.getElementById('fc_'+f.key);
+      if (fc) fc.classList.toggle('on', !!v);
     } else {
       if (document.activeElement !== e) e.value = (v !== undefined ? v : '');
     }
@@ -516,7 +669,7 @@ function updateCnf(c) {
 
 async function poll() {
   try {
-    if (SCHEMA.length === 0) await loadSchema();
+    if ((SCHEMA.cnf || []).length === 0 && (SCHEMA.state || []).length === 0) await loadSchema();
     const r = await fetch('/status');
     if (!r.ok) throw 0;
     const d = await r.json();
