@@ -73,7 +73,7 @@ extern const StateFieldDesc kStateSchema[];
 extern const size_t         kStateSchemaCount;
 
 struct CanConf {
-    uint32_t version = 3;
+    uint32_t version = 4;
 
     uint32_t enable_inject    = false;
     uint32_t enable_fsd       = false;
