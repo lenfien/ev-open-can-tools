@@ -133,7 +133,7 @@ struct CanState {
 
     uint32_t speed_offset     = 0;      // current applied offset value
     uint32_t gateway_autopilot = 0;     // from CAN 2047 mux-2 data[5][4:2]
-    uint32_t das_ap_state = 0;          // 0=UNAVAIL 1=AVAIL 2=ACTIVE_NOMINAL 3=ACTIVE_MIN_DRIVER ...
+    uint32_t das_ap_state = 0;          // DAS_autopilotState (CAN 921): 0=DISABLED 1=UNAVAILABLE 2=AVAILABLE 3=ACTIVE_NOMINAL 4=ACTIVE_RESTRICTED 5=ACTIVE_NAV 8=ABORTING 9=ABORTED 14=FAULT 15=SNA
 
     // CAN 总线在线状态：由 web 层根据最近一次收到帧的时间戳决定（0=离线, 1=在线）
     uint32_t can_online = 0;

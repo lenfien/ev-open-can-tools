@@ -60,7 +60,7 @@ const StateFieldDesc kStateSchema[] = {
     STATE_ENUM(gateway_autopilot,        "网关自动驾驶", "无|高速|增强|自动驾驶|基础",         nullptr, "网关自动驾驶",       " / "),
     STATE_NUM (ban_shield_cnt,           "Ban 命中",     nullptr, "bs",  "Ban 盾 命中/检查",    " / "),
     STATE_NUM (ban_shield_check_cnt,     "Ban 检查",     nullptr, "bs",  "Ban 盾 命中/检查",    " / "),
-    STATE_NUM (das_ap_state,             "DAS AP 状态",  nullptr, "das", "DAS AP 状态",         " / "),
+    STATE_ENUM(das_ap_state,             "DAS AP 状态", "关闭|不可用|就绪|工作|受限|导航|-|-|中止中|已中止|-|-|-|-|故障|无效", "das", "DAS AP 状态", " / ")
 };
 const size_t kStateSchemaCount = sizeof(kStateSchema) / sizeof(kStateSchema[0]);
 
@@ -122,6 +122,9 @@ Handle921(CanFrame &frame) {
     bool need_send = false;
     m_state.speed_limit_fused       = (frame.data[1] & 0x1F) * 5;
     m_state.speed_limit_vision_only = (frame.data[2] & 0x1F) * 5;
+
+    m_state.das_ap_state = (frame.data[0] & 0x0F);
+
     if (m_cnf.enable_isa_speed_chime_suppress_runtime) {
         frame.data[1] |= 0x20;
         frame.data[7] = ComputeVehicleChecksum(frame);
@@ -188,6 +191,9 @@ Handle2047(CanFrame &frame) {
 bool CanHandler::
 Handle1021Mux0(CanFrame &frame) {
     if (m_cnf.enable_fsd) {
+        if (m_cnf.ap_first && m_state.das_ap_state <= 2)
+            return false;
+
         frame.SetBit(46, true);
         frame.SetBit(59, true);
 
@@ -333,7 +339,7 @@ Handle1021(CanFrame &frame) {
 bool CanHandler::Handle923(const CanFrame &frame) {
     if (frame.dlc < 7)
         return false;
-    m_state.das_ap_state = (frame.data[1] >> 4) & 0x0F;
+    // m_state.das_ap_state = (frame.data[1] >> 4) & 0x0F;
     return false;
 }
 
