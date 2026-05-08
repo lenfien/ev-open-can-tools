@@ -60,16 +60,19 @@ const StateFieldDesc kStateSchema[] = {
     STATE_ENUM(gateway_autopilot,        "网关自动驾驶", "无|高速|增强|自动驾驶|基础",         nullptr, "网关自动驾驶",       " / "),
     STATE_NUM (ban_shield_cnt,           "Ban 命中",     nullptr, "bs",  "Ban 盾 命中/检查",    " / "),
     STATE_NUM (ban_shield_check_cnt,     "Ban 检查",     nullptr, "bs",  "Ban 盾 命中/检查",    " / "),
-    STATE_ENUM(das_ap_state,             "DAS AP 状态", "关闭|不可用|就绪|工作|受限|导航|-|-|中止中|已中止|-|-|-|-|故障|无效", "das", "DAS AP 状态", " / ")
+    STATE_ENUM(das_ap_state,             "DAS AP 状态", "关闭|不可用|就绪|工作|受限|导航|-|-|中止中|已中止|-|-|-|-|故障|无效", "das", "DAS AP 状态", " / "),
+    STATE_ENUM(shift_status,               "档位", "-|-|-|P|-|R|-|N|-|D|-|-|-|-|-|-", "档位", "档位状态", " / ")
 };
+
 const size_t kStateSchemaCount = sizeof(kStateSchema) / sizeof(kStateSchema[0]);
 
 const CnfFieldDesc kCnfSchema[] = {
     // ── FSD ──
     CNF_BOOL(enable_fsd,                                  "FSD 启用",          "FSD"),
     CNF_BOOL(use_hw3_code,                                "使用 HW3 代码",      "FSD"),
-    CNF_BOOL(start_from_park,                             "驻车启动",            "FSD"),
-    CNF_BOOL(ap_first,                                    "APFirst 模式",       "FSD"),
+    CNF_BOOL(start_from_park,                             "驻车启动",           "FSD"),
+    CNF_BOOL(ap_first,                                    "APFirst 模式",      "FSD"),
+    CNF_BOOL(enable_fsd_only_in_D,                        "仅D/R档启用",          "FSD"),
 
     // ── 安全 ──
     CNF_BOOL(enable_ban_shield,                           "Ban 盾保护",                        "安全"),
@@ -192,6 +195,9 @@ bool CanHandler::
 Handle1021Mux0(CanFrame &frame) {
     if (m_cnf.enable_fsd) {
         if (m_cnf.ap_first && m_state.das_ap_state < 2)
+            return false;
+
+        if (m_cnf.enable_fsd_only_in_D && m_state.shift_status != EGearStatus::EGearStatus_D && m_state.shift_status != EGearStatus::EGearStatus_R)
             return false;
 
         frame.SetBit(46, true);
@@ -319,6 +325,11 @@ Handle1021Mux2(CanFrame &frame) {
     ApplyDebugOverride(frame, m_dbg.ovr_1021_m2);
     return true;
 }
+bool CanHandler::
+Handle280(CanFrame &frame) {
+    m_state.shift_status = (frame.data[2] >> 4) & 0x0F;
+    return false;
+}
 
 // ── CAN 1021 — dispatch by mux ────────────────────────────────────
 
@@ -348,11 +359,12 @@ Handle(CanFrame &frame, CanDriver &driver) {
     bool should_send = false;
 
     switch (frame.id) {
-        case 921:  should_send = Handle921(frame);                 break;
+        case 921:  should_send = Handle921(frame);   break;
         case 1016: should_send = Handle1016(frame);  break;
         case 2047: should_send = Handle2047(frame);  break;
         case 1021: should_send = Handle1021(frame);  break;
-        case 923:  should_send = Handle923(frame);                 break;
+        case 923:  should_send = Handle923(frame);      break;
+        case 280: should_send = Handle280(frame);    break;
     }
 
     if (m_cnf.enable_print) {
@@ -481,8 +493,9 @@ PrintState() {
     Serial.printf("CanState: follow_dist=%u profile_hw3=%u profile_hw4=%u frames=%u sent=%u\n",
         m_state.follow_distance, m_state.speed_profile_to_hw3,
         m_state.speed_profile_to_hw4, m_state.frame_cnt, m_state.frame_sent);
-    Serial.printf("CanState: ban_shield=%u ban_check=%u spd_fused=%u spd_vision=%u spd_offset=%u gtwap=%s\n",
+    Serial.printf("CanState: ban_shield=%u ban_check=%u spd_fused=%u spd_vision=%u spd_offset=%u gtwap=%s gear:%d\n",
         m_state.ban_shield_cnt, m_state.ban_shield_check_cnt,
         m_state.speed_limit_fused, m_state.speed_limit_vision_only,
-        m_state.speed_offset, GetGTWAutopilotStr(m_state.gateway_autopilot));
+        m_state.speed_offset, GetGTWAutopilotStr(m_state.gateway_autopilot),
+        m_state.shift_status);
 }

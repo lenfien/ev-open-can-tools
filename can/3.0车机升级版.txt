@@ -1,0 +1,273 @@
+#include <Arduino.h>
+#include "driver/twai.h"
+#include <math.h> 
+#include <esp_sleep.h> 
+
+// 硬件定义：Waveshare ESP32-S3-RS485-CAN
+#define CAN_TX_PIN GPIO_NUM_15
+#define CAN_RX_PIN GPIO_NUM_16
+
+// ==========================================
+// 1. HW3.0 专项全局变量
+// ==========================================
+volatile int current_speedProfile = 1;         
+volatile bool current_ota_status = false;      
+volatile bool is_fsd_engaged = false;          
+volatile char currentGear = 'N';               
+volatile uint8_t current_smart_offset_pct = 0; 
+volatile uint8_t current_detected_limit = 0;   
+
+// ✨ 防亏电休眠与计数器
+unsigned long last_can_rx_time = 0; 
+uint8_t ota_assert_count = 0;
+uint8_t ota_clear_count = 0;
+unsigned long last_fsd_active_time = 0;
+bool last_fsd_engaged_state = false;
+
+// 🌟 智能随机有机扭矩状态机
+unsigned long next_injection_time = 0;
+unsigned long current_wave_start = 0;
+bool is_injecting_torque = false;
+int total_strokes = 1;                   
+int current_stroke_count = 0;            
+int current_direction = 1;               
+int current_amplitude = 45;              
+unsigned long current_stroke_duration = 500; 
+
+// ==========================================
+// 2. 核心算法工具
+// ==========================================
+uint8_t calculate_tesla_checksum(uint16_t msg_id, uint8_t* data, uint8_t len) {
+    uint8_t checksum = (msg_id & 0xFF) + ((msg_id >> 8) & 0xFF);
+    for (uint8_t i = 0; i < len - 1; i++) { checksum += data[i]; }
+    return checksum; 
+}
+
+inline void setBit(twai_message_t &msg, int bit, bool value) {
+    int byteIndex = bit / 8;
+    int bitIndex = bit % 8;
+    if (value) msg.data[byteIndex] |= (1U << bitIndex);
+    else msg.data[byteIndex] &= ~(1U << bitIndex);
+}
+
+uint32_t xorshift_state = 88888888;
+uint32_t xorshift32() {
+    xorshift_state ^= xorshift_state << 13;
+    xorshift_state ^= xorshift_state >> 17;
+    xorshift_state ^= xorshift_state << 5;
+    return xorshift_state;
+}
+
+// 🌟 IRAM 限速偏移计算 
+void IRAM_ATTR update_smart_offset() {
+    if (!is_fsd_engaged || current_detected_limit == 0) {
+        current_smart_offset_pct = 0; return;
+    }
+    uint8_t target_pct = 0;
+    uint8_t absolute_cap = 0;
+    if (current_detected_limit <= 40) { target_pct = 50; absolute_cap = 60; } 
+    else if (current_detected_limit <= 60) { target_pct = 30; absolute_cap = 80; } 
+    else if (current_detected_limit <= 100) { target_pct = 15; absolute_cap = 115; } 
+    else { target_pct = 5; absolute_cap = current_detected_limit + 10; }
+    
+    int projected_speed = current_detected_limit + (current_detected_limit * target_pct / 100);
+    if (projected_speed > absolute_cap) {
+        target_pct = (((absolute_cap - current_detected_limit) * 100) + (current_detected_limit / 2)) / current_detected_limit;
+    }
+    current_smart_offset_pct = min((uint8_t)target_pct, (uint8_t)63);
+}
+
+// 后台打印状态任务 
+void debugPrintTask(void *pvParameters) {
+    for (;;) {
+        const char* profileStr = "未知";
+        switch(current_speedProfile) {
+            case 4: profileStr = "狂飙"; break;
+            case 3: profileStr = "激进"; break;
+            case 2: profileStr = "标准"; break;
+            case 1: profileStr = "舒适"; break;
+            case 0: profileStr = "佛系"; break;
+        }
+        Serial.printf("[HW3.0专项] 档位:%c | FSD:%s | 限速:%d | 偏移:+%d%% | 模式:%s\n", 
+                      currentGear, (is_fsd_engaged ? "在线" : "等待"), 
+                      current_detected_limit, current_smart_offset_pct, profileStr);
+        vTaskDelay(pdMS_TO_TICKS(3000)); 
+    }
+}
+
+// ==========================================
+// 3. 系统启动
+// ==========================================
+void setup() {
+    Serial.begin(115200); 
+    delay(2000); 
+    xorshift_state += millis();
+
+    twai_general_config_t g_config = TWAI_GENERAL_CONFIG_DEFAULT(CAN_TX_PIN, CAN_RX_PIN, TWAI_MODE_NORMAL);
+    twai_timing_config_t t_config = TWAI_TIMING_CONFIG_500KBITS();
+    twai_filter_config_t f_config = TWAI_FILTER_CONFIG_ACCEPT_ALL();
+
+    if (twai_driver_install(&g_config, &t_config, &f_config) == ESP_OK && twai_start() == ESP_OK) {
+        Serial.println("--- HW3.0 升级版  启动 ---");
+        xTaskCreatePinnedToCore(debugPrintTask, "DebugTask", 4096, NULL, 1, NULL, 0);
+    }
+    last_can_rx_time = millis();
+}
+
+// ==========================================
+// 4. 主逻辑循环
+// ==========================================
+void loop() {
+    unsigned long now = millis();
+    twai_message_t msg;
+
+    // ✨ 功能四：CAN无信号待机 (5分钟自动休眠保护小电瓶)
+    if (now - last_can_rx_time > 300000) {
+        Serial.println("💤 车辆已休眠，板子同步进入 Deep Sleep...");
+        esp_sleep_enable_ext0_wakeup(CAN_RX_PIN, 0); 
+        esp_deep_sleep_start();
+    }
+
+    if (twai_receive(&msg, pdMS_TO_TICKS(1)) == ESP_OK) {
+        last_can_rx_time = now;
+
+        // OTA 保护 (0x318)
+        if (msg.identifier == 0x318) { 
+            uint8_t raw_ota = msg.data[6] & 0x03; 
+            if (raw_ota == 2) { 
+                ota_clear_count = 0;
+                if (++ota_assert_count >= 3) current_ota_status = true; 
+            } else {
+                ota_assert_count = 0;
+                if (++ota_clear_count >= 6) current_ota_status = false;
+            }
+        }
+        if (current_ota_status) return;
+
+        // 档位识别 (0x118)
+        if (msg.identifier == 0x118) {
+            uint8_t gearRaw = (msg.data[2] >> 4) & 0x0F;
+            currentGear = (gearRaw == 0x9) ? 'D' : (gearRaw == 0x3 ? 'P' : 'N');
+        }
+
+        // FSD 激活状态监测 (0x389)
+        if (msg.identifier == 0x389) {
+            if (msg.data[0] == 0xFF && (msg.data[1] == 0x03 || msg.data[1] == 0x04)) {
+                last_fsd_active_time = now;
+            }
+        }
+        is_fsd_engaged = (currentGear == 'D' && (now - last_fsd_active_time < 2000));
+
+        if (is_fsd_engaged != last_fsd_engaged_state) {
+            update_smart_offset();
+            last_fsd_engaged_state = is_fsd_engaged;
+        }
+
+        // 功能三前置：限速读取 (0x399)
+        if (msg.identifier == 0x399) { 
+            uint8_t raw_limit = 0;
+            if (msg.data[1] > 0 && msg.data[1] <= 30) raw_limit = msg.data[1];
+            if (raw_limit > 0) { 
+                current_detected_limit = raw_limit * 5;
+                update_smart_offset();
+            }
+            msg.data[0] &= ~0x10; 
+            twai_transmit(&msg, 0); 
+        }
+
+        // TLSSC 强制复活逻辑 (0x331)
+        if (msg.identifier == 0x331) { 
+            msg.data[0] = (msg.data[0] & 0xC0) | 0x1B; 
+            twai_transmit(&msg, 0); 
+        }
+
+        // 功能二：智能扭矩功能 
+        if (msg.identifier == 0x370 && is_fsd_engaged) {
+            msg.data[4] = (msg.data[4] & ~0xC0) | 0x40; 
+            
+            if (!is_injecting_torque && now >= next_injection_time) {
+                is_injecting_torque = true;
+                current_wave_start = now;
+                total_strokes = 1 + (xorshift32() % 2);
+                current_direction = (xorshift32() % 2 == 0) ? 1 : -1;
+                current_amplitude = 35 + (xorshift32() % 41); 
+                current_stroke_duration = 500 + (xorshift32() % 400);
+            }
+
+            if (is_injecting_torque) {
+                unsigned long elapsed = now - current_wave_start;
+                if (elapsed <= current_stroke_duration) {
+                    float phase = ((float)elapsed / current_stroke_duration) * PI;
+                    int wave_val = (int)(sin(phase) * current_amplitude * current_direction);
+                    uint16_t new_torque = 0x5200 + wave_val; 
+                    msg.data[0] = (new_torque >> 8) & 0xFF;
+                    msg.data[1] = new_torque & 0xFF;
+                } else {
+                    current_stroke_count++;
+                    if (current_stroke_count < total_strokes) {
+                        current_direction *= -1; current_wave_start = now;
+                    } else {
+                        is_injecting_torque = false; current_stroke_count = 0;
+                        next_injection_time = now + 2000 + (xorshift32() % 4000); 
+                    }
+                }
+            }
+            msg.data[6] = (msg.data[6] & 0xF0) | ((msg.data[6] + 1) % 16);
+            msg.data[7] = calculate_tesla_checksum(0x370, msg.data, 8);
+            twai_transmit(&msg, 0);
+        }
+
+        // ====================================================
+        // ✨：车距映射拦截与隐私保护 (1016 / 0x3F8)
+        // ====================================================
+        if (msg.identifier == 1016) {
+            // 从右滚轮/拨杆中提取设定的车距档位 (1-7)
+            uint8_t fd = (msg.data[5] >> 5) & 0x07;
+            
+            // 驾驶模式：车距越近，模式越激进
+            switch(fd) { 
+                case 2: current_speedProfile = 4; break; // 狂飙
+                case 3: current_speedProfile = 3; break; // 激进
+                case 4: current_speedProfile = 2; break; // 标准
+                case 5: current_speedProfile = 1; break; // 舒适
+                case 6: current_speedProfile = 0; break; // 佛系
+            }
+            
+            setBit(msg, 43, false); // 强制关闭行程遥测上传，特斯拉无法读取fsd使用记录
+            if (is_fsd_engaged) setBit(msg, 14, true); 
+            twai_transmit(&msg, 0);
+        }
+
+        // ====================================================
+        // 核心功能注入fsd破解
+        // ====================================================
+        if (msg.identifier == 1021) {
+            uint8_t index = msg.data[0] & 0x07;
+            bool modified = false;
+            
+            if (index == 0) { 
+                setBit(msg, 46, true); setBit(msg, 60, true); setBit(msg, 38, true); 
+                modified = true; 
+            }
+            if (index == 1) { 
+                setBit(msg, 19, false); setBit(msg, 47, true); setBit(msg, 45, true); 
+                modified = true; 
+            }
+            if (index == 2) { 
+                // ✨ 通过车距控制的驾驶模式 (Speed Profile)
+                msg.data[7] &= ~(0x07 << 4); 
+                msg.data[7] |= (current_speedProfile & 0x07) << 4; 
+                
+                // ✨ 智能限速偏移 (Smart Offset)
+                msg.data[1] = (msg.data[1] & ~0x3F) | (current_smart_offset_pct & 0x3F);
+                modified = true;
+            }
+            // ✨ 小黑屋强制清0 (违规次数计数器归 0)
+            if (index == 5) {
+                msg.data[1] = 0x00; msg.data[2] = 0x00; 
+                modified = true;
+            }
+            if (modified) twai_transmit(&msg, 0);
+        }
+    } 
+}

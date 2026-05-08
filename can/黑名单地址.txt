@@ -1,0 +1,41 @@
+9个黑名单地址：
+telemetry.tesla.cn
+3.	telemetry-prd.vn.cloud.tesla.cn
+5.	hermes-prd.vn.cloud.tesla.cn
+6.	fleet-api.prd.cn.vn.cloud.tesla.cn
+7.	firmware.tesla.cn
+8.	log.tesla.cn
+9.	vehicle-files.prd.cnn1.vn.cloud.tesla.cn
+10.	hermes-x2-api.prd.vn.cloud.tesla.cn
+11.	signaling.vn.cloud.tesla.cn
+
+效果：可以使用语音助手，可以手机远程控制（有网情况）手机app正常使用。不会被没收FSD。其他所有车载软件都可以使用。
+
+10个黑名单地址：telemetry.tesla.cn
+3.	telemetry-prd.vn.cloud.tesla.cn
+5.	hermes-prd.vn.cloud.tesla.cn
+6.	fleet-api.prd.cn.vn.cloud.tesla.cn
+7.	firmware.tesla.cn
+8.	log.tesla.cn
+9.	vehicle-files.prd.cnn1.vn.cloud.tesla.cn
+10.	hermes-x2-api.prd.vn.cloud.tesla.cn
+11.	signaling.vn.cloud.tesla.cn
+api-prd.vn.cloud.tesla.cn
+效果：不会自动检测更新或者下载软件，手机app正常使用（有网情况），不会被没收FSD。其他所有车载软件都可以使用
+
+12个黑名单地址：api-prd.vn.cloud.tesla.cn	127.0.0.1	核心权限门脸
+hermes-x2-api.prd.vn.cloud.tesla.cn	127.0.0.1	新发现的隐藏接口
+signaling.vn.cloud.tesla.cn	127.0.0.1	实时控制隧道
+hermes-prd.vn.cloud.tesla.cn	127.0.0.1	新版控制协议
+hermes-stream-prd.vn.cloud.tesla.cn	127.0.0.1	实时指令流
+telemetry-prd.vn.cloud.tesla.cn	127.0.0.1	FSD 使用日志回传
+telemetry.tesla.cn	127.0.0.1	基础行驶数据上报
+apigateway-x2-trigger.tesla.cn	127.0.0.1	唤醒与指令网关
+fleet-api.prd.cn.vn.cloud.tesla.cn	127.0.0.1	车队管理接口
+firmware.tesla.cn	127.0.0.1	固件 OTA 检测
+log.tesla.cn	127.0.0.1	系统错误日志
+vehicle-files.prd.cnn1.vn.cloud.tesla.cn	127.0.0.1	敏感大文件上传
+
+效果：无解，你不更更新车机软件，特斯拉永远没办法没收FSD。手机app可以打开解锁车辆（蓝牙） ，FSD绝对的安全，其他所有车载软件都可以使用
+
+ps：虽然目前黑名单安全使用一个月了，没有任何问题，但如果你使用本方法，还是要后果自负。

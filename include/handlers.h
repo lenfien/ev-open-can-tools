@@ -97,13 +97,24 @@ struct CanConf {
 
     // auto offset table: speed_limit(km/h) → offset_percent(%), sorted ascending
     SpeedLimitToPercent speed_limit_auto_cfg[12] = {
-        {0, 60}, {20, 60}, {30, 60}, {40, 50}, {50, 40}, {60, 33},
-        {70, 12}, {80, 11}, {90, 10}, {100, 10}, {110, 10}, {120, 10}
+        {0, 50},
+        {20, 50},
+        {30, 50},
+        {40, 50},
+        {50, 40},
+        {60, 33},
+        {70, 12},
+        {80, 0},
+        {90, 0},
+        {100, 0},
+        {110, 0},
+        {120, 0}
     };
 
     uint32_t start_from_park = 0; //
     uint32_t camera_by_distance = 0;
     uint32_t ap_first = 0;   //
+    uint32_t enable_fsd_only_in_D = 0;
 };
 
 // 按 key 查找 cnf schema 条目；找不到返回 nullptr。实现见 handlers.cpp。
@@ -111,6 +122,14 @@ const CnfFieldDesc *CnfSchemaFindByKey(const char *key);
 
 // 按 schema 条目把值写入 CanConf（含范围 clamp）。实现见 handlers.cpp。
 void SchemaApplyValue(const CnfFieldDesc &f, CanConf &cnf, uint32_t v);
+
+enum EGearStatus
+{
+    EGearStatus_P = 3,
+    EGearStatus_R = 5,
+    EGearStatus_D = 9,
+    EGearStatus_N = 7,
+};
 
 struct CanState {
     uint32_t follow_distance      = 1; // 1–5, from CAN 1016 data[5][7:5]
@@ -137,6 +156,8 @@ struct CanState {
 
     // CAN 总线在线状态：由 web 层根据最近一次收到帧的时间戳决定（0=离线, 1=在线）
     uint32_t can_online = 0;
+
+    uint32_t shift_status = 0; // 档位识别
 };
 
 // ── Debug override (not persisted, cleared on reboot) ─────────────
@@ -259,8 +280,11 @@ private:
     bool
     Handle1021Mux2(CanFrame &frame);
 
+    bool
+    Handle280(CanFrame& frame);
+
 public:
-    std::vector<uint32_t> filter_can_id_list = {921, 1016, 1021, 2047, 923};
+    std::vector<uint32_t> filter_can_id_list = {280, 921, 1016, 1021, 2047, 923};
 
     // Reference frames for ban shield — mux index → expected clean frame content.
     // A mux frame is only forwarded when its content differs from the stored reference.
