@@ -461,10 +461,10 @@ body.injecting .tab.act{color:#5b8fff}
     <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
     主页
   </button>
-  <button class="tab" id="tab_debug" onclick="switchTab('debug')">
+  <!--<button class="tab" id="tab_debug" onclick="switchTab('debug')" >
     <svg viewBox="0 0 24 24"><path d="M12 2v3"/><path d="M4 7l2 2"/><path d="M20 7l-2 2"/><path d="M7 20l-2-2"/><path d="M17 20l2-2"/><rect x="7" y="8" width="10" height="12" rx="4"/><path d="M9 12h6"/><path d="M9 16h6"/></svg>
     调试
-  </button>
+  </button>-->
   <button class="tab" id="tab_wifi" onclick="switchTab('wifi')">
     <svg viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1" fill="currentColor"/></svg>
     WiFi / 系统

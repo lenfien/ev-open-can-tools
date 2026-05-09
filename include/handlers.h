@@ -158,6 +158,8 @@ struct CanState {
     uint32_t can_online = 0;
 
     uint32_t shift_status = 0; // 档位识别
+
+    uint32_t last_reset_frame_sec = 0;
 };
 
 // ── Debug override (not persisted, cleared on reboot) ─────────────

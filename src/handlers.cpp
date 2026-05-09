@@ -147,14 +147,7 @@ Handle1016(CanFrame &frame) {
     if (m_cnf.camera_by_distance)
         m_cnf.disable_camera = m_state.follow_distance > 1;
 
-    // 缓存最近一次原始帧，供调试页展示
-    memcpy(m_dbg.last_1016.data, frame.data, 8);
-    m_dbg.last_1016.seen       = true;
-    m_dbg.last_1016.updated_ms = millis();
-
-    // 调试页覆盖：有任何 bit 被覆盖就改写并转发
-    bool overridden = ApplyDebugOverride(frame, m_dbg.ovr_1016);
-    return overridden;
+    return false;
 }
 
 // ── CAN 2047 — gateway autopilot + ban shield ─────────────────────
@@ -193,54 +186,39 @@ Handle2047(CanFrame &frame) {
 
 bool CanHandler::
 Handle1021Mux0(CanFrame &frame) {
-    if (m_cnf.enable_fsd) {
-        if (m_cnf.ap_first && m_state.das_ap_state < 2)
-            return false;
+    frame.SetBit(46, true);
+    frame.SetBit(59, true);
 
-        if (m_cnf.enable_fsd_only_in_D && m_state.shift_status != EGearStatus::EGearStatus_D && m_state.shift_status != EGearStatus::EGearStatus_R)
-            return false;
+    if (!m_cnf.use_hw3_code)
+        frame.SetBit(60, true);
 
-        frame.SetBit(46, true);
-        frame.SetBit(59, true);
-
-        if (!m_cnf.use_hw3_code)
-            frame.SetBit(60, true);
-
-        if (m_cnf.speed_profile_use_follow_distance) {
-            switch (m_state.follow_distance) {
-                case 1:  m_state.speed_profile_to_hw3 = 2; break;
-                case 2:  m_state.speed_profile_to_hw3 = 1; break;
-                default: m_state.speed_profile_to_hw3 = 0; break;
-            }
+    if (m_cnf.speed_profile_use_follow_distance) {
+        switch (m_state.follow_distance) {
+            case 1:  m_state.speed_profile_to_hw3 = 2; break;
+            case 2:  m_state.speed_profile_to_hw3 = 1; break;
+            default: m_state.speed_profile_to_hw3 = 0; break;
         }
-        else {
-            switch (m_cnf.speed_profile_from_web) {
-            case 5:
-            case 4:
-                m_state.speed_profile_to_hw3 = 2;
-                break;
-            case 3:
-                m_state.speed_profile_to_hw3 = 1;
-                break;
-            default:
-                m_state.speed_profile_to_hw3 = 0;
-                break;
-            }
-        }
-
-        if (m_cnf.enable_set_hw3_profile) {
-            frame.data[6] &= ~0x06;
-            frame.data[6] |= (m_state.speed_profile_to_hw3 << 1);
+    }
+    else {
+        switch (m_cnf.speed_profile_from_web) {
+        case 5:
+        case 4:
+            m_state.speed_profile_to_hw3 = 2;
+            break;
+        case 3:
+            m_state.speed_profile_to_hw3 = 1;
+            break;
+        default:
+            m_state.speed_profile_to_hw3 = 0;
+            break;
         }
     }
 
-    // 缓存原始帧（未覆盖前的 m_cnf 逻辑结果之前的值）— 放在最开头更符合
-    // "当前值" 语义，但这里简化为 handler 出口前保存覆盖应用前的值。
-    memcpy(m_dbg.last_1021_m0.data, frame.data, 8);
-    m_dbg.last_1021_m0.seen       = true;
-    m_dbg.last_1021_m0.updated_ms = millis();
+    if (m_cnf.enable_set_hw3_profile) {
+        frame.data[6] &= ~0x06;
+        frame.data[6] |= (m_state.speed_profile_to_hw3 << 1);
+    }
 
-    ApplyDebugOverride(frame, m_dbg.ovr_1021_m0);
     return true;
 }
 
@@ -260,14 +238,6 @@ Handle1021Mux1(CanFrame &frame) {
         should_send = true;
     }
 
-    // 缓存原始帧用于调试页显示
-    memcpy(m_dbg.last_1021_m1.data, frame.data, 8);
-    m_dbg.last_1021_m1.seen       = true;
-    m_dbg.last_1021_m1.updated_ms = millis();
-
-    if (ApplyDebugOverride(frame, m_dbg.ovr_1021_m1))
-        should_send = true;
-
     return should_send;
 }
 
@@ -275,9 +245,6 @@ Handle1021Mux1(CanFrame &frame) {
 
 bool CanHandler::
 Handle1021Mux2(CanFrame &frame) {
-    if (!m_cnf.enable_fsd)
-        return true;
-
     if (m_cnf.speed_profile_use_follow_distance) {
         switch (m_state.follow_distance) {
             case 1:  m_state.speed_profile_to_hw4 = 3; break;
@@ -317,12 +284,6 @@ Handle1021Mux2(CanFrame &frame) {
         frame.SetBit(7, true);
     }
 
-    // 缓存原始帧用于调试页显示
-    memcpy(m_dbg.last_1021_m2.data, frame.data, 8);
-    m_dbg.last_1021_m2.seen       = true;
-    m_dbg.last_1021_m2.updated_ms = millis();
-
-    ApplyDebugOverride(frame, m_dbg.ovr_1021_m2);
     return true;
 }
 bool CanHandler::
@@ -336,6 +297,12 @@ Handle280(CanFrame &frame) {
 bool CanHandler::
 Handle1021(CanFrame &frame) {
     if (frame.dlc < 8) return false;
+
+    if (!m_cnf.enable_fsd)
+        return false;
+
+    if (m_cnf.enable_fsd_only_in_D && m_state.shift_status != EGearStatus::EGearStatus_D && m_state.shift_status != EGearStatus::EGearStatus_R)
+        return false;
 
     switch (frame.GetMux()) {
         case 0:  return Handle1021Mux0(frame);
@@ -358,6 +325,8 @@ bool CanHandler::
 Handle(CanFrame &frame, CanDriver &driver) {
     bool should_send = false;
 
+    m_state.frame_rx_rate += 1;
+
     switch (frame.id) {
         case 921:  should_send = Handle921(frame);   break;
         case 1016: should_send = Handle1016(frame);  break;
@@ -365,6 +334,16 @@ Handle(CanFrame &frame, CanDriver &driver) {
         case 1021: should_send = Handle1021(frame);  break;
         case 923:  should_send = Handle923(frame);      break;
         case 280: should_send = Handle280(frame);    break;
+    }
+
+    if (should_send)
+        m_state.frame_tx_rate += 1;
+
+    if (m_state.last_reset_frame_sec < millis() / 1000)
+    {
+        m_state.last_reset_frame_sec = millis() / 1000;
+        m_state.frame_rx_rate = 0;
+        m_state.frame_tx_rate = 0;
     }
 
     if (m_cnf.enable_print) {
