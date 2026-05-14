@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <cstring>
 
+
 // ── Schema ────────────────────────────────────────────────────────
 // 主页上的可写开关 / 只读状态都在这里声明。
 //   可写字段（渲染成表单控件）→ kCnfSchema[]
@@ -61,7 +62,8 @@ const StateFieldDesc kStateSchema[] = {
     STATE_NUM (ban_shield_cnt,           "Ban 命中",     nullptr, "bs",  "Ban 盾 命中/检查",    " / "),
     STATE_NUM (ban_shield_check_cnt,     "Ban 检查",     nullptr, "bs",  "Ban 盾 命中/检查",    " / "),
     STATE_ENUM(das_ap_state,             "DAS AP 状态", "关闭|不可用|就绪|工作|受限|导航|-|-|中止中|已中止|-|-|-|-|故障|无效", "das", "DAS AP 状态", " / "),
-    STATE_ENUM(shift_status,               "档位", "-|-|-|P|-|R|-|N|-|D|-|-|-|-|-|-", "档位", "档位状态", " / ")
+    STATE_ENUM(shift_status,              "档位", "-|-|-|P|-|R|-|N|-|D|-|-|-|-|-|-", "档位", "档位状态", " / "),
+    STATE_NUM(temprature,               "温度", "°C", nullptr, "", " / ")
 };
 
 const size_t kStateSchemaCount = sizeof(kStateSchema) / sizeof(kStateSchema[0]);
@@ -327,6 +329,7 @@ Handle(CanFrame &frame, CanDriver &driver) {
 
     m_state.frame_rx_rate += 1;
 
+    m_state.temprature = (uint32_t)temperatureRead();
     switch (frame.id) {
         case 921:  should_send = Handle921(frame);   break;
         case 1016: should_send = Handle1016(frame);  break;
