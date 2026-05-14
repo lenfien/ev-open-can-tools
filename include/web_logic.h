@@ -19,9 +19,10 @@ static bool          canOnline   = false;
 static unsigned long lastFrameMs = 0;
 
 // WiFi AP
-static char    apSSID[33] = "";
-static char    apPass[65] = "";
-static bool    apHidden   = false;
+static char    apSSID[33]   = "";
+static char    apPass[65]   = "";
+static bool    apHidden     = false;
+static bool    apDisabled   = false;
 
 // WiFi STA
 static char      staSSID[33]  = "";

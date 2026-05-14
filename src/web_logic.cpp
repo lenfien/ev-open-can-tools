@@ -90,7 +90,8 @@ dashLoadPrefs() {
     String apP = prefs.isKey("ap_pass") ? prefs.getString("ap_pass") : "";
     strlcpy(apSSID, apS.length() ? apS.c_str() : DASH_SSID, sizeof(apSSID));
     strlcpy(apPass, apP.length() ? apP.c_str() : DASH_PASS, sizeof(apPass));
-    apHidden = prefs.getBool("ap_hidden", false);
+    apHidden    = prefs.getBool("ap_hidden",   false);
+    apDisabled  = prefs.getBool("ap_disabled", false);
 
     strlcpy(staSSID, prefs.getString("wifi_ssid", "").c_str(), sizeof(staSSID));
     strlcpy(staPass, prefs.getString("wifi_pass", "").c_str(), sizeof(staPass));
@@ -288,11 +289,15 @@ handleReboot() {
 static void
 dashConnectSTA() {
     if (!strlen(staSSID)) return;
-    WiFi.mode(WIFI_AP_STA);
     WiFi.persistent(false);
     WiFi.setAutoReconnect(false);
     WiFi.setSleep(false);
-    WiFi.softAP(apSSID, apPass, 1, apHidden ? 1 : 0, 4);
+    if (apDisabled) {
+        WiFi.mode(WIFI_STA);
+    } else {
+        WiFi.mode(WIFI_AP_STA);
+        WiFi.softAP(apSSID, apPass, 1, apHidden ? 1 : 0, 4);
+    }
 
     if (staStaticIP && (uint32_t)staIP != 0)
         WiFi.config(staIP, staGW, staMask, staDNS);
@@ -398,9 +403,10 @@ handleWifiStatus() {
 static void
 handleApStatus() {
     String j = "{\"ssid\":\"" + jesc(apSSID) + "\"";
-    j += ",\"ip\":\""     + WiFi.softAPIP().toString() + "\"";
-    j += ",\"clients\":"  + String(WiFi.softAPgetStationNum());
-    j += ",\"hidden\":"   + String(apHidden ? "true" : "false");
+    j += ",\"ip\":\""      + WiFi.softAPIP().toString() + "\"";
+    j += ",\"clients\":"   + String(WiFi.softAPgetStationNum());
+    j += ",\"hidden\":"    + String(apHidden   ? "true" : "false");
+    j += ",\"disabled\":"  + String(apDisabled ? "true" : "false");
     j += "}";
     server.send(200, "application/json", j);
 }
@@ -409,7 +415,8 @@ static void
 handleApConfig() {
     String newSsid = server.arg("ssid");
     String newPass = server.arg("pass");
-    if (!newSsid.length()) {
+    bool onlyToggle = !newSsid.length() && server.hasArg("disabled") && !server.hasArg("hidden");
+    if (!newSsid.length() && !onlyToggle) {
         server.send(400, "application/json", "{\"ok\":false,\"error\":\"SSID required\"}");
         return;
     }
@@ -417,18 +424,30 @@ handleApConfig() {
         server.send(400, "application/json", "{\"ok\":false,\"error\":\"Password min 8 chars\"}");
         return;
     }
-    strlcpy(apSSID, newSsid.c_str(), sizeof(apSSID));
+    if (newSsid.length())
+        strlcpy(apSSID, newSsid.c_str(), sizeof(apSSID));
     if (newPass.length())
         strlcpy(apPass, newPass.c_str(), sizeof(apPass));
     if (server.hasArg("hidden"))
         apHidden = server.arg("hidden") == "1";
+    if (server.hasArg("disabled")) {
+        bool wantDisable = server.arg("disabled") == "1";
+        if (wantDisable && WiFi.status() != WL_CONNECTED) {
+            server.send(400, "application/json", "{\"ok\":false,\"error\":\"STA not connected — cannot disable AP\"}");
+            return;
+        }
+        apDisabled = wantDisable;
+    }
 
     prefs.begin(PREFS_NS, false);
-    prefs.putString("ap_ssid", newSsid);
+    if (newSsid.length())
+        prefs.putString("ap_ssid", newSsid);
     if (newPass.length())
         prefs.putString("ap_pass", newPass);
     if (server.hasArg("hidden"))
         prefs.putBool("ap_hidden", apHidden);
+    if (server.hasArg("disabled"))
+        prefs.putBool("ap_disabled", apDisabled);
     prefs.end();
     server.send(200, "application/json", "{\"ok\":true}");
 }
@@ -588,8 +607,13 @@ WebSetup(CanHandler * /*handler*/, CanDriver * /*driver*/) {
     dbgLoadArchive();
 
     WiFi.persistent(false);
-    WiFi.mode(WIFI_AP_STA);
-    WiFi.softAP(apSSID, apPass, 1, apHidden ? 1 : 0, 4);
+    if (apDisabled) {
+        WiFi.mode(WIFI_STA);
+    } else {
+        WiFi.mode(WIFI_AP_STA);
+        WiFi.softAP(apSSID, apPass, 1, apHidden ? 1 : 0, 4);
+        Serial.printf("[WIFI] AP: %s  IP: %s\n", apSSID, WiFi.softAPIP().toString().c_str());
+    }
     if (strlen(staSSID)) {
         if (staStaticIP && (uint32_t)staIP != 0)
             WiFi.config(staIP, staGW, staMask, staDNS);
@@ -597,7 +621,6 @@ WebSetup(CanHandler * /*handler*/, CanDriver * /*driver*/) {
         WiFi.setSleep(WIFI_PS_NONE);
         WiFi.begin(staSSID, staPass);
     }
-    Serial.printf("[WIFI] AP: %s  IP: %s\n", apSSID, WiFi.softAPIP().toString().c_str());
 
     server.on("/",             HTTP_GET,  handleRoot);
     server.on("/status",       HTTP_GET,  handleStatus);

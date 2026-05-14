@@ -421,6 +421,10 @@ body.injecting .tab.act{color:#5b8fff}
   <div class="row"><span class="lbl">SSID</span><span id="ap_ssid" class="val">--</span></div>
   <div class="row"><span class="lbl">IP</span><span id="ap_ip" class="val">--</span></div>
   <div class="row"><span class="lbl">已连接设备</span><span id="ap_cli" class="val">--</span></div>
+  <div class="row"><span class="lbl">热点状态</span><span id="ap_dis_lbl" class="val">--</span></div>
+</div>
+<div class="card pad">
+  <button class="btn" id="ap_toggle_btn" onclick="toggleAp()">--</button>
 </div>
 <div class="card pad">
   <span class="lbl">修改热点名称 / 密码</span>
@@ -830,7 +834,20 @@ async function loadAp() {
   try {
     const d = await (await fetch('/ap_status')).json();
     txt('ap_ssid', d.ssid); txt('ap_ip', d.ip); txt('ap_cli', d.clients);
+    txt('ap_dis_lbl', d.disabled ? '已关闭 (仅STA)' : '运行中', d.disabled ? 'warn' : 'ok');
+    g('ap_toggle_btn').textContent = d.disabled ? '开启热点 (AP)' : '关闭热点，仅STA模式';
+    g('ap_toggle_btn')._apDisabled = d.disabled;
   } catch(e) {}
+}
+async function toggleAp() {
+  const dis = !g('ap_toggle_btn')._apDisabled;
+  const p = new URLSearchParams({disabled: dis ? '1' : '0'});
+  try {
+    const r = await fetch('/ap_config', {method:'POST', body:p});
+    const d = await r.json();
+    if (!d.ok) { alert('失败：' + d.error); return; }
+    alert('已保存，重启后生效。');
+  } catch(e) { alert('请求失败'); }
 }
 async function loadSta() {
   try {
