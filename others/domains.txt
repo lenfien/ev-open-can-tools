@@ -1,0 +1,9 @@
+server=/connman.vn.cloud.tesla.cn/114.114.114.114
+server=/nav-prd-maps.tesla.cn/114.114.114.114
+server=/maps-cn-prd.go.tesla.services/114.114.114.114
+
+# === 激进版例外 (4 条) ===
+server=/hermes-prd.vn.cloud.tesla.cn/114.114.114.114
+server=/signaling.vn.cloud.tesla.cn/114.114.114.114
+server=/media-server-me.tesla.cn/114.114.114.114
+server=/www.tesla.cn/114.114.114.114
