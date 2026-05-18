@@ -1,0 +1,4 @@
+
+
+while ip6tables -D FORWARD -j DROP 2>/dev/null; do :; done
+ip6tables -I FORWARD 1 -j DROP 2>/dev/null
