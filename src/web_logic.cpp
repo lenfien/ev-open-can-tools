@@ -128,7 +128,9 @@ jesc(const String &s) {
 
 static void
 handleRoot() {
-    server.send_P(200, "text/html", DASH_HTML);
+    server.sendHeader("Content-Encoding", "gzip");
+    server.sendHeader("Cache-Control", "public, max-age=86400");
+    server.send_P(200, "text/html", (const char *)DASH_HTML_GZ, DASH_HTML_GZ_LEN);
 }
 
 static void
@@ -293,7 +295,7 @@ dashConnectSTA() {
     if (!strlen(staSSID)) return;
     WiFi.persistent(false);
     WiFi.setAutoReconnect(false);
-    WiFi.setSleep(false);
+    WiFi.setSleep(WIFI_PS_MIN_MODEM);
     if (apDisabled) {
         WiFi.mode(WIFI_STA);
     } else {
@@ -463,6 +465,8 @@ handleBleStatus() {
     j += st.enabled ? "true" : "false";
     j += ",\"advertising\":";
     j += st.advertising ? "true" : "false";
+    j += ",\"use_saved_timing\":";
+    j += st.use_saved_timing ? "true" : "false";
     j += ",\"uuid\":\"";
     j += jesc(st.uuid);
     j += "\",\"window_ms\":";
@@ -491,7 +495,8 @@ handleBleConfig() {
     uint32_t duration_ms = (uint32_t)server.arg("duration_ms").toInt();
     uint32_t interval_ms = (uint32_t)server.arg("interval_ms").toInt();
     bool enabled = !server.hasArg("enabled") || server.arg("enabled") == "1";
-    if (!BleProbeSetConfig(uuid, window_ms, duration_ms, interval_ms, enabled)) {
+    bool use_saved_timing = server.hasArg("use_saved_timing") && server.arg("use_saved_timing") == "1";
+    if (!BleProbeSetConfig(uuid, window_ms, duration_ms, interval_ms, enabled, use_saved_timing)) {
         server.send(400, "application/json", "{\"ok\":false,\"error\":\"bad uuid\"}");
         return;
     }
@@ -667,6 +672,7 @@ WebSetup(CanHandler * /*handler*/, CanDriver * /*driver*/) {
     dbgLoadArchive();
 
     WiFi.persistent(false);
+    WiFi.setSleep(WIFI_PS_MIN_MODEM);
     if (apDisabled) {
         WiFi.mode(WIFI_STA);
     } else {
@@ -678,7 +684,7 @@ WebSetup(CanHandler * /*handler*/, CanDriver * /*driver*/) {
         if (staStaticIP && (uint32_t)staIP != 0)
             WiFi.config(staIP, staGW, staMask, staDNS);
         WiFi.setAutoReconnect(false);
-        WiFi.setSleep(WIFI_PS_NONE);
+        WiFi.setSleep(WIFI_PS_MIN_MODEM);
         WiFi.begin(staSSID, staPass);
     }
     BleProbeSetup();

@@ -13,11 +13,19 @@ static constexpr uint32_t MIN_DURATION_MS = 100;
 static constexpr uint32_t MAX_DURATION_MS = 3600000;
 static constexpr uint32_t MIN_INTERVAL_MS = 20;
 static constexpr uint32_t MAX_INTERVAL_MS = 5000;
+static constexpr uint32_t DEFAULT_WINDOW_MS = 3000;
+static constexpr uint32_t DEFAULT_DURATION_MS = 600;
+static constexpr uint32_t DEFAULT_INTERVAL_MS = 200;
+static constexpr uint32_t LEGACY_DEFAULT_WINDOW_MS = 1000;
+static constexpr uint32_t LEGACY_DEFAULT_DURATION_MS = 1000;
+static constexpr uint32_t LEGACY_DEFAULT_INTERVAL_MS = 20;
 
 static BleProbeStatus g_ble;
 static bool g_ble_ready = false;
-static uint32_t g_cycle_start_ms = 0;
 static uint32_t g_adv_start_ms = 0;
+static uint32_t g_next_adv_ms = 0;
+static uint32_t g_adv_stop_ms = 0;
+static uint32_t g_adv_seq = 0;
 
 static uint32_t clampMs(uint32_t v, uint32_t lo, uint32_t hi) {
     if (v < lo) return lo;
@@ -65,7 +73,6 @@ static void stopAdvertising() {
     if (!g_ble_ready || !g_ble.advertising) return;
     BLEDevice::getAdvertising()->stop();
     g_ble.advertising = false;
-    Serial.println("[BLE] advertising stopped");
 }
 
 static void startAdvertising() {
@@ -80,19 +87,36 @@ static void startAdvertising() {
     adv->setMinPreferred(0x06);
     adv->setMaxPreferred(0x12);
 
+    uint32_t next_seq = g_adv_seq + 1;
     BLEAdvertisementData advData;
     advData.setFlags(0x06);
     advData.setCompleteServices(BLEUUID(g_ble.uuid));
+    char mfg[4] = {
+        (char)0xff,
+        (char)0xff,
+        (char)(next_seq & 0xff),
+        (char)((next_seq >> 8) & 0xff),
+    };
+    advData.setManufacturerData(std::string(mfg, sizeof(mfg)));
     adv->setAdvertisementData(advData);
 
     BLEAdvertisementData scanData;
     scanData.setName(BLE_DEVICE_NAME);
     adv->setScanResponseData(scanData);
+
     adv->start();
 
     g_ble.advertising = true;
     g_adv_start_ms = millis();
-    Serial.printf("[BLE] advertising UUID %s\n", g_ble.uuid);
+    g_adv_stop_ms = g_adv_start_ms + g_ble.duration_ms;
+    g_adv_seq = next_seq;
+    Serial.printf("[BLE] advertising trigger #%lu period=%lums duration=%lums interval=%lums saved=%u uuid=%s\n",
+                  (unsigned long)g_adv_seq,
+                  (unsigned long)g_ble.window_ms,
+                  (unsigned long)g_ble.duration_ms,
+                  (unsigned long)g_ble.interval_ms,
+                  g_ble.use_saved_timing ? 1 : 0,
+                  g_ble.uuid);
 }
 
 void BleProbeLoad(Preferences &prefs) {
@@ -100,19 +124,36 @@ void BleProbeLoad(Preferences &prefs) {
     if (!BleProbeUuidValid(uuid))
         uuid = DEFAULT_UUID;
     strlcpy(g_ble.uuid, uuid.c_str(), sizeof(g_ble.uuid));
-    uint32_t defaultWindowMs = 1000;
-    uint32_t defaultDurationMs = 1000;
+    uint32_t defaultWindowMs = DEFAULT_WINDOW_MS;
+    uint32_t defaultDurationMs = DEFAULT_DURATION_MS;
     if (!prefs.isKey("ble_win_ms") && prefs.isKey("ble_win_s"))
         defaultWindowMs = prefs.getUInt("ble_win_s", 30) * 1000u;
     if (!prefs.isKey("ble_dur_ms") && prefs.isKey("ble_dur_s"))
         defaultDurationMs = prefs.getUInt("ble_dur_s", 10) * 1000u;
 
-    g_ble.window_ms = clampMs(prefs.getUInt("ble_win_ms", defaultWindowMs), MIN_WINDOW_MS, MAX_WINDOW_MS);
-    g_ble.duration_ms = clampMs(prefs.getUInt("ble_dur_ms", defaultDurationMs), MIN_DURATION_MS, MAX_DURATION_MS);
+    g_ble.use_saved_timing = prefs.getBool("ble_use_timing", false);
+    g_ble.window_ms = g_ble.use_saved_timing ? clampMs(prefs.getUInt("ble_win_ms", defaultWindowMs), MIN_WINDOW_MS, MAX_WINDOW_MS)
+                                             : DEFAULT_WINDOW_MS;
+    g_ble.duration_ms = g_ble.use_saved_timing ? clampMs(prefs.getUInt("ble_dur_ms", defaultDurationMs), MIN_DURATION_MS, MAX_DURATION_MS)
+                                               : DEFAULT_DURATION_MS;
     if (g_ble.duration_ms > g_ble.window_ms)
         g_ble.duration_ms = g_ble.window_ms;
-    g_ble.interval_ms = clampMs(prefs.getUInt("ble_int_ms", 20), MIN_INTERVAL_MS, MAX_INTERVAL_MS);
+    g_ble.interval_ms = g_ble.use_saved_timing ? clampMs(prefs.getUInt("ble_int_ms", DEFAULT_INTERVAL_MS), MIN_INTERVAL_MS, MAX_INTERVAL_MS)
+                                               : DEFAULT_INTERVAL_MS;
     g_ble.enabled = prefs.getBool("ble_enabled", true);
+
+    if (g_ble.use_saved_timing &&
+        g_ble.window_ms == LEGACY_DEFAULT_WINDOW_MS &&
+        g_ble.duration_ms == LEGACY_DEFAULT_DURATION_MS &&
+        g_ble.interval_ms == LEGACY_DEFAULT_INTERVAL_MS) {
+        g_ble.window_ms = DEFAULT_WINDOW_MS;
+        g_ble.duration_ms = DEFAULT_DURATION_MS;
+        g_ble.interval_ms = DEFAULT_INTERVAL_MS;
+        prefs.putUInt("ble_win_ms", g_ble.window_ms);
+        prefs.putUInt("ble_dur_ms", g_ble.duration_ms);
+        prefs.putUInt("ble_int_ms", g_ble.interval_ms);
+        Serial.println("[BLE] migrated aggressive default advertising interval");
+    }
 }
 
 void BleProbeSave(Preferences &prefs) {
@@ -123,17 +164,18 @@ void BleProbeSave(Preferences &prefs) {
     prefs.remove("ble_win_s");
     prefs.remove("ble_dur_s");
     prefs.putBool("ble_enabled", g_ble.enabled);
+    prefs.putBool("ble_use_timing", g_ble.use_saved_timing);
 }
 
 void BleProbeSetup() {
     BLEDevice::init(BLE_DEVICE_NAME);
     BLEDevice::setPower(ESP_PWR_LVL_P6);
     g_ble_ready = true;
-    g_cycle_start_ms = millis();
+    g_next_adv_ms = millis();
     startAdvertising();
 }
 
-bool BleProbeSetConfig(const String &uuid, uint32_t window_ms, uint32_t duration_ms, uint32_t interval_ms, bool enabled) {
+bool BleProbeSetConfig(const String &uuid, uint32_t window_ms, uint32_t duration_ms, uint32_t interval_ms, bool enabled, bool use_saved_timing) {
     if (!BleProbeUuidValid(uuid)) return false;
     stopAdvertising();
     strlcpy(g_ble.uuid, uuid.c_str(), sizeof(g_ble.uuid));
@@ -143,8 +185,10 @@ bool BleProbeSetConfig(const String &uuid, uint32_t window_ms, uint32_t duration
         g_ble.duration_ms = g_ble.window_ms;
     g_ble.interval_ms = clampMs(interval_ms, MIN_INTERVAL_MS, MAX_INTERVAL_MS);
     g_ble.enabled = enabled;
-    g_cycle_start_ms = millis();
+    g_ble.use_saved_timing = use_saved_timing;
+    g_next_adv_ms = millis();
     g_adv_start_ms = 0;
+    g_adv_stop_ms = 0;
     if (g_ble.enabled)
         startAdvertising();
     return true;
@@ -163,24 +207,24 @@ void BleProbeLoop() {
         stopAdvertising();
         g_ble.cycle_remaining_ms = 0;
         g_ble.adv_remaining_ms = 0;
+        g_next_adv_ms = millis();
         return;
     }
 
-    if (now - g_cycle_start_ms >= window_ms) {
-        g_cycle_start_ms = now;
-        startAdvertising();
+    if (g_ble.advertising && (int32_t)(now - g_adv_stop_ms) >= 0) {
+        stopAdvertising();
+        g_next_adv_ms = g_adv_start_ms + window_ms;
     }
 
-    uint32_t cycle_elapsed = now - g_cycle_start_ms;
-    if (g_ble.advertising && cycle_elapsed >= duration_ms)
-        stopAdvertising();
-    else if (!g_ble.advertising && cycle_elapsed < duration_ms)
+    if (!g_ble.advertising && (int32_t)(now - g_next_adv_ms) >= 0)
         startAdvertising();
 
-    cycle_elapsed = now - g_cycle_start_ms;
     uint32_t adv_elapsed = g_ble.advertising ? (now - g_adv_start_ms) : 0;
-    g_ble.cycle_remaining_ms = (cycle_elapsed < window_ms) ? (window_ms - cycle_elapsed) : 0;
+    uint32_t until_next = g_ble.advertising ? (window_ms - min(window_ms, adv_elapsed))
+                                            : ((int32_t)(g_next_adv_ms - now) > 0 ? (g_next_adv_ms - now) : 0);
+    g_ble.cycle_remaining_ms = until_next;
     g_ble.adv_remaining_ms = (g_ble.advertising && adv_elapsed < duration_ms) ? (duration_ms - adv_elapsed) : 0;
+
 }
 
 BleProbeStatus BleProbeGetStatus() {

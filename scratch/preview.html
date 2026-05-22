@@ -589,6 +589,13 @@ input:checked+.sl::before{transform:translateX(18px);background:#5b8fff}
 .srow{display:flex;gap:8px;align-items:flex-end;margin-top:6px}
 .srow input{flex:1;margin-top:0}
 .srow button{flex-shrink:0;width:auto;margin-top:0;padding:8px 14px}
+.uuid-wrap{display:flex;align-items:center;justify-content:flex-end;gap:8px;min-width:0;max-width:72%;position:relative}
+.uuid-wrap .val{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.copy-btn{width:30px;height:30px;border:1px solid var(--pbtn-b);border-radius:8px;background:var(--pbtn);color:var(--pbtn-hc);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:background .15s,border-color .15s,color .15s}
+.copy-btn:hover{border-color:var(--pbtn-hb);background:var(--net-h);color:#8ab4f8}
+.copy-btn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.copy-hint{position:absolute;right:0;top:-24px;background:#2a3f6e;color:#8ab4f8;border:1px solid #3a5fa8;border-radius:7px;padding:3px 7px;font-size:11px;font-weight:700;opacity:0;transform:translateY(3px);pointer-events:none;transition:opacity .16s,transform .16s;white-space:nowrap}
+.copy-hint.show{opacity:1;transform:translateY(0)}
 .net{padding:8px 10px;background:var(--net);border-radius:6px;margin-top:4px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-size:13px;border:1px solid var(--net-b)}
 .net:hover{background:var(--net-h)}
 .rssi{color:var(--rssi);font-size:12px}
@@ -975,8 +982,8 @@ body.injecting .tab.act{color:#5b8fff}
 <h2>BLE 探针</h2>
 <div class="card">
   <div class="row"><span class="lbl">广播状态</span><span id="ble_adv_st" class="val">--</span></div>
-  <div class="row"><span class="lbl">广播 UUID</span><span id="ble_uuid_show" class="val" style="max-width:66%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">--</span></div>
-  <div class="row"><span class="lbl">窗口 / 时长</span><span id="ble_window_show" class="val">--</span></div>
+  <div class="row"><span class="lbl">广播 UUID</span><span class="uuid-wrap"><span id="ble_uuid_show" class="val">--</span><button class="copy-btn" onclick="copyBleUuid()" title="复制广播 UUID" aria-label="复制广播 UUID"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button><span id="ble_copy_hint" class="copy-hint">已复制</span></span></div>
+  <div class="row"><span class="lbl">周期 / 时长</span><span id="ble_window_show" class="val">--</span></div>
   <div class="row"><span class="lbl">广播间隔</span><span id="ble_interval_show" class="val">--</span></div>
 </div>
 <div class="card">
@@ -992,7 +999,7 @@ body.injecting .tab.act{color:#5b8fff}
     </div>
     <div class="srow">
       <div style="flex:1">
-        <span class="lbl">广播窗口（毫秒）</span>
+        <span class="lbl">广播周期（毫秒）</span>
         <input type="number" id="ble_window_ms" class="inp" min="100" max="3600000" step="100">
       </div>
       <div style="flex:1">
@@ -1002,6 +1009,10 @@ body.injecting .tab.act{color:#5b8fff}
     </div>
     <span class="lbl">广播间隔（毫秒）</span>
     <input type="number" id="ble_interval_ms" class="inp" min="20" max="5000" step="10">
+    <div class="tog" style="padding:10px 0 0;border-bottom:none">
+      <span class="tlbl">启动时使用当前时序</span>
+      <label class="sw"><input type="checkbox" id="ble_use_saved_timing"><span class="sl"></span></label>
+    </div>
     <button class="btn" onclick="saveBle()">保存 BLE 配置</button>
   </div>
 </div>
@@ -1184,11 +1195,19 @@ function syncMaster(on) {
 }
 syncMaster(false);
 
+let _activeTab = 'main';
+let _wifiLoadedOnce = false;
+
 function switchTab(name) {
+  _activeTab = name;
   document.querySelectorAll('.pg').forEach(p => p.classList.remove('act'));
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('act'));
   document.getElementById('pg_'+name).classList.add('act');
   document.getElementById('tab_'+name).classList.add('act');
+  if (name === 'wifi') {
+    setTimeout(refreshSystemPage, _wifiLoadedOnce ? 80 : 0);
+    _wifiLoadedOnce = true;
+  }
 }
 
 let _useStalk = true, _overrideOn = false, _useDynamic = false;
@@ -1417,23 +1436,52 @@ async function loadSta() {
   } catch(e) {}
 }
 
+let _bleCountdown = null;
+
+function fmtMs(ms) {
+  ms = Math.max(0, Math.round(ms));
+  return ms + 'ms';
+}
+
+function renderBleTiming() {
+  if (!_bleCountdown) return;
+  const elapsed = Date.now() - _bleCountdown.t0;
+  const remain = Math.max(0, _bleCountdown.remaining - elapsed);
+  const label = _bleCountdown.advertising ? '剩余 ' : '下次周期 ';
+  txt('ble_window_show', _bleCountdown.window + 'ms / ' + _bleCountdown.duration + 'ms · ' + label + fmtMs(remain));
+}
+
 async function loadBle() {
   try {
     const d = await (await fetch('/ble_status')).json();
     const advText = !d.enabled ? '已关闭' : (d.advertising ? '正在广播' : '等待窗口');
     txt('ble_adv_st', advText, !d.enabled ? 'warn' : (d.advertising ? 'ok' : 'warn'));
     txt('ble_uuid_show', d.uuid || '--');
-    const rem = d.advertising ? ('剩余 ' + d.adv_remaining_ms + 'ms') : ('下次窗口 ' + d.cycle_remaining_ms + 'ms');
-    txt('ble_window_show', d.window_ms + 'ms / ' + d.duration_ms + 'ms · ' + rem);
+    _bleCountdown = {
+      t0: Date.now(),
+      advertising: !!d.advertising,
+      remaining: d.advertising ? d.adv_remaining_ms : d.cycle_remaining_ms,
+      window: d.window_ms,
+      duration: d.duration_ms
+    };
+    renderBleTiming();
     txt('ble_interval_show', d.interval_ms + 'ms');
     const en = g('ble_enabled'); if (en) en.checked = !!d.enabled;
     const uuid = g('ble_uuid'); if (uuid && document.activeElement !== uuid) uuid.value = d.uuid || '';
     const win = g('ble_window_ms'); if (win && document.activeElement !== win) win.value = d.window_ms;
     const dur = g('ble_duration_ms'); if (dur && document.activeElement !== dur) dur.value = d.duration_ms;
     const intv = g('ble_interval_ms'); if (intv && document.activeElement !== intv) intv.value = d.interval_ms;
+    const useTiming = g('ble_use_saved_timing'); if (useTiming) useTiming.checked = !!d.use_saved_timing;
   } catch(e) {
     txt('ble_adv_st', '未知', 'err');
+    _bleCountdown = null;
   }
+}
+
+function refreshSystemPage() {
+  loadAp();
+  loadSta();
+  loadBle();
 }
 
 async function genBleUuid() {
@@ -1442,6 +1490,39 @@ async function genBleUuid() {
     g('ble_uuid').value = d.uuid;
   } catch(e) {
     alert('生成 UUID 失败');
+  }
+}
+
+async function copyText(text) {
+  if (!text) return false;
+  if (navigator.clipboard && window.isSecureContext) {
+    await navigator.clipboard.writeText(text);
+    return true;
+  }
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.setAttribute('readonly', '');
+  ta.style.position = 'fixed';
+  ta.style.left = '-9999px';
+  document.body.appendChild(ta);
+  ta.select();
+  let ok = false;
+  try { ok = document.execCommand('copy'); } finally { document.body.removeChild(ta); }
+  return ok;
+}
+
+async function copyBleUuid() {
+  const text = (g('ble_uuid_show').textContent || '').trim();
+  if (!text || text === '--') return;
+  try {
+    if (!await copyText(text)) throw new Error('copy failed');
+    const hint = g('ble_copy_hint');
+    hint.textContent = '已复制';
+    hint.classList.add('show');
+    clearTimeout(hint._t);
+    hint._t = setTimeout(() => hint.classList.remove('show'), 1100);
+  } catch(e) {
+    alert('复制失败');
   }
 }
 
@@ -1455,7 +1536,8 @@ async function saveBle() {
     window_ms: String(windowMs),
     duration_ms: String(durationMs),
     interval_ms: String(intervalMs),
-    enabled: g('ble_enabled').checked ? '1' : '0'
+    enabled: g('ble_enabled').checked ? '1' : '0',
+    use_saved_timing: g('ble_use_saved_timing').checked ? '1' : '0'
   });
   try {
     const r = await fetch('/ble_config', {method:'POST', body:p});
@@ -1842,12 +1924,14 @@ async function dbgSaveArchive() {
   }
 }
 
-loadSchema(); poll(); loadAp(); loadSta(); loadBle();
+loadSchema();
+poll();
 setInterval(poll, 2000);
-setInterval(loadAp, 15000);
-setInterval(loadSta, 6000);
-setInterval(loadBle, 2000);
-setInterval(dbgPoll, 1500);
+setInterval(() => { if (_activeTab === 'wifi') loadAp(); }, 15000);
+setInterval(() => { if (_activeTab === 'wifi') loadSta(); }, 6000);
+setInterval(() => { if (_activeTab === 'wifi') loadBle(); }, 2000);
+setInterval(() => { if (_activeTab === 'wifi') renderBleTiming(); }, 200);
+setInterval(() => { if (_activeTab === 'debug') dbgPoll(); }, 1500);
 </script>
 </body>
 </html>

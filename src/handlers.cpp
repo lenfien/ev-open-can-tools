@@ -329,7 +329,6 @@ Handle(CanFrame &frame, CanDriver &driver) {
 
     m_state.frame_rx_rate += 1;
 
-    m_state.temprature = (uint32_t)temperatureRead();
     switch (frame.id) {
         case 921:  should_send = Handle921(frame);   break;
         case 1016: should_send = Handle1016(frame);  break;

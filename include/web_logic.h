@@ -13,6 +13,8 @@
 extern Preferences prefs;
 extern WebServer   server;
 extern const char DASH_HTML[];
+extern const uint8_t DASH_HTML_GZ[];
+extern const size_t DASH_HTML_GZ_LEN;
 
 static unsigned long startMs     = 0;
 static bool          canOnline   = false;
