@@ -61,4 +61,5 @@ void loop()
     }
 
     digitalWrite(PIN_LED, HIGH);
+    mcpDashboardLoop();
 }

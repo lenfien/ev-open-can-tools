@@ -4,6 +4,7 @@
 
 #include "common.h"
 #include "web_logic.h"
+#include "ble_probe.h"
 
 Preferences prefs;
 WebServer   server(80);
@@ -85,6 +86,7 @@ static void
 dashLoadPrefs() {
     prefs.begin(PREFS_NS, false);
     g_can_handler->LoadConf(prefs);
+    BleProbeLoad(prefs);
 
     String apS = prefs.isKey("ap_ssid") ? prefs.getString("ap_ssid") : "";
     String apP = prefs.isKey("ap_pass") ? prefs.getString("ap_pass") : "";
@@ -452,6 +454,60 @@ handleApConfig() {
     server.send(200, "application/json", "{\"ok\":true}");
 }
 
+// ------------------------ BLE probe ----------------------------- //
+
+static void
+handleBleStatus() {
+    BleProbeStatus st = BleProbeGetStatus();
+    String j = "{\"enabled\":";
+    j += st.enabled ? "true" : "false";
+    j += ",\"advertising\":";
+    j += st.advertising ? "true" : "false";
+    j += ",\"uuid\":\"";
+    j += jesc(st.uuid);
+    j += "\",\"window_sec\":";
+    j += String(st.window_sec);
+    j += ",\"duration_sec\":";
+    j += String(st.duration_sec);
+    j += ",\"cycle_remaining_sec\":";
+    j += String(st.cycle_remaining_sec);
+    j += ",\"adv_remaining_sec\":";
+    j += String(st.adv_remaining_sec);
+    j += "}";
+    server.send(200, "application/json", j);
+}
+
+static void
+handleBleConfig() {
+    if (!server.hasArg("uuid") || !server.hasArg("window_sec") || !server.hasArg("duration_sec")) {
+        server.send(400, "application/json", "{\"ok\":false,\"error\":\"missing args\"}");
+        return;
+    }
+    String uuid = server.arg("uuid");
+    uuid.trim();
+    uint32_t window_sec = (uint32_t)server.arg("window_sec").toInt();
+    uint32_t duration_sec = (uint32_t)server.arg("duration_sec").toInt();
+    bool enabled = !server.hasArg("enabled") || server.arg("enabled") == "1";
+    if (!BleProbeSetConfig(uuid, window_sec, duration_sec, enabled)) {
+        server.send(400, "application/json", "{\"ok\":false,\"error\":\"bad uuid\"}");
+        return;
+    }
+
+    prefs.begin(PREFS_NS, false);
+    BleProbeSave(prefs);
+    prefs.end();
+    server.send(200, "application/json", "{\"ok\":true}");
+}
+
+static void
+handleBleGenerate() {
+    String uuid = BleProbeGenerateUuid();
+    String j = "{\"uuid\":\"";
+    j += uuid;
+    j += "\"}";
+    server.send(200, "application/json", j);
+}
+
 // ── Debug overlay (不落盘，用于调试页覆盖指定 bit) ─────────────
 
 static DebugOverride *
@@ -590,6 +646,7 @@ webTask(void *) {
     for (;;) {
         server.handleClient();
         dashCheckWifi();
+        BleProbeLoop();
         vTaskDelay(pdMS_TO_TICKS(2));
     }
 }
@@ -621,6 +678,7 @@ WebSetup(CanHandler * /*handler*/, CanDriver * /*driver*/) {
         WiFi.setSleep(WIFI_PS_NONE);
         WiFi.begin(staSSID, staPass);
     }
+    BleProbeSetup();
 
     server.on("/",             HTTP_GET,  handleRoot);
     server.on("/status",       HTTP_GET,  handleStatus);
@@ -632,6 +690,9 @@ WebSetup(CanHandler * /*handler*/, CanDriver * /*driver*/) {
     server.on("/wifi_status",  HTTP_GET,  handleWifiStatus);
     server.on("/ap_status",    HTTP_GET,  handleApStatus);
     server.on("/ap_config",    HTTP_POST, handleApConfig);
+    server.on("/ble_status",   HTTP_GET,  handleBleStatus);
+    server.on("/ble_config",   HTTP_POST, handleBleConfig);
+    server.on("/ble_generate", HTTP_POST, handleBleGenerate);
     server.on("/debug_status",       HTTP_GET,  handleDebugStatus);
     server.on("/debug_set",          HTTP_POST, handleDebugSet);
     server.on("/debug_clear",        HTTP_POST, handleDebugClear);

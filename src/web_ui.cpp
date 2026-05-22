@@ -61,6 +61,8 @@ input:checked+.sl::before{transform:translateX(18px);background:#5b8fff}
 .btn:hover{background:#334d85}
 .btn.danger{background:#3b1616;color:#ff7070;border-color:#7a2424}
 .btn.danger:hover{background:#4a1e1e}
+.btn.secondary{background:var(--pbtn);color:var(--pbtn-hc);border-color:var(--pbtn-b)}
+.btn.secondary:hover{border-color:var(--pbtn-hb);background:var(--net-h)}
 .srow{display:flex;gap:8px;align-items:flex-end;margin-top:6px}
 .srow input{flex:1;margin-top:0}
 .srow button{flex-shrink:0;width:auto;margin-top:0;padding:8px 14px}
@@ -353,6 +355,37 @@ body.injecting .tab.act{color:#5b8fff}
 
 <h2>状态</h2>
 <div id="state_root" class="grid"></div>
+
+<h2>BLE 探针</h2>
+<div class="card">
+  <div class="row"><span class="lbl">广播状态</span><span id="ble_adv_st" class="val">--</span></div>
+  <div class="row"><span class="lbl">广播 UUID</span><span id="ble_uuid_show" class="val" style="max-width:66%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">--</span></div>
+  <div class="row"><span class="lbl">窗口 / 时长</span><span id="ble_window_show" class="val">--</span></div>
+</div>
+<div class="card">
+  <div class="tog">
+    <span class="tlbl">启用 BLE 广播</span>
+    <label class="sw"><input type="checkbox" id="ble_enabled"><span class="sl"></span></label>
+  </div>
+  <div class="pad" style="border-top:1px solid var(--sep)">
+    <span class="lbl">广播 UUID</span>
+    <div class="srow">
+      <input type="text" id="ble_uuid" class="inp" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+      <button class="btn secondary" onclick="genBleUuid()">生成</button>
+    </div>
+    <div class="srow">
+      <div style="flex:1">
+        <span class="lbl">广播窗口（秒）</span>
+        <input type="number" id="ble_window_sec" class="inp" min="1" max="3600" step="1">
+      </div>
+      <div style="flex:1">
+        <span class="lbl">广播时长（秒）</span>
+        <input type="number" id="ble_duration_sec" class="inp" min="1" max="3600" step="1">
+      </div>
+    </div>
+    <button class="btn" onclick="saveBle()">保存 BLE 配置</button>
+  </div>
+</div>
 
 <div id="controlled" class="locked">
 <h2>速度档位</h2>
@@ -858,6 +891,52 @@ async function loadSta() {
   } catch(e) {}
 }
 
+async function loadBle() {
+  try {
+    const d = await (await fetch('/ble_status')).json();
+    const advText = !d.enabled ? '已关闭' : (d.advertising ? '正在广播' : '等待窗口');
+    txt('ble_adv_st', advText, !d.enabled ? 'warn' : (d.advertising ? 'ok' : 'warn'));
+    txt('ble_uuid_show', d.uuid || '--');
+    const rem = d.advertising ? ('剩余 ' + d.adv_remaining_sec + 's') : ('下次窗口 ' + d.cycle_remaining_sec + 's');
+    txt('ble_window_show', d.window_sec + 's / ' + d.duration_sec + 's · ' + rem);
+    const en = g('ble_enabled'); if (en) en.checked = !!d.enabled;
+    const uuid = g('ble_uuid'); if (uuid && document.activeElement !== uuid) uuid.value = d.uuid || '';
+    const win = g('ble_window_sec'); if (win && document.activeElement !== win) win.value = d.window_sec;
+    const dur = g('ble_duration_sec'); if (dur && document.activeElement !== dur) dur.value = d.duration_sec;
+  } catch(e) {
+    txt('ble_adv_st', '未知', 'err');
+  }
+}
+
+async function genBleUuid() {
+  try {
+    const d = await (await fetch('/ble_generate', {method:'POST'})).json();
+    g('ble_uuid').value = d.uuid;
+  } catch(e) {
+    alert('生成 UUID 失败');
+  }
+}
+
+async function saveBle() {
+  const uuid = g('ble_uuid').value.trim();
+  const windowSec = Math.max(1, Math.min(3600, +(g('ble_window_sec').value || 0)));
+  const durationSec = Math.max(1, Math.min(3600, +(g('ble_duration_sec').value || 0)));
+  const p = new URLSearchParams({
+    uuid,
+    window_sec: String(windowSec),
+    duration_sec: String(durationSec),
+    enabled: g('ble_enabled').checked ? '1' : '0'
+  });
+  try {
+    const r = await fetch('/ble_config', {method:'POST', body:p});
+    const d = await r.json();
+    if (!d.ok) { alert('保存失败：' + (d.error || '配置无效')); return; }
+    await loadBle();
+  } catch(e) {
+    alert('保存 BLE 配置失败');
+  }
+}
+
 async function scanWifi() {
   g('nets').innerHTML = '<div style="color:#555;padding:6px 0">扫描中...</div>';
   try {
@@ -1233,10 +1312,11 @@ async function dbgSaveArchive() {
   }
 }
 
-loadSchema(); poll(); loadAp(); loadSta();
+loadSchema(); poll(); loadAp(); loadSta(); loadBle();
 setInterval(poll, 2000);
 setInterval(loadAp, 15000);
 setInterval(loadSta, 6000);
+setInterval(loadBle, 2000);
 setInterval(dbgPoll, 1500);
 </script>
 </body>
