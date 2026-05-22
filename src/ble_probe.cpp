@@ -7,19 +7,18 @@
 
 static constexpr const char *BLE_DEVICE_NAME = "TeslaWakeProbe";
 static constexpr const char *DEFAULT_UUID = "f4a2b6a1-2c7e-4c79-9f1d-6f7d9a21c8b4";
-static constexpr uint32_t MIN_WINDOW_SEC = 1;
-static constexpr uint32_t MAX_WINDOW_SEC = 3600;
-static constexpr uint32_t MIN_DURATION_SEC = 1;
-static constexpr uint32_t MAX_DURATION_SEC = 3600;
-static constexpr uint32_t MIN_INTERVAL_MS = 100;
-static constexpr uint32_t MAX_INTERVAL_MS = 10000;
+static constexpr uint32_t MIN_WINDOW_MS = 100;
+static constexpr uint32_t MAX_WINDOW_MS = 3600000;
+static constexpr uint32_t MIN_DURATION_MS = 100;
+static constexpr uint32_t MAX_DURATION_MS = 3600000;
+static constexpr uint32_t ADV_INTERVAL_MS = 500;
 
 static BleProbeStatus g_ble;
 static bool g_ble_ready = false;
 static uint32_t g_cycle_start_ms = 0;
 static uint32_t g_adv_start_ms = 0;
 
-static uint32_t clampSec(uint32_t v, uint32_t lo, uint32_t hi) {
+static uint32_t clampMs(uint32_t v, uint32_t lo, uint32_t hi) {
     if (v < lo) return lo;
     if (v > hi) return hi;
     return v;
@@ -74,7 +73,7 @@ static void startAdvertising() {
     BLEAdvertising *adv = BLEDevice::getAdvertising();
     adv->stop();
     adv->setScanResponse(true);
-    uint16_t interval = intervalMsToBleUnits(g_ble.interval_ms);
+    uint16_t interval = intervalMsToBleUnits(ADV_INTERVAL_MS);
     adv->setMinInterval(interval);
     adv->setMaxInterval(interval);
     adv->setMinPreferred(0x06);
@@ -100,19 +99,27 @@ void BleProbeLoad(Preferences &prefs) {
     if (!BleProbeUuidValid(uuid))
         uuid = DEFAULT_UUID;
     strlcpy(g_ble.uuid, uuid.c_str(), sizeof(g_ble.uuid));
-    g_ble.window_sec = clampSec(prefs.getUInt("ble_win_s", 30), MIN_WINDOW_SEC, MAX_WINDOW_SEC);
-    g_ble.duration_sec = clampSec(prefs.getUInt("ble_dur_s", 10), MIN_DURATION_SEC, MAX_DURATION_SEC);
-    if (g_ble.duration_sec > g_ble.window_sec)
-        g_ble.duration_sec = g_ble.window_sec;
-    g_ble.interval_ms = clampSec(prefs.getUInt("ble_int_ms", 500), MIN_INTERVAL_MS, MAX_INTERVAL_MS);
+    uint32_t defaultWindowMs = 30000;
+    uint32_t defaultDurationMs = 10000;
+    if (!prefs.isKey("ble_win_ms") && prefs.isKey("ble_win_s"))
+        defaultWindowMs = prefs.getUInt("ble_win_s", 30) * 1000u;
+    if (!prefs.isKey("ble_dur_ms") && prefs.isKey("ble_dur_s"))
+        defaultDurationMs = prefs.getUInt("ble_dur_s", 10) * 1000u;
+
+    g_ble.window_ms = clampMs(prefs.getUInt("ble_win_ms", defaultWindowMs), MIN_WINDOW_MS, MAX_WINDOW_MS);
+    g_ble.duration_ms = clampMs(prefs.getUInt("ble_dur_ms", defaultDurationMs), MIN_DURATION_MS, MAX_DURATION_MS);
+    if (g_ble.duration_ms > g_ble.window_ms)
+        g_ble.duration_ms = g_ble.window_ms;
     g_ble.enabled = prefs.getBool("ble_enabled", true);
 }
 
 void BleProbeSave(Preferences &prefs) {
     prefs.putString("ble_uuid", g_ble.uuid);
-    prefs.putUInt("ble_win_s", g_ble.window_sec);
-    prefs.putUInt("ble_dur_s", g_ble.duration_sec);
-    prefs.putUInt("ble_int_ms", g_ble.interval_ms);
+    prefs.putUInt("ble_win_ms", g_ble.window_ms);
+    prefs.putUInt("ble_dur_ms", g_ble.duration_ms);
+    prefs.remove("ble_win_s");
+    prefs.remove("ble_dur_s");
+    prefs.remove("ble_int_ms");
     prefs.putBool("ble_enabled", g_ble.enabled);
 }
 
@@ -124,15 +131,14 @@ void BleProbeSetup() {
     startAdvertising();
 }
 
-bool BleProbeSetConfig(const String &uuid, uint32_t window_sec, uint32_t duration_sec, uint32_t interval_ms, bool enabled) {
+bool BleProbeSetConfig(const String &uuid, uint32_t window_ms, uint32_t duration_ms, bool enabled) {
     if (!BleProbeUuidValid(uuid)) return false;
     stopAdvertising();
     strlcpy(g_ble.uuid, uuid.c_str(), sizeof(g_ble.uuid));
-    g_ble.window_sec = clampSec(window_sec, MIN_WINDOW_SEC, MAX_WINDOW_SEC);
-    g_ble.duration_sec = clampSec(duration_sec, MIN_DURATION_SEC, MAX_DURATION_SEC);
-    if (g_ble.duration_sec > g_ble.window_sec)
-        g_ble.duration_sec = g_ble.window_sec;
-    g_ble.interval_ms = clampSec(interval_ms, MIN_INTERVAL_MS, MAX_INTERVAL_MS);
+    g_ble.window_ms = clampMs(window_ms, MIN_WINDOW_MS, MAX_WINDOW_MS);
+    g_ble.duration_ms = clampMs(duration_ms, MIN_DURATION_MS, MAX_DURATION_MS);
+    if (g_ble.duration_ms > g_ble.window_ms)
+        g_ble.duration_ms = g_ble.window_ms;
     g_ble.enabled = enabled;
     g_cycle_start_ms = millis();
     g_adv_start_ms = 0;
@@ -145,15 +151,15 @@ void BleProbeLoop() {
     if (!g_ble_ready) return;
 
     uint32_t now = millis();
-    uint32_t window_ms = g_ble.window_sec * 1000u;
-    uint32_t duration_ms = g_ble.duration_sec * 1000u;
+    uint32_t window_ms = g_ble.window_ms;
+    uint32_t duration_ms = g_ble.duration_ms;
     if (duration_ms > window_ms)
         duration_ms = window_ms;
 
     if (!g_ble.enabled) {
         stopAdvertising();
-        g_ble.cycle_remaining_sec = 0;
-        g_ble.adv_remaining_sec = 0;
+        g_ble.cycle_remaining_ms = 0;
+        g_ble.adv_remaining_ms = 0;
         return;
     }
 
@@ -170,8 +176,8 @@ void BleProbeLoop() {
 
     cycle_elapsed = now - g_cycle_start_ms;
     uint32_t adv_elapsed = g_ble.advertising ? (now - g_adv_start_ms) : 0;
-    g_ble.cycle_remaining_sec = (cycle_elapsed < window_ms) ? ((window_ms - cycle_elapsed + 999u) / 1000u) : 0;
-    g_ble.adv_remaining_sec = (g_ble.advertising && adv_elapsed < duration_ms) ? ((duration_ms - adv_elapsed + 999u) / 1000u) : 0;
+    g_ble.cycle_remaining_ms = (cycle_elapsed < window_ms) ? (window_ms - cycle_elapsed) : 0;
+    g_ble.adv_remaining_ms = (g_ble.advertising && adv_elapsed < duration_ms) ? (duration_ms - adv_elapsed) : 0;
 }
 
 BleProbeStatus BleProbeGetStatus() {

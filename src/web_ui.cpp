@@ -361,7 +361,6 @@ body.injecting .tab.act{color:#5b8fff}
   <div class="row"><span class="lbl">广播状态</span><span id="ble_adv_st" class="val">--</span></div>
   <div class="row"><span class="lbl">广播 UUID</span><span id="ble_uuid_show" class="val" style="max-width:66%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">--</span></div>
   <div class="row"><span class="lbl">窗口 / 时长</span><span id="ble_window_show" class="val">--</span></div>
-  <div class="row"><span class="lbl">广播间隔</span><span id="ble_interval_show" class="val">--</span></div>
 </div>
 <div class="card">
   <div class="tog">
@@ -376,16 +375,14 @@ body.injecting .tab.act{color:#5b8fff}
     </div>
     <div class="srow">
       <div style="flex:1">
-        <span class="lbl">广播窗口（秒）</span>
-        <input type="number" id="ble_window_sec" class="inp" min="1" max="3600" step="1">
+        <span class="lbl">广播窗口（毫秒）</span>
+        <input type="number" id="ble_window_ms" class="inp" min="100" max="3600000" step="100">
       </div>
       <div style="flex:1">
-        <span class="lbl">广播时长（秒）</span>
-        <input type="number" id="ble_duration_sec" class="inp" min="1" max="3600" step="1">
+        <span class="lbl">广播时长（毫秒）</span>
+        <input type="number" id="ble_duration_ms" class="inp" min="100" max="3600000" step="100">
       </div>
     </div>
-    <span class="lbl">广播间隔（毫秒）</span>
-    <input type="number" id="ble_interval_ms" class="inp" min="100" max="10000" step="50">
     <button class="btn" onclick="saveBle()">保存 BLE 配置</button>
   </div>
 </div>
@@ -900,14 +897,12 @@ async function loadBle() {
     const advText = !d.enabled ? '已关闭' : (d.advertising ? '正在广播' : '等待窗口');
     txt('ble_adv_st', advText, !d.enabled ? 'warn' : (d.advertising ? 'ok' : 'warn'));
     txt('ble_uuid_show', d.uuid || '--');
-    const rem = d.advertising ? ('剩余 ' + d.adv_remaining_sec + 's') : ('下次窗口 ' + d.cycle_remaining_sec + 's');
-    txt('ble_window_show', d.window_sec + 's / ' + d.duration_sec + 's · ' + rem);
-    txt('ble_interval_show', d.interval_ms + ' ms');
+    const rem = d.advertising ? ('剩余 ' + d.adv_remaining_ms + 'ms') : ('下次窗口 ' + d.cycle_remaining_ms + 'ms');
+    txt('ble_window_show', d.window_ms + 'ms / ' + d.duration_ms + 'ms · ' + rem);
     const en = g('ble_enabled'); if (en) en.checked = !!d.enabled;
     const uuid = g('ble_uuid'); if (uuid && document.activeElement !== uuid) uuid.value = d.uuid || '';
-    const win = g('ble_window_sec'); if (win && document.activeElement !== win) win.value = d.window_sec;
-    const dur = g('ble_duration_sec'); if (dur && document.activeElement !== dur) dur.value = d.duration_sec;
-    const intv = g('ble_interval_ms'); if (intv && document.activeElement !== intv) intv.value = d.interval_ms;
+    const win = g('ble_window_ms'); if (win && document.activeElement !== win) win.value = d.window_ms;
+    const dur = g('ble_duration_ms'); if (dur && document.activeElement !== dur) dur.value = d.duration_ms;
   } catch(e) {
     txt('ble_adv_st', '未知', 'err');
   }
@@ -924,14 +919,12 @@ async function genBleUuid() {
 
 async function saveBle() {
   const uuid = g('ble_uuid').value.trim();
-  const windowSec = Math.max(1, Math.min(3600, +(g('ble_window_sec').value || 0)));
-  const durationSec = Math.max(1, Math.min(3600, +(g('ble_duration_sec').value || 0)));
-  const intervalMs = Math.max(100, Math.min(10000, +(g('ble_interval_ms').value || 0)));
+  const windowMs = Math.max(100, Math.min(3600000, +(g('ble_window_ms').value || 0)));
+  const durationMs = Math.max(100, Math.min(3600000, +(g('ble_duration_ms').value || 0)));
   const p = new URLSearchParams({
     uuid,
-    window_sec: String(windowSec),
-    duration_sec: String(durationSec),
-    interval_ms: String(intervalMs),
+    window_ms: String(windowMs),
+    duration_ms: String(durationMs),
     enabled: g('ble_enabled').checked ? '1' : '0'
   });
   try {

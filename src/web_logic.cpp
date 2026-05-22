@@ -465,33 +465,30 @@ handleBleStatus() {
     j += st.advertising ? "true" : "false";
     j += ",\"uuid\":\"";
     j += jesc(st.uuid);
-    j += "\",\"window_sec\":";
-    j += String(st.window_sec);
-    j += ",\"duration_sec\":";
-    j += String(st.duration_sec);
-    j += ",\"interval_ms\":";
-    j += String(st.interval_ms);
-    j += ",\"cycle_remaining_sec\":";
-    j += String(st.cycle_remaining_sec);
-    j += ",\"adv_remaining_sec\":";
-    j += String(st.adv_remaining_sec);
+    j += "\",\"window_ms\":";
+    j += String(st.window_ms);
+    j += ",\"duration_ms\":";
+    j += String(st.duration_ms);
+    j += ",\"cycle_remaining_ms\":";
+    j += String(st.cycle_remaining_ms);
+    j += ",\"adv_remaining_ms\":";
+    j += String(st.adv_remaining_ms);
     j += "}";
     server.send(200, "application/json", j);
 }
 
 static void
 handleBleConfig() {
-    if (!server.hasArg("uuid") || !server.hasArg("window_sec") || !server.hasArg("duration_sec") || !server.hasArg("interval_ms")) {
+    if (!server.hasArg("uuid") || !server.hasArg("window_ms") || !server.hasArg("duration_ms")) {
         server.send(400, "application/json", "{\"ok\":false,\"error\":\"missing args\"}");
         return;
     }
     String uuid = server.arg("uuid");
     uuid.trim();
-    uint32_t window_sec = (uint32_t)server.arg("window_sec").toInt();
-    uint32_t duration_sec = (uint32_t)server.arg("duration_sec").toInt();
-    uint32_t interval_ms = (uint32_t)server.arg("interval_ms").toInt();
+    uint32_t window_ms = (uint32_t)server.arg("window_ms").toInt();
+    uint32_t duration_ms = (uint32_t)server.arg("duration_ms").toInt();
     bool enabled = !server.hasArg("enabled") || server.arg("enabled") == "1";
-    if (!BleProbeSetConfig(uuid, window_sec, duration_sec, interval_ms, enabled)) {
+    if (!BleProbeSetConfig(uuid, window_ms, duration_ms, enabled)) {
         server.send(400, "application/json", "{\"ok\":false,\"error\":\"bad uuid\"}");
         return;
     }
