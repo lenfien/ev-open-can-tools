@@ -315,6 +315,36 @@ PRELUDE_TEMPLATE = r"""<!DOCTYPE html>
   mockCnf.enable_ban_shield = true;
   mockCnf.enable_nag_suppress = true;
 
+  const mockBle = {{
+    enabled: true,
+    advertising: true,
+    uuid: 'f4a2b6a1-2c7e-4c79-9f1d-6f7d9a21c8b4',
+    window_ms: 1000,
+    duration_ms: 1000,
+    interval_ms: 20,
+    cycle_start: Date.now(),
+  }};
+  function updateMockBle() {{
+    if (!mockBle.enabled) {{
+      mockBle.advertising = false;
+      mockBle.cycle_remaining_ms = 0;
+      mockBle.adv_remaining_ms = 0;
+      return;
+    }}
+    const now = Date.now();
+    const elapsed = (now - mockBle.cycle_start) % mockBle.window_ms;
+    mockBle.advertising = elapsed < mockBle.duration_ms;
+    mockBle.cycle_remaining_ms = Math.max(0, mockBle.window_ms - elapsed);
+    mockBle.adv_remaining_ms = mockBle.advertising ? Math.max(0, mockBle.duration_ms - elapsed) : 0;
+  }}
+  function genUuidV4() {{
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {{
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : ((r & 0x3) | 0x8);
+      return v.toString(16);
+    }});
+  }}
+
   // ---- 调试四组帧（和固件 /debug_status 结构对齐） ----
   function newFrame(data) {{
     return {{ seen: true, data: data.slice(0,8),
@@ -411,6 +441,31 @@ PRELUDE_TEMPLATE = r"""<!DOCTYPE html>
     if (path === '/wifi_config' && method === 'POST') return okResp();
     if (path === '/ap_config'   && method === 'POST') return okResp();
     if (path === '/reboot'      && method === 'POST') return okResp();
+    if (path === '/ble_status'  && method === 'GET') {{
+      updateMockBle();
+      return jsonResp({{
+        enabled: mockBle.enabled,
+        advertising: mockBle.advertising,
+        uuid: mockBle.uuid,
+        window_ms: mockBle.window_ms,
+        duration_ms: mockBle.duration_ms,
+        interval_ms: mockBle.interval_ms,
+        cycle_remaining_ms: mockBle.cycle_remaining_ms,
+        adv_remaining_ms: mockBle.adv_remaining_ms,
+      }});
+    }}
+    if (path === '/ble_generate' && method === 'POST') return jsonResp({{uuid: genUuidV4()}});
+    if (path === '/ble_config' && method === 'POST') {{
+      const a = parseForm(init && init.body);
+      mockBle.uuid = a.uuid || mockBle.uuid;
+      mockBle.window_ms = Math.max(100, Math.min(3600000, +a.window_ms || mockBle.window_ms));
+      mockBle.duration_ms = Math.max(100, Math.min(3600000, +a.duration_ms || mockBle.duration_ms));
+      mockBle.interval_ms = Math.max(20, Math.min(5000, +a.interval_ms || mockBle.interval_ms));
+      if (mockBle.duration_ms > mockBle.window_ms) mockBle.duration_ms = mockBle.window_ms;
+      mockBle.enabled = a.enabled === '1';
+      mockBle.cycle_start = Date.now();
+      return okResp();
+    }}
 
     if (path === '/debug_status' && method === 'GET') {{
       jitterRaw();

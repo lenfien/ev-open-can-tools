@@ -46,6 +46,13 @@
     "widget": "checkbox"
   },
   {
+    "key": "enable_fsd_only_in_D",
+    "label": "仅D/R档启用",
+    "group": "FSD",
+    "type": "bool",
+    "widget": "checkbox"
+  },
+  {
     "key": "enable_ban_shield",
     "label": "Ban 盾保护",
     "group": "安全",
@@ -249,6 +256,23 @@
     "tile_label": "DAS AP 状态",
     "tile_sep": " / ",
     "enum_labels": "关闭|不可用|就绪|工作|受限|导航|-|-|中止中|已中止|-|-|-|-|故障|无效"
+  },
+  {
+    "key": "shift_status",
+    "label": "档位",
+    "type": "enum",
+    "tile": "档位",
+    "tile_label": "档位状态",
+    "tile_sep": " / ",
+    "enum_labels": "-|-|-|P|-|R|-|N|-|D|-|-|-|-|-|-"
+  },
+  {
+    "key": "temprature",
+    "label": "温度",
+    "type": "number",
+    "unit": "°C",
+    "tile_label": "",
+    "tile_sep": " / "
   }
 ];
 
@@ -268,7 +292,9 @@
   "gateway_autopilot": 1,
   "ban_shield_cnt": 33,
   "ban_shield_check_cnt": 36,
-  "das_ap_state": 1
+  "das_ap_state": 1,
+  "shift_status": 1,
+  "temprature": 45
 });
 
   // ---- 假 cnf：对 SCHEMA_CNF 每个 key 给默认值 ----
@@ -288,6 +314,36 @@
   mockCnf.enable_fsd = true;
   mockCnf.enable_ban_shield = true;
   mockCnf.enable_nag_suppress = true;
+
+  const mockBle = {
+    enabled: true,
+    advertising: true,
+    uuid: 'f4a2b6a1-2c7e-4c79-9f1d-6f7d9a21c8b4',
+    window_ms: 1000,
+    duration_ms: 1000,
+    interval_ms: 20,
+    cycle_start: Date.now(),
+  };
+  function updateMockBle() {
+    if (!mockBle.enabled) {
+      mockBle.advertising = false;
+      mockBle.cycle_remaining_ms = 0;
+      mockBle.adv_remaining_ms = 0;
+      return;
+    }
+    const now = Date.now();
+    const elapsed = (now - mockBle.cycle_start) % mockBle.window_ms;
+    mockBle.advertising = elapsed < mockBle.duration_ms;
+    mockBle.cycle_remaining_ms = Math.max(0, mockBle.window_ms - elapsed);
+    mockBle.adv_remaining_ms = mockBle.advertising ? Math.max(0, mockBle.duration_ms - elapsed) : 0;
+  }
+  function genUuidV4() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : ((r & 0x3) | 0x8);
+      return v.toString(16);
+    });
+  }
 
   // ---- 调试四组帧（和固件 /debug_status 结构对齐） ----
   function newFrame(data) {
@@ -385,6 +441,31 @@
     if (path === '/wifi_config' && method === 'POST') return okResp();
     if (path === '/ap_config'   && method === 'POST') return okResp();
     if (path === '/reboot'      && method === 'POST') return okResp();
+    if (path === '/ble_status'  && method === 'GET') {
+      updateMockBle();
+      return jsonResp({
+        enabled: mockBle.enabled,
+        advertising: mockBle.advertising,
+        uuid: mockBle.uuid,
+        window_ms: mockBle.window_ms,
+        duration_ms: mockBle.duration_ms,
+        interval_ms: mockBle.interval_ms,
+        cycle_remaining_ms: mockBle.cycle_remaining_ms,
+        adv_remaining_ms: mockBle.adv_remaining_ms,
+      });
+    }
+    if (path === '/ble_generate' && method === 'POST') return jsonResp({uuid: genUuidV4()});
+    if (path === '/ble_config' && method === 'POST') {
+      const a = parseForm(init && init.body);
+      mockBle.uuid = a.uuid || mockBle.uuid;
+      mockBle.window_ms = Math.max(100, Math.min(3600000, +a.window_ms || mockBle.window_ms));
+      mockBle.duration_ms = Math.max(100, Math.min(3600000, +a.duration_ms || mockBle.duration_ms));
+      mockBle.interval_ms = Math.max(20, Math.min(5000, +a.interval_ms || mockBle.interval_ms));
+      if (mockBle.duration_ms > mockBle.window_ms) mockBle.duration_ms = mockBle.window_ms;
+      mockBle.enabled = a.enabled === '1';
+      mockBle.cycle_start = Date.now();
+      return okResp();
+    }
 
     if (path === '/debug_status' && method === 'GET') {
       jitterRaw();
@@ -503,6 +584,8 @@ input:checked+.sl::before{transform:translateX(18px);background:#5b8fff}
 .btn:hover{background:#334d85}
 .btn.danger{background:#3b1616;color:#ff7070;border-color:#7a2424}
 .btn.danger:hover{background:#4a1e1e}
+.btn.secondary{background:var(--pbtn);color:var(--pbtn-hc);border-color:var(--pbtn-b)}
+.btn.secondary:hover{border-color:var(--pbtn-hb);background:var(--net-h)}
 .srow{display:flex;gap:8px;align-items:flex-end;margin-top:6px}
 .srow input{flex:1;margin-top:0}
 .srow button{flex-shrink:0;width:auto;margin-top:0;padding:8px 14px}
@@ -863,6 +946,10 @@ body.injecting .tab.act{color:#5b8fff}
   <div class="row"><span class="lbl">SSID</span><span id="ap_ssid" class="val">--</span></div>
   <div class="row"><span class="lbl">IP</span><span id="ap_ip" class="val">--</span></div>
   <div class="row"><span class="lbl">已连接设备</span><span id="ap_cli" class="val">--</span></div>
+  <div class="row"><span class="lbl">热点状态</span><span id="ap_dis_lbl" class="val">--</span></div>
+</div>
+<div class="card pad">
+  <button class="btn" id="ap_toggle_btn" onclick="toggleAp()">--</button>
 </div>
 <div class="card pad">
   <span class="lbl">修改热点名称 / 密码</span>
@@ -885,6 +972,40 @@ body.injecting .tab.act{color:#5b8fff}
   <button class="btn" onclick="connectWifi()">连接</button>
 </div>
 
+<h2>BLE 探针</h2>
+<div class="card">
+  <div class="row"><span class="lbl">广播状态</span><span id="ble_adv_st" class="val">--</span></div>
+  <div class="row"><span class="lbl">广播 UUID</span><span id="ble_uuid_show" class="val" style="max-width:66%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">--</span></div>
+  <div class="row"><span class="lbl">窗口 / 时长</span><span id="ble_window_show" class="val">--</span></div>
+  <div class="row"><span class="lbl">广播间隔</span><span id="ble_interval_show" class="val">--</span></div>
+</div>
+<div class="card">
+  <div class="tog">
+    <span class="tlbl">启用 BLE 广播</span>
+    <label class="sw"><input type="checkbox" id="ble_enabled"><span class="sl"></span></label>
+  </div>
+  <div class="pad" style="border-top:1px solid var(--sep)">
+    <span class="lbl">广播 UUID</span>
+    <div class="srow">
+      <input type="text" id="ble_uuid" class="inp" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+      <button class="btn secondary" onclick="genBleUuid()">生成</button>
+    </div>
+    <div class="srow">
+      <div style="flex:1">
+        <span class="lbl">广播窗口（毫秒）</span>
+        <input type="number" id="ble_window_ms" class="inp" min="100" max="3600000" step="100">
+      </div>
+      <div style="flex:1">
+        <span class="lbl">广播时长（毫秒）</span>
+        <input type="number" id="ble_duration_ms" class="inp" min="100" max="3600000" step="100">
+      </div>
+    </div>
+    <span class="lbl">广播间隔（毫秒）</span>
+    <input type="number" id="ble_interval_ms" class="inp" min="20" max="5000" step="10">
+    <button class="btn" onclick="saveBle()">保存 BLE 配置</button>
+  </div>
+</div>
+
 <h2>系统</h2>
 <button class="btn danger" onclick="reboot()">重启设备</button>
 </div><!-- pg_wifi -->
@@ -903,13 +1024,13 @@ body.injecting .tab.act{color:#5b8fff}
     <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
     主页
   </button>
-  <button class="tab" id="tab_debug" onclick="switchTab('debug')">
+  <!--<button class="tab" id="tab_debug" onclick="switchTab('debug')" >
     <svg viewBox="0 0 24 24"><path d="M12 2v3"/><path d="M4 7l2 2"/><path d="M20 7l-2 2"/><path d="M7 20l-2-2"/><path d="M17 20l2-2"/><rect x="7" y="8" width="10" height="12" rx="4"/><path d="M9 12h6"/><path d="M9 16h6"/></svg>
     调试
-  </button>
+  </button>-->
   <button class="tab" id="tab_wifi" onclick="switchTab('wifi')">
     <svg viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1" fill="currentColor"/></svg>
-    WiFi / 系统
+    系统
   </button>
 </nav>
 
@@ -1272,7 +1393,20 @@ async function loadAp() {
   try {
     const d = await (await fetch('/ap_status')).json();
     txt('ap_ssid', d.ssid); txt('ap_ip', d.ip); txt('ap_cli', d.clients);
+    txt('ap_dis_lbl', d.disabled ? '已关闭 (仅STA)' : '运行中', d.disabled ? 'warn' : 'ok');
+    g('ap_toggle_btn').textContent = d.disabled ? '开启热点 (AP)' : '关闭热点，仅STA模式';
+    g('ap_toggle_btn')._apDisabled = d.disabled;
   } catch(e) {}
+}
+async function toggleAp() {
+  const dis = !g('ap_toggle_btn')._apDisabled;
+  const p = new URLSearchParams({disabled: dis ? '1' : '0'});
+  try {
+    const r = await fetch('/ap_config', {method:'POST', body:p});
+    const d = await r.json();
+    if (!d.ok) { alert('失败：' + d.error); return; }
+    alert('已保存，重启后生效。');
+  } catch(e) { alert('请求失败'); }
 }
 async function loadSta() {
   try {
@@ -1281,6 +1415,56 @@ async function loadSta() {
     txt('sta_ssid', d.ssid || '--');
     txt('sta_ip',   d.connected ? (d.ip||'--') : '--');
   } catch(e) {}
+}
+
+async function loadBle() {
+  try {
+    const d = await (await fetch('/ble_status')).json();
+    const advText = !d.enabled ? '已关闭' : (d.advertising ? '正在广播' : '等待窗口');
+    txt('ble_adv_st', advText, !d.enabled ? 'warn' : (d.advertising ? 'ok' : 'warn'));
+    txt('ble_uuid_show', d.uuid || '--');
+    const rem = d.advertising ? ('剩余 ' + d.adv_remaining_ms + 'ms') : ('下次窗口 ' + d.cycle_remaining_ms + 'ms');
+    txt('ble_window_show', d.window_ms + 'ms / ' + d.duration_ms + 'ms · ' + rem);
+    txt('ble_interval_show', d.interval_ms + 'ms');
+    const en = g('ble_enabled'); if (en) en.checked = !!d.enabled;
+    const uuid = g('ble_uuid'); if (uuid && document.activeElement !== uuid) uuid.value = d.uuid || '';
+    const win = g('ble_window_ms'); if (win && document.activeElement !== win) win.value = d.window_ms;
+    const dur = g('ble_duration_ms'); if (dur && document.activeElement !== dur) dur.value = d.duration_ms;
+    const intv = g('ble_interval_ms'); if (intv && document.activeElement !== intv) intv.value = d.interval_ms;
+  } catch(e) {
+    txt('ble_adv_st', '未知', 'err');
+  }
+}
+
+async function genBleUuid() {
+  try {
+    const d = await (await fetch('/ble_generate', {method:'POST'})).json();
+    g('ble_uuid').value = d.uuid;
+  } catch(e) {
+    alert('生成 UUID 失败');
+  }
+}
+
+async function saveBle() {
+  const uuid = g('ble_uuid').value.trim();
+  const windowMs = Math.max(100, Math.min(3600000, +(g('ble_window_ms').value || 0)));
+  const durationMs = Math.max(100, Math.min(3600000, +(g('ble_duration_ms').value || 0)));
+  const intervalMs = Math.max(20, Math.min(5000, +(g('ble_interval_ms').value || 0)));
+  const p = new URLSearchParams({
+    uuid,
+    window_ms: String(windowMs),
+    duration_ms: String(durationMs),
+    interval_ms: String(intervalMs),
+    enabled: g('ble_enabled').checked ? '1' : '0'
+  });
+  try {
+    const r = await fetch('/ble_config', {method:'POST', body:p});
+    const d = await r.json();
+    if (!d.ok) { alert('保存失败：' + (d.error || '配置无效')); return; }
+    await loadBle();
+  } catch(e) {
+    alert('保存 BLE 配置失败');
+  }
 }
 
 async function scanWifi() {
@@ -1658,10 +1842,11 @@ async function dbgSaveArchive() {
   }
 }
 
-loadSchema(); poll(); loadAp(); loadSta();
+loadSchema(); poll(); loadAp(); loadSta(); loadBle();
 setInterval(poll, 2000);
 setInterval(loadAp, 15000);
 setInterval(loadSta, 6000);
+setInterval(loadBle, 2000);
 setInterval(dbgPoll, 1500);
 </script>
 </body>
