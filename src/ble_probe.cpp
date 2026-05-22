@@ -11,6 +11,8 @@ static constexpr uint32_t MIN_WINDOW_SEC = 1;
 static constexpr uint32_t MAX_WINDOW_SEC = 3600;
 static constexpr uint32_t MIN_DURATION_SEC = 1;
 static constexpr uint32_t MAX_DURATION_SEC = 3600;
+static constexpr uint32_t MIN_INTERVAL_MS = 100;
+static constexpr uint32_t MAX_INTERVAL_MS = 10000;
 
 static BleProbeStatus g_ble;
 static bool g_ble_ready = false;
@@ -21,6 +23,13 @@ static uint32_t clampSec(uint32_t v, uint32_t lo, uint32_t hi) {
     if (v < lo) return lo;
     if (v > hi) return hi;
     return v;
+}
+
+static uint16_t intervalMsToBleUnits(uint32_t interval_ms) {
+    uint32_t units = (interval_ms * 1000u + 624u) / 625u;
+    if (units < 0x20) units = 0x20;
+    if (units > 0x4000) units = 0x4000;
+    return (uint16_t)units;
 }
 
 bool BleProbeUuidValid(const String &uuid) {
@@ -65,6 +74,9 @@ static void startAdvertising() {
     BLEAdvertising *adv = BLEDevice::getAdvertising();
     adv->stop();
     adv->setScanResponse(true);
+    uint16_t interval = intervalMsToBleUnits(g_ble.interval_ms);
+    adv->setMinInterval(interval);
+    adv->setMaxInterval(interval);
     adv->setMinPreferred(0x06);
     adv->setMaxPreferred(0x12);
 
@@ -92,6 +104,7 @@ void BleProbeLoad(Preferences &prefs) {
     g_ble.duration_sec = clampSec(prefs.getUInt("ble_dur_s", 10), MIN_DURATION_SEC, MAX_DURATION_SEC);
     if (g_ble.duration_sec > g_ble.window_sec)
         g_ble.duration_sec = g_ble.window_sec;
+    g_ble.interval_ms = clampSec(prefs.getUInt("ble_int_ms", 500), MIN_INTERVAL_MS, MAX_INTERVAL_MS);
     g_ble.enabled = prefs.getBool("ble_enabled", true);
 }
 
@@ -99,6 +112,7 @@ void BleProbeSave(Preferences &prefs) {
     prefs.putString("ble_uuid", g_ble.uuid);
     prefs.putUInt("ble_win_s", g_ble.window_sec);
     prefs.putUInt("ble_dur_s", g_ble.duration_sec);
+    prefs.putUInt("ble_int_ms", g_ble.interval_ms);
     prefs.putBool("ble_enabled", g_ble.enabled);
 }
 
@@ -110,7 +124,7 @@ void BleProbeSetup() {
     startAdvertising();
 }
 
-bool BleProbeSetConfig(const String &uuid, uint32_t window_sec, uint32_t duration_sec, bool enabled) {
+bool BleProbeSetConfig(const String &uuid, uint32_t window_sec, uint32_t duration_sec, uint32_t interval_ms, bool enabled) {
     if (!BleProbeUuidValid(uuid)) return false;
     stopAdvertising();
     strlcpy(g_ble.uuid, uuid.c_str(), sizeof(g_ble.uuid));
@@ -118,6 +132,7 @@ bool BleProbeSetConfig(const String &uuid, uint32_t window_sec, uint32_t duratio
     g_ble.duration_sec = clampSec(duration_sec, MIN_DURATION_SEC, MAX_DURATION_SEC);
     if (g_ble.duration_sec > g_ble.window_sec)
         g_ble.duration_sec = g_ble.window_sec;
+    g_ble.interval_ms = clampSec(interval_ms, MIN_INTERVAL_MS, MAX_INTERVAL_MS);
     g_ble.enabled = enabled;
     g_cycle_start_ms = millis();
     g_adv_start_ms = 0;
